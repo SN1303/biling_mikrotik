@@ -18,6 +18,11 @@ Route::post('/auth/logout', [LoginBasic::class, 'logout'])->name('logout');
 Route::middleware(['auth'])->group(function () {
   Route::get('/', [HomePage::class, 'index'])->name('pages-home');
 
+  // Super Admin only (role 1) — manajemen akun staf & pengguna internal
+  Route::middleware('role:1')->group(function () {
+    require __DIR__ . '/modules/staff.php';
+  });
+
   // Super Admin + Admin only (role 1,2) — server management, internet packages
     Route::middleware('role:1,2')->group(function () {
       require __DIR__ . '/modules/mikrotik.php';
@@ -38,14 +43,14 @@ Route::middleware(['auth'])->group(function () {
     require __DIR__ . '/modules/area.php';
   });
 
-  // Admin + Teknisi + Bendahara (role 1,2,3,4) — pelanggan (bendahara read-only via controller)
-  Route::middleware('role:1,2,3,4')->group(function () {
+  // Admin + Teknisi + Bendahara + Kolektor (role 1,2,3,4,6) — pelanggan
+  Route::middleware('role:1,2,3,4,6')->group(function () {
     require __DIR__ . '/modules/user.php';
     require __DIR__ . '/modules/select.php';
   });
 
-  // Admin + Bendahara (role 1,2,3) — billing/tagihan
-  Route::middleware('role:1,2,3')->group(function () {
+  // Admin + Bendahara + Kolektor (role 1,2,3,6) — billing/tagihan
+  Route::middleware('role:1,2,3,6')->group(function () {
     require __DIR__ . '/modules/tagihan.php';
   });
 });

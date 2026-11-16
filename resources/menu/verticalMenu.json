@@ -9,7 +9,7 @@
     {
       "name": "Server",
       "icon": "menu-icon tf-icons mdi mdi-server-network",
-      "slug": ["mikrotik", "olt", "odc", "odp", "radius"],
+      "slug": ["mikrotik", "olt", "odc", "odp"],
       "submenu": [
         {
           "url": "/mikrotik",
@@ -44,54 +44,32 @@
       ]
     },
     {
-      "name": "FreeRADIUS",
-      "icon": "menu-icon tf-icons mdi mdi-radius-outline",
-      "slug": "radius",
+      "name": "Pelanggan",
+      "icon": "menu-icon tf-icons mdi mdi-account-group",
+      "slug": "user",
       "submenu": [
         {
-          "name": "Pelanggan",
-          "icon": "menu-icon tf-icons mdi mdi-account-group",
-          "slug": "radius.user",
-          "submenu": [
-            {
-              "url": "/radius/users?status=Semua",
-              "name": "Semua Pelanggan",
-              "icon": "menu-icon tf-icons mdi mdi-circle-small",
-              "slug": "radius.user.index"
-            },
-            {
-              "url": "/radius/users?status=Online",
-              "name": "Online",
-              "icon": "menu-icon tf-icons mdi mdi-circle-small",
-              "slug": "radius.user.online"
-            },
-            {
-              "url": "/radius/users?status=Offline",
-              "name": "Offline",
-              "icon": "menu-icon tf-icons mdi mdi-circle-small",
-              "slug": "radius.user.offline"
-            }
-          ]
+          "url": "/user",
+          "name": "Daftar Pelanggan",
+          "slug": "user.index"
         },
         {
-          "url": "/radius/profiles",
-          "name": "Paket",
-          "icon": "menu-icon tf-icons mdi mdi-package-variant",
-          "slug": "radius.profile.index"
+          "url": "/user/create",
+          "name": "Tambah Pelanggan",
+          "slug": "user.create"
         },
         {
-          "url": "/radius/sync",
-          "name": "Sinkronisasi",
-          "icon": "menu-icon tf-icons mdi mdi-sync",
-          "slug": "radius.sync.index"
-        },
-        {
-          "url": "/radius/migration",
-          "name": "Alat Migrasi",
-          "icon": "menu-icon tf-icons mdi mdi-database-import",
-          "slug": "radius.migration.index"
+          "url": "/user/list/mapping",
+          "name": "Mapping Pelanggan",
+          "slug": "user.mapping"
         }
       ]
+    },
+    {
+      "name": "Manajemen Staf",
+      "icon": "menu-icon tf-icons mdi mdi-shield-account",
+      "slug": "staff.index",
+      "url": "/staff"
     },
     {
       "name": "Pengaturan Sistem",

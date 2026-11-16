@@ -52,7 +52,21 @@ class User extends Authenticatable
   public function isAdmin()      { return (int) $this->idRole === 2; }
   public function isBendahara()  { return (int) $this->idRole === 3; }
   public function isTeknisi()    { return (int) $this->idRole === 4; }
+  public function isKolektor()   { return (int) $this->idRole === 6; }
   public function hasRole(...$roles) { return in_array((int) $this->idRole, $roles); }
+
+  public function getRoleNameAttribute(): string
+  {
+    return match ((int) $this->idRole) {
+      1 => 'Super Admin',
+      2 => 'Admin',
+      3 => 'Bendahara',
+      4 => 'Teknisi',
+      5 => 'Pelanggan',
+      6 => 'Kolektor',
+      default => 'Lainnya',
+    };
+  }
 
   public function user_detail()
   {

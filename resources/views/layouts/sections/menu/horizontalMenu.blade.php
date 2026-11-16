@@ -93,8 +93,8 @@
       </li>
       @endif
 
-      <!-- PELANGGAN - Super Admin(1), Admin(2), Bendahara(3), Teknisi(4) -->
-      @if(auth()->user()->hasRole(1,2,3,4))
+      <!-- PELANGGAN - Super Admin(1), Admin(2), Bendahara(3), Teknisi(4), Kolektor(6) -->
+      @if(auth()->user()->hasRole(1,2,3,4,6))
       <li class="menu-item menu-dropdown">
         <a href="javascript:void(0);" class="menu-link menu-toggle">
           <i class="menu-icon tf-icons mdi mdi-badge-account-outline"></i>
@@ -181,80 +181,18 @@
       </li>
       @endif
 
-      <!-- RADIUS - Super Admin(1), Admin(2) only -->
-      @if(auth()->user()->hasRole(1,2))
-      <li class="menu-item menu-dropdown">
-        <a href="javascript:void(0);" class="menu-link menu-toggle">
-          <i class="menu-icon tf-icons mdi mdi-radius-outline"></i>
-          <div>RADIUS</div>
+      <!-- STAF - Super Admin (1) only -->
+      @if(auth()->user()->isSuperAdmin())
+      <li class="menu-item {{ request()->is('staff*') ? 'active' : '' }}">
+        <a href="{{ route('staff.index') }}" class="menu-link">
+          <i class="menu-icon tf-icons mdi mdi-shield-account-outline"></i>
+          <div>STAF</div>
         </a>
-        <ul class="menu-sub">
-          <li class="menu-item">
-            <a href="{{ route('radius.dashboard') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-view-dashboard mdi-20px"></i>
-              <div>DASHBOARD</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.config.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-server mdi-20px"></i>
-              <div>STATUS SERVER</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.guide.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-book-open-variant mdi-20px"></i>
-              <div>PANDUAN</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.nas.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-router mdi-20px"></i>
-              <div>NAS CLIENTS</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.profile.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-package-variant-closed mdi-20px"></i>
-              <div>PAKET / PROFIL</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.user.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-account-star mdi-20px"></i>
-              <div>PELANGGAN RADIUS</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.sync.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-sync mdi-20px"></i>
-              <div>SINKRONISASI</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.monitor.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-wifi mdi-20px"></i>
-              <div>MONITORING</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.monitor.history') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-history mdi-20px"></i>
-              <div>RIWAYAT SESI</div>
-            </a>
-          </li>
-          <li class="menu-item">
-            <a href="{{ route('radius.migration.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons mdi mdi-database-export mdi-20px"></i>
-              <div>ALAT MIGRASI</div>
-            </a>
-          </li>
-        </ul>
       </li>
       @endif
 
-      <!-- TAGIHAN - Super Admin(1), Admin(2), Bendahara(3) -->
-      @if(auth()->user()->hasRole(1,2,3))
+      <!-- TAGIHAN - Super Admin(1), Admin(2), Bendahara(3), Kolektor(6) -->
+      @if(auth()->user()->hasRole(1,2,3,6))
       <li class="menu-item menu-dropdown">
         <a href="javascript:void(0);" class="menu-link menu-toggle">
           <i class="menu-icon tf-icons mdi mdi-cash-multiple"></i>
@@ -273,6 +211,7 @@
               <div>Tagihan Lunas</div>
             </a>
           </li>
+          @if(auth()->user()->hasRole(1,2,3))
           <li class="menu-item">
             <a href="{{ route('tagihan.rekap') }}" class="menu-link">
               <i class="menu-icon tf-icons mdi mdi-calendar-month mdi-20px"></i>
@@ -285,6 +224,7 @@
               <div>Generate Tagihan</div>
             </a>
           </li>
+          @endif
         </ul>
       </li>
       @endif
