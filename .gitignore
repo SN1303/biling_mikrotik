@@ -29,5 +29,6 @@ yarn-error.log
 # But not these files...
 !/public/assets/*
 /public/assets/js
-/public/assets/css
+/public/assets/css/*
+!/public/assets/css/mryes-modern.css
 /public/assets/vendor

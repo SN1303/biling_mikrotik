@@ -2,7 +2,7 @@
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&ampdisplay=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
 
 <!-- Icons -->
 <link rel="stylesheet" href="{{ asset(mix('assets/vendor/fonts/materialdesignicons.css')) }}" />
@@ -30,16 +30,11 @@
 <link rel="stylesheet" href="{{asset('assets/vendor/libs/toastr/toastr.css')}}" />
 <link rel="stylesheet" href="{{asset('assets/vendor/libs/select2/select2.css')}}" />
 
+<!-- MRYES Modern Design System -->
+<link rel="stylesheet" href="{{ asset('assets/css/mryes-modern.css') }}?v=1.0" />
+
 @yield('vendor-style')
 
 
 <!-- Page Styles -->
 @yield('page-style')
-
-<style>
-  /* Pindahkan Customizer Toggle ke pojok bawah */
-  .template-customizer-open-btn {
-    top: unset !important;
-    bottom: 20px !important;
-  }
-</style>

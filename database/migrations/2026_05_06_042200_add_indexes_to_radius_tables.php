@@ -12,6 +12,7 @@ return new class extends Migration
      */
     private function hasIndex($table, $indexName)
     {
+        if (!Schema::hasTable($table)) return true;
         $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
         return count($indexes) > 0;
     }

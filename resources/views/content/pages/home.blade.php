@@ -1,12 +1,23 @@
-{{-- filepath: e:\1.WEB_SERVER\1.LARAVELKU\1.projek\lamtim_biling_mikrotik\resources\views\content\pages\home.blade.php
---}}
 @php
 $configData = Helper::appClasses();
+$currentUser = auth()->user();
+
+// Dynamic Greeting based on Indonesian time
+$hour = (int) Carbon\Carbon::now()->format('H');
+if ($hour >= 5 && $hour < 11) {
+    $greeting = 'Selamat Pagi';
+} elseif ($hour >= 11 && $hour < 15) {
+    $greeting = 'Selamat Siang';
+} elseif ($hour >= 15 && $hour < 18) {
+    $greeting = 'Selamat Sore';
+} else {
+    $greeting = 'Selamat Malam';
+}
 @endphp
 
 @extends('layouts/layoutMaster')
 
-@section('title', 'Dashboard - Lamtim Billing')
+@section('title', 'Dashboard - MRYES NET Billing')
 
 @section('vendor-style')
 <link rel="stylesheet" href="{{ asset('assets/vendor/libs/apex-charts/apex-charts.css') }}" />
@@ -19,198 +30,292 @@ $configData = Helper::appClasses();
 @section('page-script')
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-  // Revenue Chart
-  const revenueChartEl = document.querySelector('#revenueChart');
-  if (revenueChartEl) {
-    const revenueData = @json($monthlyRevenue);
-    const months = revenueData.map(item => item.month);
-    const revenues = revenueData.map(item => item.revenue);
+    // Revenue Chart with Modern NOC styling
+    const revenueChartEl = document.querySelector('#revenueChart');
+    if (revenueChartEl) {
+      const revenueData = @json($monthlyRevenue);
+      const months = revenueData.map(item => item.month);
+      const revenues = revenueData.map(item => item.revenue);
 
-    const revenueChart = new ApexCharts(revenueChartEl, {
-      chart: {
-        height: 300,
-        type: 'line',
-        toolbar: { show: false }
-      },
-      series: [{
-        name: 'Revenue',
-        data: revenues
-      }],
-      colors: ['#696cff'],
-      stroke: {
-        curve: 'smooth',
-        width: 3
-      },
-      xaxis: {
-        categories: months
-      },
-      yaxis: {
-        labels: {
-          formatter: function (val) {
-            return 'Rp ' + val.toLocaleString('id-ID');
+      const revenueChart = new ApexCharts(revenueChartEl, {
+        chart: {
+          height: 310,
+          type: 'area',
+          toolbar: { show: false },
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          sparkline: { enabled: false }
+        },
+        series: [{
+          name: 'Pendapatan',
+          data: revenues
+        }],
+        colors: ['#2563eb'],
+        fill: {
+          type: 'gradient',
+          gradient: {
+            shadeIntensity: 1,
+            opacityFrom: 0.45,
+            opacityTo: 0.05,
+            stops: [0, 95, 100]
           }
-        }
-      },
-      tooltip: {
-        y: {
-          formatter: function (val) {
-            return 'Rp ' + val.toLocaleString('id-ID');
+        },
+        stroke: {
+          curve: 'smooth',
+          width: 3
+        },
+        xaxis: {
+          categories: months,
+          axisBorder: { show: false },
+          axisTicks: { show: false },
+          labels: {
+            style: {
+              colors: '#64748b',
+              fontSize: '12px',
+              fontWeight: 500
+            }
           }
+        },
+        yaxis: {
+          labels: {
+            style: {
+              colors: '#64748b',
+              fontSize: '12px'
+            },
+            formatter: function (val) {
+              if (val >= 1000000) {
+                return 'Rp ' + (val / 1000000).toFixed(1) + 'M';
+              } else if (val >= 1000) {
+                return 'Rp ' + (val / 1000).toFixed(0) + 'k';
+              }
+              return 'Rp ' + val.toLocaleString('id-ID');
+            }
+          }
+        },
+        tooltip: {
+          theme: 'light',
+          y: {
+            formatter: function (val) {
+              return 'Rp ' + val.toLocaleString('id-ID');
+            }
+          }
+        },
+        grid: {
+          borderColor: '#f1f5f9',
+          strokeDashArray: 4,
+          padding: { top: 10, right: 10, bottom: 0, left: 10 }
+        },
+        markers: {
+          size: 4,
+          colors: ['#2563eb'],
+          strokeColors: '#ffffff',
+          strokeWidth: 2,
+          hover: { size: 6 }
         }
-      },
-      grid: {
-        strokeDashArray: 4
-      }
-    });
-    revenueChart.render();
-  }
+      });
+      revenueChart.render();
+    }
 
-  // Bills Status Donut Chart
-  const billsChartEl = document.querySelector('#billsChart');
-  if (billsChartEl) {
-    const billsChart = new ApexCharts(billsChartEl, {
-      chart: {
-        height: 250,
-        type: 'donut'
-      },
-      series: [{{ $stats['paid_bills'] }}, {{ $stats['unpaid_bills'] }}],
-      labels: ['Terbayar', 'Belum Bayar'],
-      colors: ['#28c76f', '#ff4757'],
-      legend: {
-        position: 'bottom'
-      },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '70%'
+    // Bills Status Donut Chart
+    const billsChartEl = document.querySelector('#billsChart');
+    if (billsChartEl) {
+      const paidBills = {{ (int) $stats['paid_bills'] }};
+      const unpaidBills = {{ (int) $stats['unpaid_bills'] }};
+      const hasData = (paidBills + unpaidBills) > 0;
+
+      const billsChart = new ApexCharts(billsChartEl, {
+        chart: {
+          height: 230,
+          type: 'donut',
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
+        },
+        series: hasData ? [paidBills, unpaidBills] : [1],
+        labels: hasData ? ['Terbayar', 'Belum Bayar'] : ['Belum Ada Tagihan'],
+        colors: hasData ? ['#10b981', '#ef4444'] : ['#e2e8f0'],
+        legend: {
+          position: 'bottom',
+          fontSize: '13px',
+          fontWeight: 600,
+          markers: { radius: 12 }
+        },
+        stroke: { width: 0 },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '75%',
+              labels: {
+                show: true,
+                name: {
+                  show: true,
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#64748b'
+                },
+                value: {
+                  show: true,
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  formatter: function(val) {
+                    return hasData ? val : 0;
+                  }
+                },
+                total: {
+                  show: true,
+                  label: 'Total Tagihan',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#64748b',
+                  formatter: function() {
+                    return {{ (int) $stats['monthly_bills'] }};
+                  }
+                }
+              }
+            }
           }
-        }
-      }
-    });
-    billsChart.render();
-  }
-});
+        },
+        dataLabels: { enabled: false }
+      });
+      billsChart.render();
+    }
+  });
 </script>
 @endsection
 
 @section('content')
-<!-- Dashboard Header -->
+
+<!-- Modern Hero Banner: Telecom & ISP Command Center -->
 <div class="row mb-4">
   <div class="col-12">
-    <div class="card bg-primary text-white">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-md-8">
-            <h4 class="card-title text-white mb-2">
-              <i class="mdi mdi-view-dashboard me-2"></i>Dashboard Lamtim Billing
-            </h4>
-            <p class="card-text mb-0">Selamat datang di sistem billing mikrotik RT/RW Net</p>
+    <div class="card mryes-hero-banner p-3 p-md-4">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem;">
+              <i class="mdi mdi-access-point-network me-1"></i> MRYES NOC CONTROL
+            </span>
+            <span class="text-white-50 small">&bull;</span>
+            <span class="text-white-50 small">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
           </div>
-          <div class="col-md-4 text-end">
-            <h6 class="text-white-50 mb-1">{{ Carbon\Carbon::now()->format('d F Y') }}</h6>
-            <small class="text-white-50">{{ Carbon\Carbon::now()->format('H:i') }} WIB</small>
-          </div>
+          <h3 class="text-white fw-bold mb-1" style="letter-spacing: -0.02em;">
+            {{ $greeting }}, {{ $currentUser->name ?? 'Administrator' }}! 👋
+          </h3>
+          <p class="text-white-50 mb-0" style="font-size: 0.9rem; max-width: 620px;">
+            Sistem operasional terintegrasi: Monitoring MikroTik RouterOS, Manajemen PPPoE/Isolir, Penagihan Otomatis, dan Pemetaan ODP.
+          </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          @if($currentUser && $currentUser->hasRole(1, 2, 4))
+          <a href="{{ route('user.create') }}" class="btn btn-light text-dark fw-bold d-flex align-items-center gap-1 shadow-sm">
+            <i class="mdi mdi-account-plus text-primary"></i>
+            <span>Pelanggan Baru</span>
+          </a>
+          @endif
+
+          @if($currentUser && $currentUser->hasRole(1, 2))
+          <a href="{{ route('mikrotik.index') }}" class="btn btn-primary d-flex align-items-center gap-1 shadow-sm" style="background: rgba(255, 255, 255, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important;">
+            <i class="mdi mdi-router-wireless"></i>
+            <span>Router MikroTik</span>
+          </a>
+          @endif
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Statistics Cards -->
-<div class="row mb-4">
-  <!-- Total Users -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center">
-        <div class="flex-shrink-0 me-3">
-          <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 60px; height: 60px;">
-            <i class="mdi mdi-account-group mdi-24px"></i>
+<!-- 4 Key Metric Cards -->
+<div class="row g-3 mb-4">
+  <!-- Total Pelanggan Aktif -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="card metric-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between p-3">
+        <div>
+          <span class="metric-label d-block mb-1">Pelanggan Aktif</span>
+          <div class="metric-value mb-1">{{ number_format($stats['total_users']) }}</div>
+          <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
+            <span class="text-success fw-semibold"><i class="mdi mdi-check-circle-outline"></i> Siap Layanan</span>
           </div>
         </div>
-        <div class="flex-grow-1">
-          <h5 class="mb-1 text-dark fw-bold">{{ number_format($stats['total_users']) }}</h5>
-          <small class="text-muted">Total Pelanggan</small>
+        <div class="metric-icon-box" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
+          <i class="mdi mdi-account-group-outline"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Active Mikrotik -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center">
-        <div class="flex-shrink-0 me-3">
-          <div class="bg-success bg-opacity-10 text-success rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 60px; height: 60px;">
-            <i class="mdi mdi-router-wireless mdi-24px"></i>
+  <!-- Router Server Aktif -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="card metric-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between p-3">
+        <div>
+          <span class="metric-label d-block mb-1">Router MikroTik</span>
+          <div class="metric-value mb-1">{{ $stats['active_mikrotik'] }} <span class="text-muted fw-normal" style="font-size: 0.95rem;">/ {{ $stats['total_mikrotik'] }}</span></div>
+          <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+            @if($stats['active_mikrotik'] > 0)
+              <span class="text-success fw-semibold"><i class="mdi mdi-lan-connect"></i> Terhubung API</span>
+            @else
+              <span class="text-danger fw-semibold"><i class="mdi mdi-lan-disconnect"></i> Belum Aktif</span>
+            @endif
           </div>
         </div>
-        <div class="flex-grow-1">
-          <h5 class="mb-1 text-dark fw-bold">{{ $stats['active_mikrotik'] }}/{{ $stats['total_mikrotik'] }}</h5>
-          <small class="text-muted">Server Aktif</small>
+        <div class="metric-icon-box" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+          <i class="mdi mdi-router-wireless"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Monthly Revenue -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center">
-        <div class="flex-shrink-0 me-3">
-          <div class="bg-info bg-opacity-10 text-info rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 60px; height: 60px;">
-            <i class="mdi mdi-cash-multiple mdi-24px"></i>
+  <!-- Pendapatan Bulan Ini -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="card metric-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between p-3">
+        <div>
+          <span class="metric-label d-block mb-1">Pendapatan Bulan Ini</span>
+          <div class="metric-value mb-1" style="font-size: 1.35rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
+          <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
+            <span>{{ $stats['paid_bills'] }} transaksi terbayar</span>
           </div>
         </div>
-        <div class="flex-grow-1">
-          <h5 class="mb-1 text-dark fw-bold">Rp {{ number_format($stats['monthly_revenue']) }}</h5>
-          <small class="text-muted">Pendapatan Bulan Ini</small>
+        <div class="metric-icon-box" style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+          <i class="mdi mdi-cash-check"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Pending Revenue -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center">
-        <div class="flex-shrink-0 me-3">
-          <div class="bg-warning bg-opacity-10 text-warning rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 60px; height: 60px;">
-            <i class="mdi mdi-clock-alert-outline mdi-24px"></i>
+  <!-- Tagihan Tertunda -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="card metric-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between p-3">
+        <div>
+          <span class="metric-label d-block mb-1">Tagihan Tertunda</span>
+          <div class="metric-value mb-1" style="font-size: 1.35rem; color: #b91c1c;">Rp {{ number_format($stats['pending_revenue'], 0, ',', '.') }}</div>
+          <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
+            <span class="text-danger fw-semibold">{{ $stats['unpaid_bills'] }} invoice</span> belum lunas
           </div>
         </div>
-        <div class="flex-grow-1">
-          <h5 class="mb-1 text-dark fw-bold">Rp {{ number_format($stats['pending_revenue']) }}</h5>
-          <small class="text-muted">Tagihan Tertunda</small>
+        <div class="metric-icon-box" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+          <i class="mdi mdi-alert-circle-outline"></i>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Charts and Recent Activities -->
-<div class="row">
-  <!-- Revenue Chart -->
-  <div class="col-lg-8 col-md-12 mb-4">
+<!-- Main Operations Hub: Charts & Fast Status -->
+<div class="row g-3 mb-4">
+  <!-- Trend Pendapatan Chart -->
+  <div class="col-lg-8">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
         <div>
-          <h5 class="card-title mb-0">Trend Pendapatan (6 Bulan Terakhir)</h5>
-          <small class="text-muted">Grafik pendapatan bulanan yang sudah terbayar</small>
+          <h5 class="card-title mb-0">Tren Arus Kas Pembayaran</h5>
+          <small class="text-muted">Riwayat realisasi pendapatan 6 bulan terakhir</small>
         </div>
-        <div class="dropdown">
-          <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="mdi mdi-calendar me-1"></i> 6 Bulan
-          </button>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="javascript:void(0);">3 Bulan</a></li>
-            <li><a class="dropdown-item" href="javascript:void(0);">6 Bulan</a></li>
-            <li><a class="dropdown-item" href="javascript:void(0);">1 Tahun</a></li>
-          </ul>
-        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          <i class="mdi mdi-trending-up me-1"></i> Arus Kas
+        </span>
       </div>
       <div class="card-body">
         <div id="revenueChart"></div>
@@ -218,148 +323,134 @@ $configData = Helper::appClasses();
     </div>
   </div>
 
-  <!-- Bills Status & Quick Stats -->
-  <div class="col-lg-4 col-md-12 mb-4">
-    <!-- Bills Status Chart -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Status Tagihan Bulan Ini</h5>
-        <small class="text-muted">{{ Carbon\Carbon::now()->format('F Y') }}</small>
+  <!-- Status Tagihan & Quick Stats -->
+  <div class="col-lg-4 d-flex flex-column gap-3">
+    <!-- Donut Chart -->
+    <div class="card">
+      <div class="card-header pb-2">
+        <h5 class="card-title mb-0">Realisasi Tagihan</h5>
+        <small class="text-muted">{{ Carbon\Carbon::now()->isoFormat('MMMM Y') }}</small>
       </div>
-      <div class="card-body">
+      <div class="card-body pt-1">
         <div id="billsChart"></div>
-        <div class="row text-center mt-3">
+        <div class="row g-2 text-center mt-2 pt-2 border-top">
           <div class="col-6">
-            <h6 class="text-success fw-bold">{{ $stats['paid_bills'] }}</h6>
-            <small class="text-muted">Terbayar</small>
+            <span class="text-muted d-block small">Terbayar</span>
+            <span class="text-success fw-bold fs-6">{{ $stats['paid_bills'] }}</span>
           </div>
           <div class="col-6">
-            <h6 class="text-danger fw-bold">{{ $stats['unpaid_bills'] }}</h6>
-            <small class="text-muted">Belum Bayar</small>
+            <span class="text-muted d-block small">Belum Bayar</span>
+            <span class="text-danger fw-bold fs-6">{{ $stats['unpaid_bills'] }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="card">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Statistik Cepat</h5>
+    <!-- Quick Network Summary -->
+    <div class="card flex-grow-1">
+      <div class="card-header pb-2">
+        <h5 class="card-title mb-0">Rangkuman Operasional</h5>
       </div>
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <div class="flex-shrink-0 me-3">
-            <div
-              class="bg-primary bg-opacity-10 text-primary rounded-2 d-flex align-items-center justify-content-center"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-package-variant mdi-20px"></i>
-            </div>
+      <div class="card-body pt-2 d-flex flex-column justify-content-around gap-2">
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-2 p-1 text-primary bg-primary-subtle"><i class="mdi mdi-speedometer"></i></div>
+            <span class="small fw-semibold text-secondary">Total Paket Internet</span>
           </div>
-          <div class="flex-grow-1">
-            <h6 class="mb-0">{{ $stats['total_packages'] }}</h6>
-            <small class="text-muted">Total Paket</small>
-          </div>
+          <span class="badge bg-light text-dark border">{{ $stats['total_packages'] }} Paket</span>
         </div>
 
-        <div class="d-flex align-items-center mb-3">
-          <div class="flex-shrink-0 me-3">
-            <div
-              class="bg-success bg-opacity-10 text-success rounded-2 d-flex align-items-center justify-content-center"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-file-document-multiple mdi-20px"></i>
-            </div>
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-2 p-1 text-success bg-success-subtle"><i class="mdi mdi-percent"></i></div>
+            <span class="small fw-semibold text-secondary">Rasio Pembayaran</span>
           </div>
-          <div class="flex-grow-1">
-            <h6 class="mb-0">{{ $stats['monthly_bills'] }}</h6>
-            <small class="text-muted">Total Tagihan Bulan Ini</small>
-          </div>
+          <span class="badge bg-success-subtle text-success border border-success-subtle">
+            {{ $stats['monthly_bills'] > 0 ? number_format(($stats['paid_bills'] / $stats['monthly_bills']) * 100, 1) : 0 }}%
+          </span>
         </div>
 
-        <div class="d-flex align-items-center">
-          <div class="flex-shrink-0 me-3">
-            <div class="bg-info bg-opacity-10 text-info rounded-2 d-flex align-items-center justify-content-center"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-percent mdi-20px"></i>
-            </div>
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-2 p-1 text-info bg-info-subtle"><i class="mdi mdi-receipt-outline"></i></div>
+            <span class="small fw-semibold text-secondary">Tagihan Diterbitkan</span>
           </div>
-          <div class="flex-grow-1">
-            <h6 class="mb-0">
-              @if($stats['monthly_bills'] > 0)
-              {{ number_format(($stats['paid_bills'] / $stats['monthly_bills']) * 100, 1) }}%
-              @else
-              0%
-              @endif
-            </h6>
-            <small class="text-muted">Tingkat Pembayaran</small>
-          </div>
+          <span class="badge bg-info-subtle text-info border border-info-subtle">{{ $stats['monthly_bills'] }} Invoice</span>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Recent Transactions -->
-<div class="row">
+<!-- Recent Transactions Table -->
+<div class="row mb-4">
   <div class="col-12">
     <div class="card">
-      <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div>
           <h5 class="card-title mb-0">
-            <i class="mdi mdi-history me-2"></i>Transaksi Terbaru
+            <i class="mdi mdi-history text-primary me-1"></i> 5 Pembayaran Terakhir
           </h5>
-          <small class="text-muted">5 pembayaran terakhir yang berhasil</small>
+          <small class="text-muted">Transaksi pelunasan tagihan realtime yang berhasil dicatat sistem</small>
         </div>
-        <a href="#" class="btn btn-sm btn-outline-primary">
-          <i class="mdi mdi-eye me-1"></i>Lihat Semua
+        @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
+        <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+          <i class="mdi mdi-format-list-bulleted"></i>
+          <span>Lihat Semua Transaksi</span>
         </a>
+        @endif
       </div>
-      <div class="card-body">
+      <div class="card-body p-0">
         @if($recent_transactions->count() > 0)
         <div class="table-responsive">
-          <table class="table table-hover">
-            <thead class="table-light">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
               <tr>
-                <th>No. Tagihan</th>
+                <th>No. Invoice</th>
                 <th>Pelanggan</th>
-                <th>Paket</th>
-                <th>Total</th>
-                <th>Tanggal Bayar</th>
-                <th>Status</th>
+                <th>Paket Layanan</th>
+                <th>Nominal</th>
+                <th>Waktu Pembayaran</th>
+                <th class="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               @foreach($recent_transactions as $transaction)
               <tr>
                 <td>
-                  <span class="fw-bold">#{{ $transaction->noTagihan }}</span>
+                  <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.8rem;">
+                    #{{ $transaction->noTagihan }}
+                  </span>
                 </td>
                 <td>
-                  <div class="d-flex align-items-center">
-                    <div
-                      class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2"
-                      style="width: 32px; height: 32px;">
-                      <i class="mdi mdi-account mdi-16px"></i>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #0ea5e9); font-size: 0.8rem;">
+                      {{ strtoupper(substr($transaction->user->name ?? 'P', 0, 1)) }}
                     </div>
                     <div>
-                      <div class="fw-medium">{{ $transaction->user->name ?? 'N/A' }}</div>
-                      <small class="text-muted">{{ Carbon\Carbon::parse($transaction->tglBayar)->format('M Y')
-                        }}</small>
+                      <div class="fw-semibold text-dark">{{ $transaction->user->name ?? 'Pelanggan N/A' }}</div>
+                      <small class="text-muted">ID: {{ $transaction->user->username ?? '-' }}</small>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span class="badge bg-info">{{ $transaction->paket->nama ?? 'N/A' }}</span>
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                    {{ $transaction->paket->nama ?? 'Paket N/A' }}
+                  </span>
                 </td>
                 <td>
-                  <span class="fw-bold text-success">Rp {{ number_format($transaction->total) }}</span>
+                  <span class="fw-bold text-success" style="font-size: 0.95rem;">
+                    Rp {{ number_format($transaction->total, 0, ',', '.') }}
+                  </span>
                 </td>
                 <td>
-                  <span class="text-muted">{{ Carbon\Carbon::parse($transaction->tglBayar)->format('d M Y H:i')
-                    }}</span>
+                  <span class="text-secondary small">
+                    <i class="mdi mdi-clock-outline me-1"></i>{{ Carbon\Carbon::parse($transaction->tglBayar)->isoFormat('D MMM Y, HH:mm') }} WIB
+                  </span>
                 </td>
-                <td>
-                  <span class="badge bg-success">
-                    <i class="mdi mdi-check me-1"></i>Lunas
+                <td class="text-center">
+                  <span class="badge badge-status-active">
+                    <i class="mdi mdi-check-circle-outline me-1"></i>LUNAS
                   </span>
                 </td>
               </tr>
@@ -368,12 +459,12 @@ $configData = Helper::appClasses();
           </table>
         </div>
         @else
-        <div class="text-center py-4">
-          <div class="mb-3">
-            <i class="mdi mdi-file-document-outline mdi-48px text-muted"></i>
+        <div class="text-center py-5">
+          <div class="mb-2 text-muted" style="font-size: 2.5rem;">
+            <i class="mdi mdi-receipt-text-outline"></i>
           </div>
-          <h6 class="text-muted">Belum ada transaksi</h6>
-          <p class="text-muted mb-0">Transaksi yang berhasil akan ditampilkan di sini</p>
+          <h6 class="text-dark fw-bold mb-1">Belum Ada Transaksi Bulan Ini</h6>
+          <p class="text-muted small mb-0">Pembayaran tagihan pelanggan yang terkonfirmasi lunas akan langsung muncul di sini.</p>
         </div>
         @endif
       </div>
@@ -381,58 +472,71 @@ $configData = Helper::appClasses();
   </div>
 </div>
 
-<!-- Quick Action Cards -->
-<div class="row mt-4">
-  <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card bg-primary text-white h-100">
-      <div class="card-body text-center">
-        <i class="mdi mdi-account-plus mdi-36px mb-3"></i>
-        <h6 class="card-title text-white">Tambah Pelanggan</h6>
-        <p class="card-text small">Daftarkan pelanggan baru</p>
-        <a href="#" class="btn btn-light btn-sm">
-          <i class="mdi mdi-plus me-1"></i>Tambah
-        </a>
+<!-- Operational Quick Navigation Grid -->
+<div class="row g-3">
+  @if($currentUser && $currentUser->hasRole(1, 2, 4))
+  <div class="col-md-3 col-sm-6">
+    <a href="{{ route('user.create') }}" class="card text-decoration-none h-100 metric-card p-3 border">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-3 bg-primary-subtle text-primary">
+          <i class="mdi mdi-account-plus mdi-24px"></i>
+        </div>
+        <div>
+          <h6 class="text-dark fw-bold mb-0">Tambah Pelanggan</h6>
+          <small class="text-muted">Registrasi data baru</small>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
+  @endif
 
-  <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card bg-success text-white h-100">
-      <div class="card-body text-center">
-        <i class="mdi mdi-cash-multiple mdi-36px mb-3"></i>
-        <h6 class="card-title text-white">Generate Tagihan</h6>
-        <p class="card-text small">Buat tagihan bulanan</p>
-        <a href="#" class="btn btn-light btn-sm">
-          <i class="mdi mdi-file-plus me-1"></i>Generate
-        </a>
+  @if($currentUser && $currentUser->hasRole(1, 2, 3))
+  <div class="col-md-3 col-sm-6">
+    <a href="{{ route('tagihan.generate') }}" class="card text-decoration-none h-100 metric-card p-3 border">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-3 bg-success-subtle text-success">
+          <i class="mdi mdi-lightning-bolt-circle mdi-24px"></i>
+        </div>
+        <div>
+          <h6 class="text-dark fw-bold mb-0">Generate Tagihan</h6>
+          <small class="text-muted">Terbitkan tagihan bulan baru</small>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
+  @endif
 
-  <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card bg-info text-white h-100">
-      <div class="card-body text-center">
-        <i class="mdi mdi-router-wireless mdi-36px mb-3"></i>
-        <h6 class="card-title text-white">Monitor Server</h6>
-        <p class="card-text small">Kelola server mikrotik</p>
-        <a href="{{ route('mikrotik.index') }}" class="btn btn-light btn-sm">
-          <i class="mdi mdi-eye me-1"></i>Monitor
-        </a>
+  @if($currentUser && $currentUser->hasRole(1, 2))
+  <div class="col-md-3 col-sm-6">
+    <a href="{{ route('mikrotik.index') }}" class="card text-decoration-none h-100 metric-card p-3 border">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-3 bg-info-subtle text-info">
+          <i class="mdi mdi-router-wireless mdi-24px"></i>
+        </div>
+        <div>
+          <h6 class="text-dark fw-bold mb-0">Server MikroTik</h6>
+          <small class="text-muted">Status koneksi & API</small>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
+  @endif
 
-  <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card bg-warning text-white h-100">
-      <div class="card-body text-center">
-        <i class="mdi mdi-chart-line mdi-36px mb-3"></i>
-        <h6 class="card-title text-white">Laporan</h6>
-        <p class="card-text small">Lihat laporan keuangan</p>
-        <a href="#" class="btn btn-light btn-sm">
-          <i class="mdi mdi-file-chart me-1"></i>Laporan
-        </a>
+  @if($currentUser && $currentUser->hasRole(1, 2, 3))
+  <div class="col-md-3 col-sm-6">
+    <a href="{{ route('tagihan.rekap') }}" class="card text-decoration-none h-100 metric-card p-3 border">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-3 bg-warning-subtle text-warning">
+          <i class="mdi mdi-file-chart-outline mdi-24px"></i>
+        </div>
+        <div>
+          <h6 class="text-dark fw-bold mb-0">Rekapitulasi Kas</h6>
+          <small class="text-muted">Laporan kasir & penagihan</small>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
+  @endif
 </div>
+
 @endsection

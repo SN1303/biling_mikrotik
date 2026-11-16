@@ -1,86 +1,271 @@
 @php
 $configData = Helper::appClasses();
+$currentUser = auth()->user();
+$roleBadgeClass = 'badge-role-2';
+if ($currentUser) {
+    if ($currentUser->idRole == 1) $roleBadgeClass = 'badge-role-1';
+    elseif ($currentUser->idRole == 2) $roleBadgeClass = 'badge-role-2';
+    elseif ($currentUser->idRole == 3) $roleBadgeClass = 'badge-role-3';
+    elseif ($currentUser->idRole == 4) $roleBadgeClass = 'badge-role-4';
+    elseif ($currentUser->idRole == 6) $roleBadgeClass = 'badge-role-6';
+}
 @endphp
 
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
 
-  <!-- ! Hide app brand if navbar-full -->
-  @if(!isset($navbarFull))
-  <div class="app-brand demo">
-    <a href="{{url('/')}}" class="app-brand-link">
-      <span class="app-brand-logo demo">@include('_partials.macros',["width"=>25,"withbg"=>'var(--bs-primary)'])</span>
-      <span class="app-brand-text demo menu-text fw-bold ms-2">{{config('variables.templateName')}}</span>
+  <!-- Brand header -->
+  <div class="app-brand demo d-flex align-items-center justify-content-between">
+    <a href="{{ url('/') }}" class="app-brand-link gap-2 d-flex align-items-center text-decoration-none">
+      <div class="app-brand-logo demo d-flex align-items-center justify-content-center p-1 rounded-3" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);">
+        <i class="mdi mdi-access-point-network text-white" style="font-size: 20px;"></i>
+      </div>
+      <div class="d-flex flex-column">
+        <span class="app-brand-text demo menu-text fw-bold text-white" style="letter-spacing: -0.02em;">MRYES NET</span>
+        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">BILLING & NOC</span>
+      </div>
     </a>
 
-    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11.4854 4.88844C11.0081 4.41121 10.2344 4.41121 9.75715 4.88844L4.51028 10.1353C4.03297 10.6126 4.03297 11.3865 4.51028 11.8638L9.75715 17.1107C10.2344 17.5879 11.0081 17.5879 11.4854 17.1107C11.9626 16.6334 11.9626 15.8597 11.4854 15.3824L7.96672 11.8638C7.48942 11.3865 7.48942 10.6126 7.96672 10.1353L11.4854 6.61667C11.9626 6.13943 11.9626 5.36568 11.4854 4.88844Z" fill="currentColor" fill-opacity="0.6" />
-        <path d="M15.8683 4.88844L10.6214 10.1353C10.1441 10.6126 10.1441 11.3865 10.6214 11.8638L15.8683 17.1107C16.3455 17.5879 17.1192 17.5879 17.5965 17.1107C18.0737 16.6334 18.0737 15.8597 17.5965 15.3824L14.0778 11.8638C13.6005 11.3865 13.6005 10.6126 14.0778 10.1353L17.5965 6.61667C18.0737 6.13943 18.0737 5.36568 17.5965 4.88844C17.1192 4.41121 16.3455 4.41121 15.8683 4.88844Z" fill="currentColor" fill-opacity="0.38" />
-      </svg>
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block">
+      <i class="mdi mdi-chevron-left align-middle text-muted" style="font-size: 22px;"></i>
     </a>
+  </div>
+
+  @if($currentUser)
+  <!-- Sidebar User Profile Card -->
+  <div class="sidebar-user-card">
+    <div class="sidebar-user-avatar">
+      {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
+    </div>
+    <div class="sidebar-user-meta flex-grow-1">
+      <div class="sidebar-user-name" title="{{ $currentUser->name }}">{{ $currentUser->name }}</div>
+      <span class="badge {{ $roleBadgeClass }}" style="font-size: 0.68rem; padding: 0.2rem 0.5rem;">
+        {{ $currentUser->role_name ?? 'User' }}
+      </span>
+    </div>
   </div>
   @endif
 
   <div class="menu-inner-shadow"></div>
 
   <ul class="menu-inner py-1">
-    @foreach ($menuData[0]->menu as $menu)
 
-    {{-- adding active and open class if child is active --}}
-
-    {{-- menu headers --}}
-    @if (isset($menu->menuHeader))
-    <li class="menu-header fw-medium mt-4">
-      <span class="menu-header-text">{{ __($menu->menuHeader) }}</span>
+    {{-- ================= UTAMA ================= --}}
+    <li class="menu-header">
+      <span class="menu-header-text">Utama</span>
+    </li>
+    <li class="menu-item {{ request()->is('/') ? 'active' : '' }}">
+      <a href="{{ url('/') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-view-dashboard-outline"></i>
+        <div>Dashboard</div>
+      </a>
     </li>
 
-    @else
+    {{-- ================= JARINGAN & SERVER ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 4))
+    <li class="menu-header">
+      <span class="menu-header-text">Jaringan & Server</span>
+    </li>
 
-    {{-- active menu method --}}
-    @php
-      $activeClass = null;
-      $currentRouteName =  Route::currentRouteName();
-
-      if ($currentRouteName === $menu->slug) {
-          $activeClass = 'active';
-      }
-      elseif (isset($menu->submenu)) {
-        if (gettype($menu->slug) === 'array') {
-          foreach($menu->slug as $slug){
-            if (str_contains($currentRouteName,$slug) and strpos($currentRouteName,$slug) === 0) {
-              $activeClass = 'active open';
-            }
-          }
-        }
-        else{
-          if (str_contains($currentRouteName,$menu->slug) and strpos($currentRouteName,$menu->slug) === 0) {
-            $activeClass = 'active open';
-          }
-        }
-
-      }
-    @endphp
-
-    {{-- main menu --}}
-    <li class="menu-item {{$activeClass}}">
-      <a href="{{ isset($menu->url) ? url($menu->url) : 'javascript:void(0);' }}" class="{{ isset($menu->submenu) ? 'menu-link menu-toggle' : 'menu-link' }}" @if (isset($menu->target) and !empty($menu->target)) target="_blank" @endif>
-        @isset($menu->icon)
-        <i class="{{ $menu->icon }}"></i>
-        @endisset
-        <div>{{ isset($menu->name) ? __($menu->name) : '' }}</div>
-        @isset($menu->badge)
-        <div class="badge bg-{{ $menu->badge[0] }} rounded-pill ms-auto">{{ $menu->badge[1] }}</div>
-
-        @endisset
+    {{-- Mikrotik Group --}}
+    @if($currentUser->hasRole(1, 2))
+    <li class="menu-item {{ request()->is('mikrotik*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons mdi mdi-router-wireless"></i>
+        <div>MikroTik</div>
       </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('mikrotik.index') ? 'active' : '' }}">
+          <a href="{{ route('mikrotik.index') }}" class="menu-link">
+            <div>Server MikroTik</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('mikrotik.connection-check') ? 'active' : '' }}">
+          <a href="{{ route('mikrotik.connection-check') }}" class="menu-link">
+            <div>Cek Koneksi</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('mikrotik.pppoe-manage') ? 'active' : '' }}">
+          <a href="{{ route('mikrotik.pppoe-manage') }}" class="menu-link">
+            <div>Kelola PPPoE</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('mikrotik.kelola-isolir') ? 'active' : '' }}">
+          <a href="{{ route('mikrotik.kelola-isolir') }}" class="menu-link">
+            <div>Kelola Isolir</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('mikrotik.sync-customers') ? 'active' : '' }}">
+          <a href="{{ route('mikrotik.sync-customers') }}" class="menu-link">
+            <div>Sinkron Pelanggan</div>
+          </a>
+        </li>
+      </ul>
+    </li>
 
-      {{-- submenu --}}
-      @isset($menu->submenu)
-      @include('layouts.sections.menu.submenu',['menu' => $menu->submenu])
-      @endisset
+    {{-- OLT --}}
+    <li class="menu-item {{ request()->is('olt*') ? 'active' : '' }}">
+      <a href="{{ route('olt.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-server-network"></i>
+        <div>OLT</div>
+      </a>
     </li>
     @endif
-    @endforeach
+
+    {{-- ODC, ODP & Maps (Role 1, 2, 4) --}}
+    <li class="menu-item {{ request()->is('odc*') ? 'active' : '' }}">
+      <a href="{{ route('odc.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-hub-outline"></i>
+        <div>ODC</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('odp*') ? 'active' : '' }}">
+      <a href="{{ route('odp.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-transit-connection-variant"></i>
+        <div>ODP</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('google-map*') ? 'active' : '' }}">
+      <a href="{{ route('google-map.standalone') }}" class="menu-link" target="_blank">
+        <i class="menu-icon tf-icons mdi mdi-map-marker-radius-outline"></i>
+        <div class="d-flex align-items-center justify-content-between w-100">
+          <span>Peta Jaringan</span>
+          <i class="mdi mdi-open-in-new ms-auto" style="font-size: 14px; opacity: 0.7;"></i>
+        </div>
+      </a>
+    </li>
+    @endif
+
+    {{-- ================= PELANGGAN ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6))
+    <li class="menu-header">
+      <span class="menu-header-text">Pelanggan</span>
+    </li>
+    <li class="menu-item {{ request()->is('user') || (request()->is('user/*') && !request()->is('user/create') && !request()->is('user/list/mapping') && !request()->is('user/show/map')) ? 'active' : '' }}">
+      <a href="{{ route('user.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-account-group-outline"></i>
+        <div>Daftar Pelanggan</div>
+      </a>
+    </li>
+
+    @if($currentUser->hasRole(1, 2, 4))
+    <li class="menu-item {{ request()->is('user/create') ? 'active' : '' }}">
+      <a href="{{ route('user.create') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-account-plus-outline"></i>
+        <div>Tambah Pelanggan</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('user/list/mapping') ? 'active' : '' }}">
+      <a href="{{ route('user.mapping') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-map-search-outline"></i>
+        <div>Mapping Pelanggan</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('user/show/map') ? 'active' : '' }}">
+      <a href="{{ route('user.show.mapping') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-map-marker-distance"></i>
+        <div>Lihat Map ODP</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('area*') ? 'active' : '' }}">
+      <a href="{{ route('area.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-map-marker-multiple-outline"></i>
+        <div>Area Wilayah</div>
+      </a>
+    </li>
+    @endif
+    @endif
+
+    {{-- ================= LAYANAN & INTERNET ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2))
+    <li class="menu-header">
+      <span class="menu-header-text">Layanan & Internet</span>
+    </li>
+    <li class="menu-item {{ request()->is('kategori*') ? 'active' : '' }}">
+      <a href="{{ route('kategori.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-shape-outline"></i>
+        <div>Kategori Paket</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('paket*') ? 'active' : '' }}">
+      <a href="{{ route('paket.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-speedometer"></i>
+        <div>Paket Internet</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('ip-pool*') ? 'active' : '' }}">
+      <a href="{{ route('ip-pool.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-ip-network-outline"></i>
+        <div>IP Pool</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('address-list*') ? 'active' : '' }}">
+      <a href="{{ route('address-list.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-format-list-checks"></i>
+        <div>Address List</div>
+      </a>
+    </li>
+    @endif
+
+    {{-- ================= TAGIHAN & KASIR ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
+    <li class="menu-header">
+      <span class="menu-header-text">Tagihan & Kasir</span>
+    </li>
+    <li class="menu-item {{ request()->is('tagihan') || (request()->is('tagihan/*') && !request()->is('tagihan/lunas') && !request()->is('tagihan/rekap') && !request()->is('tagihan/generate')) ? 'active' : '' }}">
+      <a href="{{ route('tagihan.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-receipt-text-outline"></i>
+        <div>Tagihan Aktif</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('tagihan/lunas') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.lunas') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-check-decagram-outline"></i>
+        <div>Tagihan Lunas</div>
+      </a>
+    </li>
+
+    @if($currentUser->hasRole(1, 2, 3))
+    <li class="menu-item {{ request()->is('tagihan/rekap') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.rekap') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-file-chart-outline"></i>
+        <div>Rekap Bulanan</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('tagihan/generate') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.generate') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-lightning-bolt-circle"></i>
+        <div>Generate Tagihan</div>
+      </a>
+    </li>
+    @endif
+    @endif
+
+    {{-- ================= MANAJEMEN STAF (SUPER ADMIN ONLY) ================= --}}
+    @if($currentUser && $currentUser->isSuperAdmin())
+    <li class="menu-header">
+      <span class="menu-header-text">Keamanan & Tim</span>
+    </li>
+    <li class="menu-item {{ request()->is('staff*') ? 'active' : '' }}">
+      <a href="{{ route('staff.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-shield-account-outline"></i>
+        <div>Manajemen Staf</div>
+      </a>
+    </li>
+    @endif
+
+    {{-- ================= SISTEM ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2))
+    <li class="menu-header">
+      <span class="menu-header-text">Sistem</span>
+    </li>
+    <li class="menu-item {{ request()->is('settings*') ? 'active' : '' }}">
+      <a href="{{ route('settings.sync.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-cog-sync-outline"></i>
+        <div>Sinkronisasi Sistem</div>
+      </a>
+    </li>
+    @endif
+
   </ul>
 
 </aside>

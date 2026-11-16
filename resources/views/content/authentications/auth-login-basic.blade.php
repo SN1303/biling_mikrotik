@@ -5,16 +5,21 @@ $customizerHidden = 'customizer-hide';
 
 @extends('layouts/layoutMaster')
 
-@section('title', 'Login Basic - Pages')
+@section('title', 'Login - MRYES Billing')
 
 @section('vendor-style')
-<!-- Vendor -->
 <link rel="stylesheet" href="{{asset('assets/vendor/libs/@form-validation/umd/styles/index.min.css')}}" />
 @endsection
 
 @section('page-style')
-<!-- Page -->
 <link rel="stylesheet" href="{{asset('assets/vendor/css/pages/page-auth.css')}}">
+<style>
+  .auth-card-modern {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+  }
+</style>
 @endsection
 
 @section('vendor-script')
@@ -30,90 +35,81 @@ $customizerHidden = 'customizer-hide';
 @section('content')
 <div class="position-relative">
   <div class="authentication-wrapper authentication-basic container-p-y">
-    <div class="authentication-inner py-4">
+    <div class="authentication-inner py-4" style="max-width: 440px;">
 
-      <!-- Login -->
-      <div class="card p-2">
+      <!-- Login Card -->
+      <div class="card auth-card-modern p-2 p-sm-3">
         <!-- Logo -->
-        <div class="app-brand justify-content-center mt-5">
-          <a href="{{url('/')}}" class="app-brand-link gap-2">
-            <span
-              class="app-brand-logo demo">@include('_partials.macros',["width"=>25,"withbg"=>'var(--bs-primary)'])</span>
-            <span class="app-brand-text demo text-heading fw-bold">{{config('variables.templateName')}}</span>
+        <div class="app-brand justify-content-center mt-3 mb-2 border-0 bg-transparent">
+          <a href="{{url('/')}}" class="app-brand-link gap-2 d-flex align-items-center text-decoration-none">
+            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);">
+              <i class="mdi mdi-access-point-network text-white" style="font-size: 24px;"></i>
+            </div>
+            <div class="text-start">
+              <span class="app-brand-text fw-bold text-dark d-block" style="font-size: 1.25rem; letter-spacing: -0.02em;">MRYES NET</span>
+              <small class="text-muted fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;">BILLING & MANAGEMENT</small>
+            </div>
           </a>
         </div>
         <!-- /Logo -->
 
-        <div class="card-body mt-2">
-          <h4 class="mb-2">Welcome to {{config('variables.templateName')}}! 👋</h4>
-          <p class="mb-4">Please sign-in to your account and start the adventure</p>
+        <div class="card-body pt-2">
+          <h4 class="mb-1 text-dark fw-bold text-center" style="letter-spacing: -0.02em;">Masuk ke Sistem</h4>
+          <p class="mb-4 text-muted text-center small">Silakan masukkan email atau username staf untuk mengakses dashboard.</p>
 
-          <form id="formAuthentication" class="mb-3" action="{{ route('auth.login')}}" method="POST">
+          @if (session('error'))
+          <div class="alert alert-danger d-flex align-items-center p-2 mb-3" role="alert" style="border-radius: 10px; font-size: 0.85rem;">
+            <i class="mdi mdi-alert-circle-outline me-2 fs-5"></i>
+            <div>{{ session('error') }}</div>
+          </div>
+          @endif
+
+          <form id="formAuthentication" class="mb-3" action="{{ route('auth.login') }}" method="POST">
             @csrf
             <div class="form-floating form-floating-outline mb-3">
-              <input type="text" class="form-control" id="email" name="email" placeholder="Enter your email or username"
-                autofocus>
-              <label for="email">Email or Username</label>
-              @error('email') <div>{{ $message }}</div> @enderror
+              <input type="text" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}" placeholder="Email atau username" required autofocus>
+              <label for="email">Email atau Username</label>
+              @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
+
             <div class="mb-3">
               <div class="form-password-toggle">
                 <div class="input-group input-group-merge">
                   <div class="form-floating form-floating-outline">
-                    <input type="password" id="password" class="form-control" name="password"
-                      placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
-                      aria-describedby="password" />
+                    <input type="password" id="password" class="form-control @error('password') is-invalid @enderror" name="password" placeholder="Password akun" required aria-describedby="password" />
                     <label for="password">Password</label>
-                    @error('password') <div>{{ $message }}</div> @enderror
+                    @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
                   </div>
                   <span class="input-group-text cursor-pointer"><i class="mdi mdi-eye-off-outline"></i></span>
                 </div>
               </div>
             </div>
-            <div class="mb-3 d-flex justify-content-between">
+
+            <div class="mb-3 d-flex justify-content-between align-items-center">
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="remember-me">
-                <label class="form-check-label" for="remember-me">
-                  Remember Me
+                <input class="form-check-input" type="checkbox" id="remember-me" name="remember">
+                <label class="form-check-label small" for="remember-me">
+                  Ingat saya
                 </label>
               </div>
-
             </div>
+
             <div class="mb-3">
-              <button class="btn btn-primary d-grid w-100" type="submit">Sign in</button>
+              <button class="btn btn-primary d-grid w-100 py-2 fs-6 fw-bold" type="submit">
+                <i class="mdi mdi-login me-1"></i> Masuk Sekarang
+              </button>
             </div>
           </form>
 
-
-
-          <div class="divider my-4">
-            <div class="divider-text">or</div>
-          </div>
-
-          <div class="d-flex justify-content-center gap-2">
-            <a href="javascript:;" class="btn btn-icon btn-lg rounded-pill btn-text-facebook">
-              <i class="tf-icons mdi mdi-24px mdi-facebook"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon btn-lg rounded-pill btn-text-twitter">
-              <i class="tf-icons mdi mdi-24px mdi-twitter"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon btn-lg rounded-pill btn-text-github">
-              <i class="tf-icons mdi mdi-24px mdi-github"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon btn-lg rounded-pill btn-text-google-plus">
-              <i class="tf-icons mdi mdi-24px mdi-google"></i>
-            </a>
+          <div class="text-center pt-2 border-top">
+            <small class="text-muted" style="font-size: 0.75rem;">
+              <i class="mdi mdi-shield-lock-outline me-1"></i>Akses khusus operator & staf internal MRYES NET
+            </small>
           </div>
         </div>
       </div>
-      <!-- /Login -->
-      <img alt="mask" src="{{asset('assets/img/illustrations/auth-basic-login-mask-'.$configData['style'].'.png') }}"
-        class="authentication-image d-none d-lg-block"
-        data-app-light-img="illustrations/auth-basic-login-mask-light.png"
-        data-app-dark-img="illustrations/auth-basic-login-mask-dark.png" />
+      <!-- /Login Card -->
+
     </div>
   </div>
 </div>

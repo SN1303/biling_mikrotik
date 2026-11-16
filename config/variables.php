@@ -1,15 +1,15 @@
 <?php
 // Variables
 return [
-  "creatorName" => "Lamtim Net",
+  "creatorName" => "MRYES NET",
   "creatorUrl" => "#",
-  "templateName" => "Lamtim Billing",
-  "templateSuffix" => "Lamtim Billing - Sistem Manajemen ISP",
-  "templateVersion" => "1.3.0",
+  "templateName" => "MRYES BILLING",
+  "templateSuffix" => "MRYES NET - ISP Billing & Management",
+  "templateVersion" => "2.0.0",
   "templateFree" => false,
-  "templateDescription" => "Materialize – is the most developer friendly & highly customizable Admin Dashboard Template.",
-  "templateKeyword" => "dashboard, material, material design, bootstrap 5 dashboard, bootstrap 5 design, bootstrap 5",
-  "licenseUrl" => "https://themeforest.net/licenses/standard",
+  "templateDescription" => "Sistem Billing MikroTik & Manajemen Jaringan RT/RW Net Terpadu",
+  "templateKeyword" => "isp billing, mikrotik, pppoe, olt, odc, odp, rtrwnet",
+  "licenseUrl" => "#",
   "livePreview" => "https://pixinvent.com/materialize-bootstrap-laravel-admin-template/",
   "productPage" => "https://1.envato.market/materialize_admin",
   "support" => "https://pixinvent.ticksy.com/",

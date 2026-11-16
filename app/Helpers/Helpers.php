@@ -21,32 +21,23 @@ class Helpers
 
     // default data array
     $DefaultData = [
-      'myLayout' => 'horizontal', #horizontal #vertical
+      'myLayout' => 'vertical', #horizontal #vertical
       'myTheme' => 'theme-default',
       'myStyle' => 'light',
-      'myRTLSupport' => true,
-      'myRTLMode' => true,
-      'hasCustomizer' => true,
-      'showDropdownOnHover' => true,
-      'displayCustomizer' => true,
-      'contentLayout' => 'compact',
+      'myRTLSupport' => false,
+      'myRTLMode' => false,
+      'hasCustomizer' => false,
+      'showDropdownOnHover' => false,
+      'displayCustomizer' => false,
+      'contentLayout' => 'wide',
       'headerType' => 'fixed',
-      'navbarType' => 'fixed',
+      'navbarType' => 'sticky',
       'menuFixed' => true,
       'menuCollapsed' => false,
       'footerFixed' => false,
       'menuFlipped' => false,
       // 'menuOffcanvas' => false,
-      'customizerControls' => [
-        'rtl',
-        'style',
-        'headerType',
-        'contentLayout',
-        'layoutCollapsed',
-        'showDropdownOnHover',
-        'layoutNavbarOptions',
-        'themes',
-      ],
+      'customizerControls' => [],
       //   'defaultLanguage'=>'en',
     ];
 
@@ -55,8 +46,7 @@ class Helpers
 
     // All options available in the template
     $allOptions = [
-      // 'myLayout' => ['horizontal', 'vertical', 'blank', 'front'],
-      'myLayout' => ['horizontal', 'blank', 'front'],
+      'myLayout' => ['horizontal', 'vertical', 'blank', 'front'],
       'menuCollapsed' => [true, false],
       'hasCustomizer' => [true, false],
       'showDropdownOnHover' => [true, false],
