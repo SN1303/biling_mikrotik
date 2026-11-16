@@ -31,7 +31,7 @@ class Helpers
       'displayCustomizer' => false,
       'contentLayout' => 'wide',
       'headerType' => 'fixed',
-      'navbarType' => 'sticky',
+      'navbarType' => 'fixed',
       'menuFixed' => true,
       'menuCollapsed' => false,
       'footerFixed' => false,

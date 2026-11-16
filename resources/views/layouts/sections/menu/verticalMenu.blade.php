@@ -1,47 +1,26 @@
 @php
 $configData = Helper::appClasses();
 $currentUser = auth()->user();
-$roleBadgeClass = 'badge-role-2';
-if ($currentUser) {
-    if ($currentUser->idRole == 1) $roleBadgeClass = 'badge-role-1';
-    elseif ($currentUser->idRole == 2) $roleBadgeClass = 'badge-role-2';
-    elseif ($currentUser->idRole == 3) $roleBadgeClass = 'badge-role-3';
-    elseif ($currentUser->idRole == 4) $roleBadgeClass = 'badge-role-4';
-    elseif ($currentUser->idRole == 6) $roleBadgeClass = 'badge-role-6';
-}
 @endphp
 
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
 
-  <!-- Brand header -->
-  <div class="app-brand demo d-flex align-items-center justify-content-between">
-    <a href="{{ url('/') }}" class="app-brand-link gap-2 d-flex align-items-center text-decoration-none">
-      <div class="app-brand-logo demo d-flex align-items-center justify-content-center p-1 rounded-3" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);">
-        <i class="mdi mdi-access-point-network text-white" style="font-size: 20px;"></i>
-      </div>
-      <div class="d-flex flex-column">
-        <span class="app-brand-text demo menu-text fw-bold text-white" style="letter-spacing: -0.02em;">MRYES NET</span>
-        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">BILLING & NOC</span>
-      </div>
-    </a>
-
-    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block">
-      <i class="mdi mdi-chevron-left align-middle text-muted" style="font-size: 22px;"></i>
-    </a>
-  </div>
-
-  @if($currentUser)
-  <!-- Sidebar User Profile Card -->
-  <div class="sidebar-user-card">
-    <div class="sidebar-user-avatar">
-      {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
-    </div>
-    <div class="sidebar-user-meta flex-grow-1">
-      <div class="sidebar-user-name" title="{{ $currentUser->name }}">{{ $currentUser->name }}</div>
-      <span class="badge {{ $roleBadgeClass }}" style="font-size: 0.68rem; padding: 0.2rem 0.5rem;">
-        {{ $currentUser->role_name ?? 'User' }}
+  <!-- ! Hide app brand if navbar-full -->
+  @if(!isset($navbarFull))
+  <div class="app-brand demo">
+    <a href="{{url('/')}}" class="app-brand-link">
+      <span class="app-brand-logo demo">
+        <i class="mdi mdi-access-point-network fs-3 text-primary"></i>
       </span>
-    </div>
+      <span class="app-brand-text demo menu-text fw-bold ms-2">MRYES NET</span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.4854 4.88844C11.0081 4.41121 10.2344 4.41121 9.75715 4.88844L4.51028 10.1353C4.03297 10.6126 4.03297 11.3865 4.51028 11.8638L9.75715 17.1107C10.2344 17.5879 11.0081 17.5879 11.4854 17.1107C11.9626 16.6334 11.9626 15.8597 11.4854 15.3824L7.96672 11.8638C7.48942 11.3865 7.48942 10.6126 7.96672 10.1353L11.4854 6.61667C11.9626 6.13943 11.9626 5.36568 11.4854 4.88844Z" fill="currentColor" fill-opacity="0.6" />
+        <path d="M15.8683 4.88844L10.6214 10.1353C10.1441 10.6126 10.1441 11.3865 10.6214 11.8638L15.8683 17.1107C16.3455 17.5879 17.1192 17.5879 17.5965 17.1107C18.0737 16.6334 18.0737 15.8597 17.5965 15.3824L14.0778 11.8638C13.6005 11.3865 13.6005 10.6126 14.0778 10.1353L17.5965 6.61667C18.0737 6.13943 18.0737 5.36568 17.5965 4.88844C17.1192 4.41121 16.3455 4.41121 15.8683 4.88844Z" fill="currentColor" fill-opacity="0.38" />
+      </svg>
+    </a>
   </div>
   @endif
 
@@ -50,7 +29,7 @@ if ($currentUser) {
   <ul class="menu-inner py-1">
 
     {{-- ================= UTAMA ================= --}}
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Utama</span>
     </li>
     <li class="menu-item {{ request()->is('/') ? 'active' : '' }}">
@@ -62,7 +41,7 @@ if ($currentUser) {
 
     {{-- ================= JARINGAN & SERVER ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2, 4))
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Jaringan & Server</span>
     </li>
 
@@ -127,17 +106,14 @@ if ($currentUser) {
     <li class="menu-item {{ request()->is('google-map*') ? 'active' : '' }}">
       <a href="{{ route('google-map.standalone') }}" class="menu-link" target="_blank">
         <i class="menu-icon tf-icons mdi mdi-map-marker-radius-outline"></i>
-        <div class="d-flex align-items-center justify-content-between w-100">
-          <span>Peta Jaringan</span>
-          <i class="mdi mdi-open-in-new ms-auto" style="font-size: 14px; opacity: 0.7;"></i>
-        </div>
+        <div>Peta Jaringan</div>
       </a>
     </li>
     @endif
 
     {{-- ================= PELANGGAN ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6))
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Pelanggan</span>
     </li>
     <li class="menu-item {{ request()->is('user') || (request()->is('user/*') && !request()->is('user/create') && !request()->is('user/list/mapping') && !request()->is('user/show/map')) ? 'active' : '' }}">
@@ -177,7 +153,7 @@ if ($currentUser) {
 
     {{-- ================= LAYANAN & INTERNET ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2))
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Layanan & Internet</span>
     </li>
     <li class="menu-item {{ request()->is('kategori*') ? 'active' : '' }}">
@@ -208,7 +184,7 @@ if ($currentUser) {
 
     {{-- ================= TAGIHAN & KASIR ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Tagihan & Kasir</span>
     </li>
     <li class="menu-item {{ request()->is('tagihan') || (request()->is('tagihan/*') && !request()->is('tagihan/lunas') && !request()->is('tagihan/rekap') && !request()->is('tagihan/generate')) ? 'active' : '' }}">
@@ -242,7 +218,7 @@ if ($currentUser) {
 
     {{-- ================= MANAJEMEN STAF (SUPER ADMIN ONLY) ================= --}}
     @if($currentUser && $currentUser->isSuperAdmin())
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Keamanan & Tim</span>
     </li>
     <li class="menu-item {{ request()->is('staff*') ? 'active' : '' }}">
@@ -255,7 +231,7 @@ if ($currentUser) {
 
     {{-- ================= SISTEM ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2))
-    <li class="menu-header">
+    <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Sistem</span>
     </li>
     <li class="menu-item {{ request()->is('settings*') ? 'active' : '' }}">

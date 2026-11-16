@@ -1,6 +1,17 @@
 @php
 $menuCollapsed = ($configData['menuCollapsed'] === 'layout-menu-collapsed') ? json_encode(true) : false;
 @endphp
+<script>
+  // Bersihkan cache templateCustomizer di browser user secara otomatis
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('templateCustomizer') || key.startsWith('sneat') || key.startsWith('materialize'))) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (e) {}
+</script>
 <!-- laravel style -->
 <script src="{{ asset('assets/vendor/js/helpers.js') }}"></script>
 <!-- beautify ignore:start -->

@@ -33,12 +33,9 @@
 
   /* Sidebar Dark Obsidian Palette */
   --mryes-sidebar-bg: #0b1120;
-  --mryes-sidebar-subbg: #070b14;
-  --mryes-sidebar-border: rgba(255, 255, 255, 0.07);
+  --mryes-sidebar-border: rgba(255, 255, 255, 0.08);
   --mryes-sidebar-text: #94a3b8;
   --mryes-sidebar-text-active: #ffffff;
-  --mryes-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --mryes-sidebar-active-gradient: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
 }
 
 /* ==========================================================================
@@ -68,91 +65,39 @@ body {
 }
 
 /* ==========================================================================
-   SIDEBAR (DARK OBSIDIAN THEME)
+   SIDEBAR (DARK OBSIDIAN THEME - PRESERVING SNEAT NATIVE GEOMETRY)
    ========================================================================== */
-#layout-menu.bg-menu-theme,
-.layout-menu.menu-vertical {
+.bg-menu-theme {
   background-color: var(--mryes-sidebar-bg) !important;
+  color: var(--mryes-sidebar-text) !important;
   border-right: 1px solid var(--mryes-sidebar-border) !important;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Brand Area */
-.app-brand {
-  height: 68px !important;
-  padding: 0 1.5rem !important;
+/* Brand area */
+.bg-menu-theme .app-brand {
   border-bottom: 1px solid var(--mryes-sidebar-border) !important;
-  background-color: var(--mryes-sidebar-bg) !important;
 }
 
-.app-brand-text {
-  font-size: 1.15rem !important;
+.bg-menu-theme .app-brand-text {
+  color: #ffffff !important;
   font-weight: 800 !important;
   letter-spacing: -0.02em !important;
-  color: #ffffff !important;
-  text-transform: uppercase;
+  font-size: 1.15rem !important;
 }
 
-.app-brand-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.bg-menu-theme .layout-menu-toggle {
+  color: #64748b !important;
 }
-
-/* Sidebar User Info Card */
-.sidebar-user-card {
-  padding: 0.85rem 1.15rem;
-  margin: 0.85rem 0.85rem 0.5rem 0.85rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  transition: all 0.2s ease;
+.bg-menu-theme .layout-menu-toggle svg {
+  fill: #64748b !important;
 }
-
-.sidebar-user-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.sidebar-user-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #ffffff;
-  background: linear-gradient(135deg, #3b82f6, #0ea5e9);
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
-  flex-shrink: 0;
-}
-
-.sidebar-user-meta {
-  overflow: hidden;
-  line-height: 1.25;
-}
-
-.sidebar-user-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  margin-bottom: 2px;
+.bg-menu-theme .layout-menu-toggle:hover svg {
+  fill: #ffffff !important;
 }
 
 /* Section Header Dividers */
-.menu-header {
-  padding: 1.25rem 1.25rem 0.4rem 1.25rem !important;
-  margin-top: 0.25rem !important;
-}
-
-.menu-header-text {
+.bg-menu-theme .menu-header-text {
   font-size: 0.65rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
@@ -160,94 +105,85 @@ body {
   color: #64748b !important;
 }
 
-/* Menu Items & Links */
-.menu-inner {
-  padding: 0.5rem 0.75rem !important;
-}
-
-.menu-item {
-  margin-bottom: 3px !important;
-}
-
-.menu-link {
+/* Menu links & icons */
+.bg-menu-theme .menu-link {
   color: var(--mryes-sidebar-text) !important;
-  font-size: 0.85rem !important;
-  font-weight: 500 !important;
-  padding: 0.65rem 0.85rem !important;
-  border-radius: 10px !important;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.menu-icon {
-  color: #64748b !important;
-  font-size: 1.2rem !important;
-  margin-right: 0.75rem !important;
   transition: all 0.18s ease !important;
 }
 
-/* Hover State */
-.menu-link:hover {
-  background-color: var(--mryes-sidebar-hover) !important;
+.bg-menu-theme .menu-icon {
+  color: #64748b !important;
+  transition: all 0.18s ease !important;
+}
+
+/* Menu Hover */
+.bg-menu-theme .menu-item:not(.active) > .menu-link:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
   color: #ffffff !important;
 }
 
-.menu-link:hover .menu-icon {
+.bg-menu-theme .menu-item:not(.active) > .menu-link:hover .menu-icon {
   color: #38bdf8 !important;
-  transform: translateX(2px);
 }
 
-/* Active State */
-.menu-item.active > .menu-link {
-  background: var(--mryes-sidebar-active-gradient) !important;
+/* Active Main Menu Item */
+.bg-menu-theme .menu-item.active > .menu-link:not(.menu-toggle) {
+  background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%) !important;
   color: #ffffff !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
 }
 
-.menu-item.active > .menu-link .menu-icon {
+.bg-menu-theme .menu-item.active > .menu-link:not(.menu-toggle) .menu-icon {
   color: #ffffff !important;
 }
 
-/* Submenu Items */
-.menu-sub {
-  background: transparent !important;
-  padding-left: 1.25rem !important;
-  position: relative !important;
+/* Open toggle menu item */
+.bg-menu-theme .menu-item.open > .menu-link.menu-toggle {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+}
+.bg-menu-theme .menu-item.open > .menu-link.menu-toggle .menu-icon {
+  color: #38bdf8 !important;
 }
 
-.menu-sub::before {
-  content: '';
-  position: absolute;
-  left: 1.6rem;
-  top: 0.25rem;
-  bottom: 0.25rem;
-  width: 1px;
-  background-color: rgba(255, 255, 255, 0.08);
+/* Chevron arrow on toggle */
+.bg-menu-theme .menu-toggle::after {
+  color: #64748b !important;
+}
+.bg-menu-theme .menu-item.open > .menu-toggle::after,
+.bg-menu-theme .menu-item.active > .menu-toggle::after {
+  color: #ffffff !important;
 }
 
-.menu-sub .menu-item {
-  margin-bottom: 2px !important;
-}
-
-.menu-sub .menu-link {
-  font-size: 0.8125rem !important;
-  padding: 0.5rem 0.75rem 0.5rem 1.25rem !important;
+/* Submenu items */
+.bg-menu-theme .menu-sub > .menu-item > .menu-link {
   color: #94a3b8 !important;
 }
 
-.menu-sub .menu-link:hover {
+.bg-menu-theme .menu-sub > .menu-item > .menu-link:hover {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
-.menu-sub .menu-item.active > .menu-link {
-  background: rgba(37, 99, 235, 0.2) !important;
+.bg-menu-theme .menu-sub > .menu-item.active > .menu-link {
+  background-color: rgba(37, 99, 235, 0.18) !important;
   color: #38bdf8 !important;
   font-weight: 600 !important;
-  box-shadow: none !important;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Submenu bullet dot */
+.bg-menu-theme .menu-sub > .menu-item > .menu-link:before {
+  background-color: #475569 !important;
+}
+.bg-menu-theme .menu-sub > .menu-item.active > .menu-link:before {
+  background-color: #38bdf8 !important;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6) !important;
+}
+
+/* Shadow fade at top of menu */
+.bg-menu-theme .menu-inner-shadow {
+  background: linear-gradient(var(--mryes-sidebar-bg) 5%, rgba(11, 17, 32, 0.75) 45%, rgba(11, 17, 32, 0.2) 80%, transparent) !important;
 }
 
 /* Custom Scrollbar for Sidebar */
@@ -268,10 +204,9 @@ body {
   background: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
-  border-bottom: 1px solid var(--mryes-border) !important;
+  border: 1px solid var(--mryes-border) !important;
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.02) !important;
-  height: 64px !important;
-  padding: 0 1.5rem !important;
+  border-radius: 12px !important;
 }
 
 .navbar-status-pill {

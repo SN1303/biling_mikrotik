@@ -15,7 +15,7 @@ return [
     'hasCustomizer' => false, // Display customizer or not
     'displayCustomizer' => false, // Display customizer UI or not
     'contentLayout' => 'wide', // options[String]: 'compact', 'wide' (compact=container-xxl, wide=container-fluid)
-    'navbarType' => 'sticky', // options[String]: 'sticky', 'static', 'hidden' (Only for vertical Layout)
+    'navbarType' => 'fixed', // options[String]: 'fixed', 'static', 'hidden' (Only for vertical Layout)
     'footerFixed' => false, // options[Boolean]: false(default), true
     'menuFixed' => true, // options[Boolean]: true(default), false
     'menuCollapsed' => false, // options[Boolean]: false(default), true

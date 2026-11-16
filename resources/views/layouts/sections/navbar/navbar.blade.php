@@ -1,46 +1,48 @@
 @php
 $containerNav = $containerNav ?? 'container-fluid';
-$navbarDetached = ($navbarDetached ?? '');
+$navbarDetached = ($navbarDetached ?? 'navbar-detached');
 $currentUser = Auth::user();
 @endphp
 
 <!-- Navbar -->
+@if(isset($navbarDetached) && $navbarDetached == 'navbar-detached')
+<nav
+  class="layout-navbar {{$containerNav}} navbar navbar-expand-xl {{$navbarDetached}} align-items-center bg-navbar-theme"
+  id="layout-navbar">
+@endif
+@if(isset($navbarDetached) && $navbarDetached == '')
 <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
-  <div class="{{ $containerNav }} d-flex align-items-center justify-content-between">
+  <div class="{{$containerNav}}">
+@endif
 
-    <!-- Left: Menu Toggle + Status Indicator -->
-    <div class="d-flex align-items-center gap-3">
-      <!-- Menu Toggle (Mobile & Desktop Collapse) -->
-      <div class="layout-menu-toggle navbar-nav align-items-xl-center me-1">
-        <a class="nav-item nav-link px-0 me-xl-2 text-secondary" href="javascript:void(0)" title="Toggle Menu">
-          <i class="mdi mdi-menu mdi-24px"></i>
-        </a>
-      </div>
-
-      <!-- Network Status Pill -->
-      <div class="navbar-status-pill d-none d-sm-inline-flex align-items-center">
-        <span class="status-dot status-dot-pulse"></span>
-        <span class="d-none d-md-inline text-muted me-1">Status Sistem:</span>
-        <span class="text-success fw-bold">ONLINE</span>
-      </div>
-
-      <!-- Quick Breadcrumb / Context Title -->
-      <div class="d-none d-lg-flex align-items-center text-muted" style="font-size: 0.85rem;">
-        <span class="mx-2" style="opacity: 0.4;">|</span>
-        <i class="mdi mdi-shield-check-outline text-primary me-1"></i>
-        <span class="fw-medium text-dark">MRYES ISP Management</span>
-      </div>
+    <!-- Menu Toggle (Mobile) -->
+    <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+      <a class="nav-item nav-link px-0 me-xl-4 text-secondary" href="javascript:void(0)">
+        <i class="mdi mdi-menu mdi-24px"></i>
+      </a>
     </div>
 
-    <!-- Right: Quick Actions & User Dropdown -->
-    <div class="navbar-nav-right d-flex align-items-center gap-2" id="navbar-collapse">
+    <div class="navbar-nav-right d-flex align-items-center justify-content-between w-100" id="navbar-collapse">
       
+      <!-- Left: Status Indicator -->
+      <div class="navbar-nav align-items-center">
+        <div class="nav-item d-flex align-items-center">
+          <div class="navbar-status-pill d-none d-sm-inline-flex align-items-center">
+            <span class="status-dot status-dot-pulse"></span>
+            <span class="d-none d-md-inline text-muted me-1">Sistem ISP:</span>
+            <span class="text-success fw-bold">ONLINE</span>
+          </div>
+          <span class="mx-2 text-muted d-none d-lg-inline" style="opacity: 0.3;">|</span>
+          <span class="d-none d-lg-inline text-muted small fw-medium">MRYES Network & Billing Control</span>
+        </div>
+      </div>
+
+      <!-- Right: Actions & User Profile -->
       <ul class="navbar-nav flex-row align-items-center ms-auto gap-2">
 
-        {{-- Quick Links for Fast Navigation --}}
         @if($currentUser && $currentUser->hasRole(1, 2, 4))
         <li class="nav-item d-none d-md-block">
-          <a href="{{ route('google-map.standalone') }}" target="_blank" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Buka Peta Jaringan">
+          <a href="{{ route('google-map.standalone') }}" target="_blank" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Buka Peta Jaringan ODP">
             <i class="mdi mdi-map-marker-radius"></i>
             <span>Peta ODP</span>
           </a>
@@ -49,7 +51,7 @@ $currentUser = Auth::user();
 
         @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
         <li class="nav-item d-none d-md-block">
-          <a href="{{ route('tagihan.index') }}" class="btn btn-sm btn-light border d-flex align-items-center gap-1 text-dark" title="Lihat Tagihan Aktif">
+          <a href="{{ route('tagihan.index') }}" class="btn btn-sm btn-light border d-flex align-items-center gap-1 text-dark" title="Lihat Tagihan">
             <i class="mdi mdi-receipt-text-outline text-primary"></i>
             <span>Tagihan</span>
           </a>
@@ -144,6 +146,9 @@ $currentUser = Auth::user();
 
       </ul>
     </div>
+
+@if(!isset($navbarDetached))
   </div>
+@endif
 </nav>
 <!-- / Navbar -->
