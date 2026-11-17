@@ -183,7 +183,7 @@ class UserController extends Controller
       $paket = $this->service->findPaket($validated['id_paket']);
       $odp = $this->service->getOdpOdcOlt($validated['id_odp']);
 
-      $odpCode = $odp->kode ?? $odp->nama ?? 'ODP';
+      $odpLabel = $odp->nama ?? $odp->kode ?? 'ODP';
       $profileName = $paket->kode ?? 'default';
 
       // Eksekusi API RouterOS MikroTik untuk menambah PPP Secret
@@ -193,7 +193,7 @@ class UserController extends Controller
         'service'  => 'pppoe',
         'profile'  => $profileName,
         'disabled' => 'false',
-        'comment'  => "Pelanggan: {$validated['nama']} - ODP: {$odpCode}",
+        'comment'  => "Pelanggan: {$validated['nama']} - ODP: {$odpLabel}",
       ];
 
       $idMikrotikUser = null;

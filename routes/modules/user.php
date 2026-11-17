@@ -16,7 +16,7 @@ Route::prefix('user')->as('user.')->controller(UserController::class)->group(fun
   Route::get('/', 'index')->name('index');
   Route::get('/create', 'create')->name('create');
   Route::get('/generate-credentials', 'generateCredentials')->name('generate-credentials');
-  Route::post('/extract-maps', 'extractMaps')->name('extract-maps');
+  Route::match(['get', 'post'], '/extract-maps', 'extractMaps')->name('extract-maps');
   Route::post('/', 'store')->name('store');
   Route::get('/{id}/foto', 'showFoto')->name('foto');
   Route::get('/{id}/edit', 'edit')->name('edit');

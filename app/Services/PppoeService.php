@@ -9,11 +9,11 @@ use Illuminate\Support\Str;
 class PppoeService
 {
     /**
-     * Generate username dan password PPPoE berdasarkan nama pelanggan dan ODP (ID atau Kode)
+     * Generate username dan password PPPoE berdasarkan nama pelanggan dan ODP (ID atau Nama ODP)
      * Aturan:
-     * - Username: <nama_slug>@<kode_odp>
+     * - Username: <nama_slug>@<nama_odp> (mengambil NAMA ODP, mempertahankan tanda strip -)
      * - Password: Sama persis dengan username (mempermudah teknisi lapangan)
-     * - Anti-duplikasi otomatis: <nama_slug>2@<kode_odp>, dst.
+     * - Anti-duplikasi otomatis: <nama_slug>2@<nama_odp>, dst.
      *
      * @param string $name
      * @param string|int|null $odpParam
@@ -28,36 +28,43 @@ class PppoeService
             $slugName = 'user';
         }
 
-        $odpCode = 'odp';
+        $odpName = 'odp';
         if (!empty($odpParam)) {
             if (is_numeric($odpParam)) {
                 $odpRecord = Lamtim_odp::find($odpParam);
                 if ($odpRecord) {
-                    $odpCode = !empty($odpRecord->kode) ? $odpRecord->kode : $odpRecord->nama;
+                    // Prioritaskan NAMA ODP (bukan kode)
+                    $odpName = !empty($odpRecord->nama) ? $odpRecord->nama : $odpRecord->kode;
                 }
             } else {
-                // Cek kemungkinan ID terenkripsi atau kode langsung
+                // Cek kemungkinan ID terenkripsi atau teks nama langsung
                 try {
                     $decrypted = decrypt($odpParam);
                     $odpRecord = Lamtim_odp::find($decrypted);
                     if ($odpRecord) {
-                        $odpCode = !empty($odpRecord->kode) ? $odpRecord->kode : $odpRecord->nama;
+                        $odpName = !empty($odpRecord->nama) ? $odpRecord->nama : $odpRecord->kode;
                     } else {
-                        $odpCode = (string) $odpParam;
+                        $odpName = (string) $odpParam;
                     }
                 } catch (\Exception $e) {
-                    $odpCode = (string) $odpParam;
+                    // Cari berdasarkan nama atau kode ODP di database
+                    $odpRecord = Lamtim_odp::where('nama', $odpParam)->orWhere('kode', $odpParam)->first();
+                    if ($odpRecord) {
+                        $odpName = !empty($odpRecord->nama) ? $odpRecord->nama : $odpRecord->kode;
+                    } else {
+                        $odpName = (string) $odpParam;
+                    }
                 }
             }
         }
 
-        // Sanitasi kode ODP: huruf kecil, hanya alfanumerik atau strip
-        $cleanOdpCode = Str::slug($odpCode, '');
-        if (empty($cleanOdpCode)) {
-            $cleanOdpCode = 'odp';
+        // Sanitasi NAMA ODP: huruf kecil, pertahankan pemisah strip (-)
+        $cleanOdpName = Str::slug($odpName, '-');
+        if (empty($cleanOdpName)) {
+            $cleanOdpName = 'odp';
         }
 
-        $baseUsername = "{$slugName}@{$cleanOdpCode}";
+        $baseUsername = "{$slugName}@{$cleanOdpName}";
         $candidate = $baseUsername;
         $counter = 2;
 
@@ -72,7 +79,7 @@ class PppoeService
                 break;
             }
 
-            $candidate = "{$slugName}{$counter}@{$cleanOdpCode}";
+            $candidate = "{$slugName}{$counter}@{$cleanOdpName}";
             $counter++;
         }
 

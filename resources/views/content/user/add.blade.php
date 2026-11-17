@@ -110,64 +110,112 @@
     function extractCoordinatesFromUrl(url) {
       if (!url || !url.trim()) return;
 
-      const trimmedUrl = url.trim();
+      let rawUrl = url.trim();
 
-      // Cek format langsung angka -5.xxxx, 105.xxxx
-      const directRegex = /^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/;
-      const directMatch = trimmedUrl.match(directRegex);
-      if (directMatch) {
-        $('#latitude').val(directMatch[1]);
-        $('#longitude').val(directMatch[2]);
-        updateMarker(directMatch[1], directMatch[2]);
-        toastr.success('Koordinat berhasil dideteksi langsung!');
-        return;
+      // Ekstrak URL jika ada teks pengantar (misal dari pesan WA: "Lokasi: https://...")
+      const urlRegex = /(https?:\/\/[^\s]+)/;
+      const urlMatch = rawUrl.match(urlRegex);
+      if (urlMatch) {
+        rawUrl = urlMatch[1];
       }
 
-      // Cek pola URL @lat,lng
-      const atRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-      const atMatch = trimmedUrl.match(atRegex);
+      // Decode URL entities dan %2C
+      let decodedUrl = rawUrl;
+      try {
+        decodedUrl = decodeURIComponent(rawUrl);
+      } catch (e) {
+        decodedUrl = rawUrl;
+      }
+
+      // Pola 1: Cek format langsung angka -5.xxxx, 105.xxxx atau -5.xxxx,+105.xxxx
+      const directRegex = /(-?\d{1,2}\.\d+)\s*,\s*\+?(-?\d{1,3}\.\d+)/;
+      const directMatch = decodedUrl.match(directRegex);
+      if (directMatch) {
+        const lat = parseFloat(directMatch[1]);
+        const lng = parseFloat(directMatch[2]);
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          $('#latitude').val(lat.toFixed(6));
+          $('#longitude').val(lng.toFixed(6));
+          updateMarker(lat, lng);
+          toastr.success('Koordinat berhasil dideteksi langsung!');
+          return;
+        }
+      }
+
+      // Pola 2: Cek pola URL @lat,lng
+      const atRegex = /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/;
+      const atMatch = decodedUrl.match(atRegex);
       if (atMatch) {
-        $('#latitude').val(atMatch[1]);
-        $('#longitude').val(atMatch[2]);
-        updateMarker(atMatch[1], atMatch[2]);
+        const lat = parseFloat(atMatch[1]);
+        const lng = parseFloat(atMatch[2]);
+        $('#latitude').val(lat.toFixed(6));
+        $('#longitude').val(lng.toFixed(6));
+        updateMarker(lat, lng);
         toastr.success('Koordinat berhasil diekstrak dari link Google Maps!');
         return;
       }
 
-      // Cek pola ?q=lat,lng atau &ll=lat,lng
-      const qRegex = /[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/;
-      const qMatch = trimmedUrl.match(qRegex);
+      // Pola 3: Cek pola /search/lat,+lng atau /place/lat,+lng
+      const searchRegex = /(?:search|place)\/(-?\d{1,2}\.\d+)(?:,|\+|\s)+\+?(-?\d{1,3}\.\d+)/;
+      const searchMatch = decodedUrl.match(searchRegex);
+      if (searchMatch) {
+        const lat = parseFloat(searchMatch[1]);
+        const lng = parseFloat(searchMatch[2]);
+        $('#latitude').val(lat.toFixed(6));
+        $('#longitude').val(lng.toFixed(6));
+        updateMarker(lat, lng);
+        toastr.success('Koordinat berhasil diekstrak dari link pencarian!');
+        return;
+      }
+
+      // Pola 4: Cek pola ?q=lat,lng atau &ll=lat,lng atau q=loc:lat,lng
+      const qRegex = /(?:[?&](?:q|ll|destination)=(?:loc:)?)(-?\d{1,2}\.\d+)(?:,|\+|\s)+(-?\d{1,3}\.\d+)/;
+      const qMatch = decodedUrl.match(qRegex);
       if (qMatch) {
-        $('#latitude').val(qMatch[1]);
-        $('#longitude').val(qMatch[2]);
-        updateMarker(qMatch[1], qMatch[2]);
+        const lat = parseFloat(qMatch[1]);
+        const lng = parseFloat(qMatch[2]);
+        $('#latitude').val(lat.toFixed(6));
+        $('#longitude').val(lng.toFixed(6));
+        updateMarker(lat, lng);
         toastr.success('Koordinat berhasil diekstrak dari query link!');
         return;
       }
 
-      // Jika kemungkinan shortlink (maps.app.goo.gl), kirim ke server untuk unshorten & extract
-      $('#btn-extract-maps').html('<span class="spinner-border spinner-border-sm"></span>');
+      // Pola 5: Cek pola internal data=!3dlat!4dlng
+      const dataRegex = /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/;
+      const dataMatch = decodedUrl.match(dataRegex);
+      if (dataMatch) {
+        const lat = parseFloat(dataMatch[1]);
+        const lng = parseFloat(dataMatch[2]);
+        $('#latitude').val(lat.toFixed(6));
+        $('#longitude').val(lng.toFixed(6));
+        updateMarker(lat, lng);
+        toastr.success('Koordinat berhasil diekstrak dari link Google Maps!');
+        return;
+      }
+
+      // Jika belum terdeteksi secara instan (misal shortlink maps.app.goo.gl), kirim ke endpoint server
+      $('#btn-extract-maps').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Mengurai...');
       $.ajax({
         url: "{{ route('user.extract-maps') }}",
-        method: "POST",
+        method: "GET",
         data: {
-          url: trimmedUrl,
-          _token: "{{ csrf_token() }}"
+          url: rawUrl
         },
         success: function(res) {
-          $('#btn-extract-maps').html('<i class="mdi mdi-crosshairs-gps me-1"></i> Ekstrak');
+          $('#btn-extract-maps').prop('disabled', false).html('<i class="mdi mdi-crosshairs-gps me-1"></i> Ekstrak');
           if (res.success && res.latitude && res.longitude) {
-            $('#latitude').val(res.latitude);
-            $('#longitude').val(res.longitude);
+            $('#latitude').val(parseFloat(res.latitude).toFixed(6));
+            $('#longitude').val(parseFloat(res.longitude).toFixed(6));
             updateMarker(res.latitude, res.longitude);
-            toastr.success('Koordinat shortlink berhasil diurai!');
+            toastr.success('Koordinat Google Maps berhasil diurai!');
           } else {
-            toastr.warning('Tidak dapat mengekstrak koordinat dari link tersebut. Silakan klik langsung di peta.');
+            toastr.warning('Tidak dapat mengekstrak koordinat dari link tersebut. Silakan klik langsung titik lokasi pada peta.');
           }
         },
         error: function() {
-          $('#btn-extract-maps').html('<i class="mdi mdi-crosshairs-gps me-1"></i> Ekstrak');
-          toastr.error('Gagal menghubungi server untuk parse URL.');
+          $('#btn-extract-maps').prop('disabled', false).html('<i class="mdi mdi-crosshairs-gps me-1"></i> Ekstrak');
+          toastr.error('Gagal menghubungi server untuk parsing URL.');
         }
       });
     }
@@ -176,10 +224,16 @@
       extractCoordinatesFromUrl($('#google_map_url').val());
     });
 
-    $('#google_map_url').on('paste change', function() {
+    let mapsInputTimer = null;
+    $('#google_map_url').on('paste change blur', function() {
       setTimeout(function() {
         extractCoordinatesFromUrl($('#google_map_url').val());
       }, 150);
+    }).on('input', function() {
+      clearTimeout(mapsInputTimer);
+      mapsInputTimer = setTimeout(function() {
+        extractCoordinatesFromUrl($('#google_map_url').val());
+      }, 800);
     });
 
     // 4. Logika Otomatisasi Generate Kredensial PPPoE
@@ -549,7 +603,7 @@
                   <select name="id_odp" id="odp-select" class="form-select select2-init" required>
                     <option value="" disabled selected>Pilih Kotak ODP (Tiang Distribusi)</option>
                     @foreach (Helper::getOdp() as $val)
-                    <option value="{{ $val->id }}" data-kode="{{ $val->kode }}" data-port="{{ $val->port }}" data-sisa="{{ $val->portSisa }}">
+                    <option value="{{ $val->id }}" data-nama="{{ $val->nama }}" data-kode="{{ $val->kode }}" data-port="{{ $val->port }}" data-sisa="{{ $val->portSisa }}">
                       {{ $val->nama }} [{{ $val->kode ?? 'ODP' }}] — Sisa: {{ $val->portSisa }} port
                     </option>
                     @endforeach
@@ -650,7 +704,7 @@
             <div class="alert alert-primary d-flex align-items-center p-2 mb-3" role="alert">
               <i class="mdi mdi-shield-check-outline fs-4 me-2"></i>
               <div class="small">
-                Format: <code>nama@odp</code>. Password disamakan persis dengan username untuk memudahkan teknisi di lapangan.
+                Format: <code>nama@nama_odp</code> (contoh: <code>budi@tji-1</code>). Password disamakan persis dengan username untuk memudahkan teknisi di lapangan.
               </div>
             </div>
 
