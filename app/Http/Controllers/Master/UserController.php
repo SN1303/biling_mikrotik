@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Master;
 use App\Exports\UserExport;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\GoogleMapsService;
 use App\Services\MikrotikMulti;
-
+use App\Services\PppoeService;
 use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -59,45 +60,111 @@ class UserController extends Controller
   }
 
   /**
-   * Store a newly created resource in storage.
+   * AJAX endpoint untuk generate username & password PPPoE secara real-time.
+   */
+  public function generateCredentials(Request $request): JsonResponse
+  {
+    $name = $request->query('name', '');
+    $odp = $request->query('odp', '');
+
+    $credentials = PppoeService::generateCredentials($name, $odp);
+
+    return response()->json($credentials);
+  }
+
+  /**
+   * AJAX endpoint untuk ekstrak koordinat dari URL Google Maps.
+   */
+  public function extractMaps(Request $request): JsonResponse
+  {
+    $url = $request->input('url', '');
+    $coords = GoogleMapsService::extractCoordinates($url);
+
+    return response()->json([
+      'success'   => $coords['lat'] !== null,
+      'latitude'  => $coords['lat'],
+      'longitude' => $coords['lng'],
+    ]);
+  }
+
+  /**
+   * Store a newly created resource in storage (Unified All-in-One Pelanggan + PPPoE).
    */
   public function store(Request $request)
   {
     $this->denyBendahara();
-    $validated = $request->validate([
-      'nama' => ['required', 'string', 'max:100'],
-      'wa' => ['required', 'string', 'max:100'],
-      'password' => ['nullable', 'string', 'min:8'], // jika dikosongkan, default di-handle di controller
-      'area' => ['required', 'string'],
-      'status_isolir' => ['required', 'in:0,1'],
-      'tgl_daftar' => ['required', 'date'],
-      //'jatuh_tempo' => ['required', 'date', 'after_or_equal:tgl_daftar'],
-      'jatuh_tempo' => ['required', 'date'],
-      'status_ppn' => ['required', 'in:0,1'],
-      'status_tagihan' => ['required', 'in:0,1'],
-      'jenis_bayar' => ['required', 'in:1,2'],
-      'google_map_url' => ['nullable', 'url'],
-      'jenis_kelamin' => ['required', 'in:L,P'],
-      //'telegram' => ['nullable', 'string', 'max:100'],
+
+    // Deteksi apakah form menggunakan mode unified (dilengkapi kredensial PPPoE dan Mikrotik)
+    $isUnified = $request->filled('pppoe_username') || $request->filled('id_mikrotik');
+
+    $rules = [
+      'nama'            => ['required', 'string', 'max:100'],
+      'wa'              => ['required', 'string', 'max:100'],
+      'password'        => ['nullable', 'string', 'min:6'],
+      'area'            => ['required', 'string'],
+      'status_isolir'   => ['required', 'in:0,1'],
+      'tgl_daftar'      => ['required', 'date'],
+      'jatuh_tempo'     => ['required', 'date'],
+      'status_ppn'      => ['required', 'in:0,1'],
+      'status_tagihan'  => ['required', 'in:0,1'],
+      'jenis_bayar'     => ['required', 'in:1,2'],
+      'google_map_url'  => ['nullable', 'string'],
+      'jenis_kelamin'   => ['required', 'in:L,P'],
       'jenis_identitas' => ['required', 'in:KTP,KK,SIM,PASPOR,KARTU_PELAJAR,KARTU_MAHASISWA,NPWP,BPJS,LAINNYA'],
-      'no_identitas' => ['required', 'string', 'max:100'],
-      'alamat' => ['nullable', 'string'],
-      'keterangan' => ['nullable', 'string'],
-    ]);
-
-    if (empty($validated['password'])) {
-      $validated['password'] = '123456789abc';
-    }
-    $validated['password'] = bcrypt($validated['password']);
-
-    $arataArray = [
-      'name'          => $validated['nama'],
-      'wa'            => $validated['wa'],
-      'password'      => $validated['password'],
-      'idRole'        => 5,
+      'no_identitas'    => ['required', 'string', 'max:100'],
+      'alamat'          => ['nullable', 'string'],
+      'keterangan'      => ['nullable', 'string'],
     ];
-    $arataArrayDetail = [
-      'idArea'        => decrypt($validated['area']),
+
+    if ($isUnified) {
+      $rules['id_mikrotik']    = ['required', 'not_in:00,0'];
+      $rules['id_odp']         = ['required', 'not_in:00,0'];
+      $rules['port_odp']       = ['nullable', 'integer', 'min:1', 'max:64'];
+      $rules['id_kategori']    = ['required', 'not_in:00,0'];
+      $rules['id_paket']       = ['required', 'not_in:00,0'];
+      $rules['pppoe_username'] = ['required', 'string', 'max:100'];
+      $rules['pppoe_password'] = ['required', 'string', 'max:100'];
+      $rules['ont_sn']         = ['nullable', 'string', 'max:100'];
+      $rules['latitude']       = ['nullable', 'numeric'];
+      $rules['longitude']      = ['nullable', 'numeric'];
+    }
+
+    $validated = $request->validate($rules);
+
+    // Default password login dashboard pelanggan jika tidak diisi
+    $plainPassword = $validated['password'] ?? '123456789abc';
+    if (empty($plainPassword)) {
+      $plainPassword = '123456789abc';
+    }
+
+    // Resolusi Area
+    $idArea = null;
+    try {
+      $idArea = decrypt($validated['area']);
+    } catch (\Throwable $e) {
+      $idArea = $validated['area'];
+    }
+
+    // Ekstraksi otomatis koordinat jika belum diisi namun Google Map URL tersedia
+    $latitude = $validated['latitude'] ?? null;
+    $longitude = $validated['longitude'] ?? null;
+    if ((empty($latitude) || empty($longitude)) && !empty($validated['google_map_url'])) {
+      $coords = GoogleMapsService::extractCoordinates($validated['google_map_url']);
+      if ($coords['lat'] !== null) {
+        $latitude = $coords['lat'];
+        $longitude = $coords['lng'];
+      }
+    }
+
+    $userData = [
+      'name'     => $validated['nama'],
+      'wa'       => $validated['wa'],
+      'password' => bcrypt($plainPassword),
+      'idRole'   => 5,
+    ];
+
+    $userDetailData = [
+      'idArea'        => $idArea,
       'tglDafatar'    => $validated['tgl_daftar'],
       'tglJatuhTempo' => $validated['jatuh_tempo'],
       'statusPpn'     => $validated['status_ppn'],
@@ -105,16 +172,76 @@ class UserController extends Controller
       'jenisBayar'    => $validated['jenis_bayar'],
       'googleMap'     => $validated['google_map_url'],
       'js'            => $validated['jenis_kelamin'],
-      //'telegram'      => $validated['telegram'],
-      // 'fotoProfile'  => $validated['area'],
-      // 'email'  => $validated['area'],
-      // 'qrcode'  => $validated['area'],
       'identitas'     => $validated['jenis_identitas'],
       'noIdentitas'   => $validated['no_identitas'],
       'alamat'        => $validated['alamat'],
       'keterangan'    => $validated['keterangan'],
     ];
-    return $this->service->storeUserAndUserDetail($arataArray, $arataArrayDetail);
+
+    if ($isUnified) {
+      $idMikrotik = $validated['id_mikrotik'];
+      $paket = $this->service->findPaket($validated['id_paket']);
+      $odp = $this->service->getOdpOdcOlt($validated['id_odp']);
+
+      $odpCode = $odp->kode ?? $odp->nama ?? 'ODP';
+      $profileName = $paket->kode ?? 'default';
+
+      // Eksekusi API RouterOS MikroTik untuk menambah PPP Secret
+      $arraySecret = [
+        'name'     => $validated['pppoe_username'],
+        'password' => $validated['pppoe_password'],
+        'service'  => 'pppoe',
+        'profile'  => $profileName,
+        'disabled' => 'false',
+        'comment'  => "Pelanggan: {$validated['nama']} - ODP: {$odpCode}",
+      ];
+
+      $idMikrotikUser = null;
+      $messageApi = null;
+      try {
+        $responseApi = MikrotikMulti::commandApi2($idMikrotik, '/ppp/secret/add', $arraySecret);
+
+        if (is_array($responseApi) && isset($responseApi['after']['ret']) && !empty($responseApi['after']['ret'])) {
+          $idMikrotikUser = $responseApi['after']['ret'];
+          $messageApi = 'Secret PPPoE berhasil disinkronkan ke Router MikroTik.';
+          Log::info('PPPoE secret berhasil dibuat di MikroTik', [
+            'ret_id'   => $idMikrotikUser,
+            'username' => $validated['pppoe_username'],
+            'router'   => $idMikrotik,
+          ]);
+        } else {
+          $messageApi = '⚠️ Router MikroTik offline/tidak merespon, akun tetap tersimpan di database.';
+          Log::warning('MikroTik API secret add tidak mengembalikan ret ID', ['response' => $responseApi]);
+        }
+      } catch (\Throwable $e) {
+        $messageApi = '⚠️ Koneksi API MikroTik gagal (' . $e->getMessage() . '), akun tetap tersimpan di database.';
+        Log::error('Mikrotik API connection error saat tambah user: ' . $e->getMessage());
+      }
+
+      $userMikrotikData = [
+        'idKategori'          => $validated['id_kategori'],
+        'idPaket'             => $validated['id_paket'],
+        'idMikrotik'          => $idMikrotik,
+        'idMikrotikUser'      => $idMikrotikUser,
+        'namaMikrotikUser'    => $validated['pppoe_username'],
+        'password'            => $validated['pppoe_password'],
+        'serviceMikrotikUser' => 'pppoe',
+        'profileMikrotikUser' => $profileName,
+        'statusIsolir'        => $validated['status_isolir'],
+        'idOlt'               => $odp->idOlt ?? null,
+        'idOdc'               => $odp->idOdc ?? null,
+        'idOdp'               => $validated['id_odp'],
+        'portOdp'             => $validated['port_odp'] ?? null,
+        'latitude'            => $latitude,
+        'longitude'           => $longitude,
+        'ont_sn'              => $validated['ont_sn'] ?? null,
+        'status'              => 'active',
+      ];
+
+      return $this->service->storeUnifiedCustomer($userData, $userDetailData, $userMikrotikData, $messageApi);
+    }
+
+    return $this->service->storeUserAndUserDetail($userData, $userDetailData);
   }
 
   /**

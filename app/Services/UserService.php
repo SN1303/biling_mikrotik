@@ -107,6 +107,48 @@ class UserService
       return LamtimResponse::internalServerError('Gagal menambahkan data.');
     }
   }
+
+  /**
+   * Pendaftaran Pelanggan Terpadu (All-in-One):
+   * Simpan User, Detail Pelanggan, dan Kredensial MikroTik PPPoE dalam satu transaksi DB atomik.
+   */
+  public function storeUnifiedCustomer(array $data_user, array $data_user_detail, array $data_user_mikrotik, ?string $messageApi = null)
+  {
+    DB::beginTransaction();
+
+    try {
+      // 1. Simpan user utama (Role Pelanggan)
+      $user = $this->modelRepo->create($data_user);
+
+      // 2. Simpan detail pelanggan
+      $data_user_detail['idUser'] = $user->id;
+      $this->modelRepo->createDetail($data_user_detail);
+
+      // 3. Simpan detail mikrotik pelanggan
+      $data_user_mikrotik['idUser'] = $user->id;
+      $this->modelRepo->createMikrotikUser($data_user_mikrotik);
+
+      DB::commit();
+
+      $message = 'Pelanggan berhasil didaftarkan!';
+      if ($messageApi) {
+        $message .= ' ' . $messageApi;
+      }
+
+      return LamtimResponse::accept($message);
+    } catch (Exception $e) {
+      DB::rollBack();
+
+      Log::error('Gagal pendaftaran pelanggan terpadu: ' . $e->getMessage(), [
+        'data_user'          => $data_user,
+        'data_user_detail'   => $data_user_detail,
+        'data_user_mikrotik' => $data_user_mikrotik,
+        'trace'              => $e->getTraceAsString()
+      ]);
+
+      return LamtimResponse::internalServerError('Gagal menyimpan data pelanggan: ' . $e->getMessage());
+    }
+  }
   /**
    * insert data user mikrotik detail
    * data user yang berhubugan dengan mikrotik
