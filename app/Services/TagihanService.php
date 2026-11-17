@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Lamtim_tagihans;
 use App\Models\Lamtim_transaksi;
 use App\Repositories\TagihanRepository;
 use App\Traits\ApiResponseTrait;
@@ -68,20 +69,12 @@ class TagihanService
       return $this->errorResponse('Metode bayar harus diisi', [], 400);
     }
 
-    // Cek apakah ada proses pembayaran yang sedang berlangsung untuk tagihan ini
     $lockKey = "payment_process_{$id}";
-    // if (Cache::has($lockKey)) {
-    //   return $this->errorResponse('Pembayaran sedang diproses, silakan tunggu', [], 423);
-    // }
 
     try {
-      // Set lock untuk mencegah double process (2 menit timeout)
       Cache::put($lockKey, true, 60);
-
-      // Mulai database transaction
       DB::beginTransaction();
 
-      // Ambil tagihan dengan locking untuk mencegah race condition
       $tagihan = $this->repository->findByIdWithLock($id);
 
       if (!$tagihan) {
@@ -90,53 +83,188 @@ class TagihanService
         return $this->errorResponse('Tagihan tidak ditemukan', [], 404);
       }
 
-      // Cek apakah tagihan sudah dibayar
-      if ($tagihan->statusBayar == 1) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Tagihan sudah dibayar sebelumnya', [], 400);
-      }
+      $rawId = $tagihan->getRawOriginal('id');
+      $idUser = $tagihan->idUser;
 
-      // Cek apakah sudah ada transaksi untuk tagihan ini
-      $existingTransaction = Lamtim_transaksi::where('idTagihan', $tagihan->id)->first();
-      if ($existingTransaction) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Transaksi untuk tagihan ini sudah ada', [], 400);
-      }
-
-      // Validasi user yang login
       if (!Auth::check()) {
         DB::rollBack();
         Cache::forget($lockKey);
         return $this->errorResponse('User tidak terautentikasi', [], 401);
       }
 
-      // Prepare data transaksi
+      $metodeBayar = $request->metode_bayar;
+      $keteranganUser = $request->keterangan ?? null;
+
+      // =========================================================================
+      // MODE A: BAYAR SEMUA TUNGGAKAN PELANGGAN (AKUMULASI FIFO)
+      // =========================================================================
+      if ($request->boolean('bayar_semua') === true) {
+        $allUnpaid = Lamtim_tagihans::where('idUser', $idUser)
+          ->where('statusBayar', 0)
+          ->orderBy('tahun', 'asc')
+          ->orderBy('bulan', 'asc')
+          ->orderBy('id', 'asc')
+          ->lockForUpdate()
+          ->get();
+
+        if ($allUnpaid->isEmpty()) {
+          DB::rollBack();
+          Cache::forget($lockKey);
+          return $this->errorResponse('Tidak ada tagihan tertunggak untuk pelanggan ini', [], 400);
+        }
+
+        $totalSemuaSisa = $allUnpaid->sum(function ($b) {
+          return max(0, (float)$b->total - (float)($b->terbayar ?? 0));
+        });
+
+        $nominalDiterima = !empty($request->nominal_bayar)
+          ? (float)$request->nominal_bayar
+          : (!empty($request->uang_diterima) ? (float)$request->uang_diterima : $totalSemuaSisa);
+
+        if ($nominalDiterima <= 0) {
+          DB::rollBack();
+          Cache::forget($lockKey);
+          return $this->errorResponse('Nominal pembayaran harus lebih besar dari 0', [], 400);
+        }
+
+        $sisaDana = $nominalDiterima;
+        $processed = [];
+        $totalAlokasi = 0;
+
+        foreach ($allUnpaid as $bill) {
+          if ($sisaDana <= 0) break;
+
+          $bRawId = $bill->getRawOriginal('id');
+          $bTotal = (float)$bill->total;
+          $bTerbayar = (float)($bill->terbayar ?? 0);
+          $bSisa = max(0, $bTotal - $bTerbayar);
+
+          if ($bSisa <= 0) continue;
+
+          $alokasi = min($sisaDana, $bSisa);
+          $newTerbayar = $bTerbayar + $alokasi;
+          $newSisa = max(0, $bTotal - $newTerbayar);
+          $isBillLunas = ($newSisa <= 0);
+
+          Lamtim_transaksi::create([
+            'idUser' => $idUser,
+            'idTagihan' => $bRawId,
+            'metodeBayar' => $metodeBayar,
+            'namaPaket' => optional($bill->paket)->nama ?? 'Paket Internet',
+            'tglBayar' => Carbon::now(),
+            'prosesBy' => Auth::id(),
+            'prosesNama' => Auth::user()->name,
+            'harga' => $bill->harga,
+            'ppn' => $bill->ppn ?? 0,
+            'diskon' => $bill->diskon ?? 0,
+            'total' => $alokasi,
+            'keterangan' => $keteranganUser ?? ($isBillLunas ? "Pelunasan Periode {$bill->bulan}/{$bill->tahun}" : "Cicilan Periode {$bill->bulan}/{$bill->tahun} (Sisa Rp " . number_format($newSisa, 0, ',', '.') . ")"),
+          ]);
+
+          $bill->update([
+            'terbayar' => $newTerbayar,
+            'statusBayar' => $isBillLunas ? 1 : 0,
+            'tglBayar' => Carbon::now(),
+            'prosesBy' => Auth::id(),
+            'prosesNama' => Auth::user()->name,
+            'metode' => $metodeBayar,
+            'aksi' => $isBillLunas ? 'Pembayaran' : 'Cicilan',
+            'updated_at' => Carbon::now(),
+          ]);
+
+          $processed[] = [
+            'id' => encrypt($bRawId),
+            'noTagihan' => $bill->noTagihan,
+            'bulan' => $bill->bulan,
+            'tahun' => $bill->tahun,
+            'paket_nama' => optional($bill->paket)->nama,
+            'alokasi' => $alokasi,
+            'sisa' => $newSisa,
+            'is_lunas' => $isBillLunas
+          ];
+
+          $totalAlokasi += $alokasi;
+          $sisaDana -= $alokasi;
+        }
+
+        DB::commit();
+        Cache::forget($lockKey);
+
+        $namaPelanggan = optional($tagihan->user)->name ?? 'Pelanggan';
+        Logger::payment(
+          'Pembayaran Akumulasi Berhasil',
+          "{$namaPelanggan} - Total Dibayar: Rp " . number_format($totalAlokasi) . ", Jumlah Tagihan: " . count($processed)
+        );
+
+        $kembalian = max(0, $nominalDiterima - $totalAlokasi);
+        $sisaTunggakanAkhir = max(0, $totalSemuaSisa - $totalAlokasi);
+
+        return $this->successResponse([
+          'mode' => 'bayar_semua',
+          'is_lunas' => ($sisaTunggakanAkhir <= 0),
+          'total_dibayar' => $totalAlokasi,
+          'uang_diterima' => $nominalDiterima,
+          'kembalian' => $kembalian,
+          'sisa_tunggakan' => $sisaTunggakanAkhir,
+          'tagihan_lunas_count' => collect($processed)->where('is_lunas', true)->count(),
+          'items' => $processed,
+          'tagihan' => $tagihan->fresh(),
+          'message' => 'Pembayaran akumulasi berhasil diproses!'
+        ], 'Pembayaran akumulasi berhasil diproses');
+      }
+
+      // =========================================================================
+      // MODE B: BAYAR 1 TAGIHAN SPESIFIK (LUNAS PENUH ATAU CICILAN SEBAGIAN)
+      // =========================================================================
+      if ($tagihan->statusBayar == 1) {
+        DB::rollBack();
+        Cache::forget($lockKey);
+        return $this->errorResponse('Tagihan sudah lunas sebelumnya', [], 400);
+      }
+
+      $totalAwal = (float)$tagihan->total;
+      $terbayarAwal = (float)($tagihan->terbayar ?? 0);
+      $sisaSaatIni = max(0, $totalAwal - $terbayarAwal);
+
+      if ($sisaSaatIni <= 0) {
+        $tagihan->update(['statusBayar' => 1]);
+        DB::commit();
+        Cache::forget($lockKey);
+        return $this->errorResponse('Tagihan sudah lunas', [], 400);
+      }
+
+      // Tentukan nominal yang disetor untuk tagihan ini
+      $uangDiterima = !empty($request->nominal_bayar)
+        ? (float)$request->nominal_bayar
+        : (!empty($request->uang_diterima) ? (float)$request->uang_diterima : $sisaSaatIni);
+
+      if ($uangDiterima <= 0) {
+        DB::rollBack();
+        Cache::forget($lockKey);
+        return $this->errorResponse('Nominal pembayaran harus lebih besar dari 0', [], 400);
+      }
+
+      // Alokasi bayar tidak boleh melebihi sisa
+      $alokasiBayar = min($uangDiterima, $sisaSaatIni);
+      $newTerbayar = $terbayarAwal + $alokasiBayar;
+      $newSisa = max(0, $totalAwal - $newTerbayar);
+      $isLunas = ($newSisa <= 0);
+
+      // Simpan transaksi kasir
       $arrayTransaksi = [
-        'idUser' => $tagihan->idUser,
-        'idTagihan' => $id,
-        'metodeBayar' => $request->metode_bayar,
-        'namaPaket' => optional($tagihan->paket)->nama ?? 'Paket tidak diketahui',
+        'idUser' => $idUser,
+        'idTagihan' => $rawId,
+        'metodeBayar' => $metodeBayar,
+        'namaPaket' => optional($tagihan->paket)->nama ?? 'Paket Internet',
         'tglBayar' => Carbon::now(),
-        'prosesBy' => Auth::user()->id,
+        'prosesBy' => Auth::id(),
         'prosesNama' => Auth::user()->name,
         'harga' => $tagihan->harga,
         'ppn' => $tagihan->ppn ?? 0,
         'diskon' => $tagihan->diskon ?? 0,
-        'total' => $tagihan->total,
-        'keterangan' => $request->keterangan ?? null,
+        'total' => $alokasiBayar,
+        'keterangan' => $keteranganUser ?? ($isLunas ? 'Pelunasan Tagihan' : "Cicilan (Sisa Rp " . number_format($newSisa, 0, ',', '.') . ")"),
       ];
-
-
-      // Validasi data transaksi
-      if ($arrayTransaksi['total'] <= 0) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Total tagihan tidak valid', [], 400);
-      }
-
-      // Buat transaksi baru
       $transaksi = Lamtim_transaksi::create($arrayTransaksi);
 
       if (!$transaksi) {
@@ -146,40 +274,41 @@ class TagihanService
       }
 
       // Update status tagihan
-      $updateResult = $tagihan->update([
+      $tagihan->update([
+        'terbayar' => $newTerbayar,
+        'statusBayar' => $isLunas ? 1 : 0,
         'tglBayar' => Carbon::now(),
-        'statusBayar' => 1,
-        'prosesBy' => Auth::user()->id,
+        'prosesBy' => Auth::id(),
         'prosesNama' => Auth::user()->name,
-        'metode' => $request->metode_bayar,
-        'aksi' => 'Pembayaran',
+        'metode' => $metodeBayar,
+        'aksi' => $isLunas ? 'Pembayaran' : 'Cicilan',
         'updated_at' => Carbon::now(),
       ]);
 
-      if (!$updateResult) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Gagal mengupdate status tagihan', [], 500);
-      }
-      $namaPelanggan = optional($tagihan->user)->name ?? 'Nama tidak diketahui';
-      // LOG dengan Utility
-      Logger::payment(
-        'Pembayaran Berhasil',
-        "{$namaPelanggan} - No: {$tagihan->noTagihan}, Metode: {$request->metode_bayar}, Total: Rp " . number_format($tagihan->total)
-      );
-
-      // Commit transaction jika semua berhasil
       DB::commit();
       Cache::forget($lockKey);
 
-      // Refresh data tagihan setelah update
-      $tagihan->refresh();
+      $namaPelanggan = optional($tagihan->user)->name ?? 'Nama tidak diketahui';
+      Logger::payment(
+        $isLunas ? 'Pembayaran Berhasil' : 'Cicilan Berhasil',
+        "{$namaPelanggan} - No: {$tagihan->noTagihan}, Metode: {$metodeBayar}, Bayar: Rp " . number_format($alokasiBayar) . ($isLunas ? ' (LUNAS)' : " (Sisa Rp " . number_format($newSisa) . ")")
+      );
 
+      $kembalian = max(0, $uangDiterima - $alokasiBayar);
 
       return $this->successResponse([
-        'tagihan' => $tagihan,
-        'transaksi' => $transaksi
-      ], 'Tagihan berhasil dibayar');
+        'mode' => $isLunas ? 'lunas' : 'cicilan',
+        'is_lunas' => $isLunas,
+        'alokasi_bayar' => $alokasiBayar,
+        'uang_diterima' => $uangDiterima,
+        'kembalian' => $kembalian,
+        'sisa' => $newSisa,
+        'total_awal' => $totalAwal,
+        'total_terbayar' => $newTerbayar,
+        'tagihan' => $tagihan->fresh(),
+        'transaksi' => $transaksi,
+        'message' => $isLunas ? 'Tagihan berhasil dilunasi!' : 'Pembayaran cicilan berhasil dicatat!'
+      ], $isLunas ? 'Tagihan berhasil dilunasi!' : 'Pembayaran cicilan berhasil dicatat!');
     } catch (QueryException $e) {
       DB::rollBack();
       Cache::forget($lockKey);
@@ -244,27 +373,14 @@ class TagihanService
         return $this->errorResponse('User tidak terautentikasi', [], 401);
       }
 
-      // Cari transaksi yang terkait dengan tagihan ini
-      $transaksi = Lamtim_transaksi::where('idTagihan', $id)->first();
+      $rawId = $tagihan->getRawOriginal('id');
+      // Hapus data transaksi yang terkait dengan tagihan ini
+      Lamtim_transaksi::where('idTagihan', $rawId)->delete();
 
-      if (!$transaksi) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Data transaksi tidak ditemukan', [], 404);
-      }
-
-      // Hapus data transaksi
-      $deleteTransaksi = $transaksi->delete();
-
-      if (!$deleteTransaksi) {
-        DB::rollBack();
-        Cache::forget($lockKey);
-        return $this->errorResponse('Gagal menghapus data transaksi', [], 500);
-      }
-
-      // Update status tagihan kembali ke belum lunas
+      // Update status tagihan kembali ke belum lunas dan reset terbayar = 0
       $updateResult = $tagihan->update([
         'tglBayar' => null,
+        'terbayar' => 0,
         'statusBayar' => 0,
         'prosesBy' => Auth::user()->id,
         'prosesNama' => Auth::user()->name,
@@ -296,7 +412,6 @@ class TagihanService
 
       return $this->successResponse([
         'tagihan' => $tagihan,
-        'deleted_transaksi_id' => $transaksi->id
       ], 'Pembayaran berhasil dibatalkan. Status tagihan dikembalikan ke belum lunas.');
     } catch (\Illuminate\Database\QueryException $e) {
       DB::rollBack();
@@ -371,12 +486,14 @@ class TagihanService
 
       $summaryData = [
         'total_count' => $summaryQuery->count(),
-        'total_unpaid' => $summaryQuery->sum('total'),
+        'total_unpaid' => $request->status_bayar == 1
+          ? $summaryQuery->sum('total')
+          : $summaryQuery->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
         'total_harga' => $summaryQuery->sum('harga'),
         'total_ppn' => $summaryQuery->sum('ppn'),
         'total_diskon' => $summaryQuery->sum('diskon'),
         'overdue_count' => $overdueItems->count(),
-        'overdue_total' => $overdueItems->sum('total'),
+        'overdue_total' => $overdueItems->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
         'today_due_count' => $todayDueItems->count(),
       ];
       $summaryData['potential_income'] = $summaryData['total_unpaid'];
@@ -421,7 +538,7 @@ class TagihanService
         $unpaidQuery = $this->repository->getDatatablesJson($unpaidWhere);
         $unpaidSummary = [
           'unpaid_count' => $unpaidQuery->count(),
-          'unpaid_total' => $unpaidQuery->sum('total'),
+          'unpaid_total' => $unpaidQuery->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
           'unpaid_harga' => $unpaidQuery->sum('harga'),
           'unpaid_ppn' => $unpaidQuery->sum('ppn'),
           'unpaid_diskon' => $unpaidQuery->sum('diskon'),
@@ -431,6 +548,12 @@ class TagihanService
       $dataTable = DataTables::of($query)
         ->addColumn('paket_nama', function ($row) {
           return optional($row->paket)->nama;
+        })
+        ->addColumn('terbayar', function ($row) {
+          return (float) ($row->terbayar ?? 0);
+        })
+        ->addColumn('sisa', function ($row) {
+          return max(0, (float)$row->total - (float)($row->terbayar ?? 0));
         })
         ->addColumn('user_nama', function ($row) {
           $user = optional($row->user);
@@ -472,6 +595,8 @@ class TagihanService
           'ppn',
           'diskon',
           'total',
+          'terbayar',
+          'sisa',
           'tglJatuhTempo',
           'tglBayar',
           'prosesNama',

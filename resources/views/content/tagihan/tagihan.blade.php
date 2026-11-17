@@ -176,6 +176,10 @@
   let table;
   let activeQuickFilter = '';
   let currentRawTotal = 0;
+  let currentBillData = null;
+  let currentPaymentMode = 'single'; // 'single' atau 'all'
+  let currentTargetTotal = 0;
+  let currentMultiTotal = 0;
 
   const namaBulan = [
     '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -229,7 +233,11 @@
               ? `<a href="javascript:void(0)" class="btn-wa-direct badge bg-success-subtle text-success border border-success-subtle text-decoration-none" data-id="${row.id}" title="Kirim Pesan WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
               : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
 
-            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total || 0);
+            const sisaNominal = (row.sisa !== undefined && row.sisa !== null) ? row.sisa : row.total;
+            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(sisaNominal || 0);
+            const cicilBadgeMobile = row.terbayar > 0
+              ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle d-block mt-1" style="font-size: 0.65rem;"><i class="mdi mdi-clock-check-outline me-1"></i>Cicil Rp ${new Intl.NumberFormat('id-ID').format(row.terbayar)}</span>`
+              : '';
             const namaBulanStr = namaBulan[row.bulan] || row.bulan;
             const periodeText = `${namaBulanStr} ${row.tahun}`;
 
@@ -285,6 +293,7 @@
                   </div>
                   <div class="text-end flex-shrink-0">
                     <div class="fs-6 fw-bolder text-primary mb-0">${totalFmt}</div>
+                    ${cicilBadgeMobile}
                     <div class="mt-1">${dueBadgeMobile}</div>
                   </div>
                 </div>
@@ -342,16 +351,19 @@
           name: 'total',
           className: 'align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
-            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
+            const sisaNominal = (row.sisa !== undefined && row.sisa !== null) ? row.sisa : data;
+            const sisaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(sisaNominal);
             let detailSub = '';
-            if (row.diskon > 0) {
+            if (row.terbayar > 0) {
+              detailSub = `<small class="text-warning fw-semibold d-block" style="font-size: 0.72rem;"><i class="mdi mdi-clock-check-outline me-1"></i>Dicicil Rp ${new Intl.NumberFormat('id-ID').format(row.terbayar)}</small>`;
+            } else if (row.diskon > 0) {
               detailSub = `<small class="text-success d-block" style="font-size: 0.72rem;"><i class="mdi mdi-tag-outline me-1"></i>Hemat Rp ${new Intl.NumberFormat('id-ID').format(row.diskon)}</small>`;
             } else if (row.ppn > 0) {
               detailSub = `<small class="text-muted d-block" style="font-size: 0.72rem;">Termasuk PPN</small>`;
             }
             return `
               <div>
-                <div class="fw-bold text-danger fs-6">${totalFmt}</div>
+                <div class="fw-bold text-danger fs-6">${sisaFmt}</div>
                 ${detailSub}
               </div>
             `;
@@ -533,52 +545,64 @@
     $(document).on('click', '.btn-bayar', function(e) {
       e.preventDefault();
       const id = $(this).attr('data-id');
-      console.log('Klik bayar ID:', id);
 
-      let rowData = null;
-      const allRows = table.rows().data().toArray();
-      if (allRows && allRows.length > 0) {
-        rowData = allRows.find(item => item.id == id);
-      }
-
-      if (!rowData) {
-        const tr = $(this).closest('tr');
-        rowData = table.row(tr).data();
-      }
-
-      if (!rowData) {
-        console.warn('Row data tidak ditemukan di memori, ambil via AJAX:', id);
-        if (window.GlobalLoading) GlobalLoading.show('Memuat data tagihan...');
-        $.ajax({
-          url: `{{ url('tagihan') }}/${id}`,
-          type: 'GET',
-          success: function(res) {
-            if (window.GlobalLoading) GlobalLoading.hide();
-            bukaModalKasir(id, res);
-          },
-          error: function() {
-            if (window.GlobalLoading) GlobalLoading.hide();
-            Swal.fire('Error', 'Gagal memuat rincian tagihan.', 'error');
-          }
-        });
-        return;
-      }
-
-      bukaModalKasir(id, rowData);
+      if (window.GlobalLoading) GlobalLoading.show('Memuat data kasir...');
+      $.ajax({
+        url: `{{ url('tagihan') }}/${id}`,
+        type: 'GET',
+        success: function(res) {
+          if (window.GlobalLoading) GlobalLoading.hide();
+          const billData = res.data || res;
+          bukaModalKasir(id, billData);
+        },
+        error: function() {
+          if (window.GlobalLoading) GlobalLoading.hide();
+          Swal.fire('Error', 'Gagal memuat rincian kasir tagihan.', 'error');
+        }
+      });
     });
 
-    function bukaModalKasir(id, rowData) {
-      currentRawTotal = parseFloat(rowData.total) || 0;
-      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(currentRawTotal);
-      const bulanNama = namaBulan[rowData.bulan] || rowData.bulan;
-      const periodeStr = `${bulanNama} ${rowData.tahun}`;
+    function bukaModalKasir(id, billData) {
+      currentBillData = billData;
+      currentPaymentMode = 'single';
+
+      const sisaTagihan = parseFloat(billData.sisa !== undefined ? billData.sisa : billData.total) || 0;
+      const totalAwal = parseFloat(billData.total) || 0;
+      const terbayarAwal = parseFloat(billData.terbayar) || 0;
+      currentTargetTotal = sisaTagihan;
+      currentMultiTotal = parseFloat(billData.total_tunggakan) || sisaTagihan;
+
+      const bulanNama = namaBulan[billData.bulan] || billData.bulan;
+      const periodeStr = `${bulanNama} ${billData.tahun}`;
 
       // Populate Modal Info
-      $('#modal-noTagihan').text(rowData.noTagihan || '-');
-      $('#modal-namaPelanggan').text(rowData.user_nama || 'Pelanggan');
-      $('#modal-paket-badge').text(rowData.paket_nama || 'Paket Internet');
+      $('#modal-noTagihan').text(billData.noTagihan || '-');
+      $('#modal-namaPelanggan').text(billData.user_nama || 'Pelanggan');
+      $('#modal-paket-badge').text(billData.paket_nama || 'Paket Internet');
       $('#modal-periode-display').text(periodeStr);
-      $('#modal-total-display').text(totalFmt);
+
+      // Info cicilan awal jika sudah pernah dicicil
+      if (terbayarAwal > 0) {
+        $('#modal-cicilan-info').show();
+        $('#modal-cicilan-terbayar').text('Rp ' + new Intl.NumberFormat('id-ID').format(terbayarAwal));
+        $('#modal-total-label').text('Sisa Tagihan Ini');
+      } else {
+        $('#modal-cicilan-info').hide();
+        $('#modal-total-label').text('Total Tagihan');
+      }
+
+      // Handle Multi-Tunggakan Alert Box
+      if (billData.unpaid_count && billData.unpaid_count > 1) {
+        $('#box-multi-tunggakan').show();
+        $('#multi-count').text(billData.unpaid_count);
+        $('#multi-total-tunggakan').text('Rp ' + new Intl.NumberFormat('id-ID').format(currentMultiTotal));
+        $('#txt-sisa-ini').text('Rp ' + new Intl.NumberFormat('id-ID').format(currentTargetTotal));
+        $('#txt-total-semua').text('Rp ' + new Intl.NumberFormat('id-ID').format(currentMultiTotal));
+        setPaymentMode('single');
+      } else {
+        $('#box-multi-tunggakan').hide();
+        setPaymentMode('single');
+      }
 
       // Set ID tagihan ke form
       $('#form-bayar').data('tagihan-id', id).attr('data-tagihan-id', id);
@@ -586,11 +610,6 @@
 
       // Default Metode: Tunai / COD
       pilihMetodeBayar('cod');
-
-      // Default langsung Uang Pas!
-      $('#cash-received').val(currentRawTotal);
-      $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
-      $('#cash-change-status').text('Uang pas');
 
       // Reset Catatan
       $('#keterangan_bayar').val('');
@@ -603,6 +622,35 @@
         $('#modalBayar').modal('show');
       }
     }
+
+    // Fungsi Ganti Mode Pembayaran Kasir (Tagihan Ini vs Lunasi Semua)
+    function setPaymentMode(mode) {
+      currentPaymentMode = mode;
+      const targetAmount = (mode === 'all') ? currentMultiTotal : currentTargetTotal;
+
+      if (mode === 'all') {
+        $('#btn-mode-bayar-semua').removeClass('btn-outline-warning').addClass('btn-warning shadow-xs active');
+        $('#btn-mode-tagihan-ini').removeClass('btn-warning shadow-xs active').addClass('btn-outline-warning');
+        $('#modal-total-label').text('Total Semua Tunggakan (' + (currentBillData ? currentBillData.unpaid_count : 0) + ' Periode)');
+        $('#modal-total-display').text('Rp ' + new Intl.NumberFormat('id-ID').format(currentMultiTotal));
+      } else {
+        $('#btn-mode-tagihan-ini').removeClass('btn-outline-warning').addClass('btn-warning shadow-xs active');
+        $('#btn-mode-bayar-semua').removeClass('btn-warning shadow-xs active').addClass('btn-outline-warning');
+        $('#modal-total-label').text((currentBillData && currentBillData.terbayar > 0) ? 'Sisa Tagihan Ini' : 'Total Tagihan Ini');
+        $('#modal-total-display').text('Rp ' + new Intl.NumberFormat('id-ID').format(currentTargetTotal));
+      }
+
+      $('#cash-received').val(targetAmount);
+      hitungKembalian();
+    }
+
+    $(document).on('click', '#btn-mode-tagihan-ini', function() {
+      setPaymentMode('single');
+    });
+
+    $(document).on('click', '#btn-mode-bayar-semua', function() {
+      setPaymentMode('all');
+    });
 
     // Fungsi Ganti Metode Pembayaran Kasir
     function pilihMetodeBayar(selected) {
@@ -647,35 +695,55 @@
       }, 50);
     });
 
-    // Kalkulator Kembalian Realtime
+    // Kalkulator Kembalian & Mode Cicilan Realtime
     $(document).on('input', '#cash-received', function() {
       hitungKembalian();
     });
 
     function hitungKembalian() {
       const received = parseFloat($('#cash-received').val()) || 0;
-      const change = received - currentRawTotal;
+      const targetAmount = (currentPaymentMode === 'all') ? currentMultiTotal : currentTargetTotal;
+      const diff = received - targetAmount;
+      const btnProses = $('#btn-proses-bayar');
 
       if (received === 0) {
-        $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
-        $('#cash-change-status').text('Masukkan nominal uang yang diterima');
-      } else if (change < 0) {
-        $('#cash-change-display').text('- Rp ' + new Intl.NumberFormat('id-ID').format(Math.abs(change))).removeClass('text-success').addClass('text-danger');
-        $('#cash-change-status').text('Uang kurang Rp ' + new Intl.NumberFormat('id-ID').format(Math.abs(change)));
-      } else if (change === 0) {
-        $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
-        $('#cash-change-status').text('Uang pas');
+        $('#cash-change-display').text('Rp 0').removeClass('text-danger text-warning').addClass('text-success');
+        $('#cash-change-status').html('<span class="text-muted">Masukkan nominal uang yang diterima</span>');
+        btnProses.removeClass('btn-warning').addClass('btn-success')
+          .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
+      } else if (diff < 0) {
+        // Kurang -> Pembayaran Cicilan
+        const kurang = Math.abs(diff);
+        const kurangFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(kurang);
+        const bayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(received);
+
+        $('#cash-change-display').text('- ' + kurangFmt).removeClass('text-success').addClass('text-danger');
+        $('#cash-change-status').html(`<span class="badge bg-warning text-dark"><i class="mdi mdi-clock-outline me-1"></i>Dicatat sebagai Cicilan (Sisa ${kurangFmt})</span>`);
+
+        btnProses.removeClass('btn-success').addClass('btn-warning')
+          .html(`<i class="mdi mdi-cash-plus fs-5"></i><span>Terima Cicilan (${bayarFmt})</span>`);
+      } else if (diff === 0) {
+        // Uang Pas
+        $('#cash-change-display').text('Rp 0').removeClass('text-danger text-warning').addClass('text-success');
+        $('#cash-change-status').html('<span class="text-success fw-bold"><i class="mdi mdi-check me-1"></i>Uang pas</span>');
+        btnProses.removeClass('btn-warning').addClass('btn-success')
+          .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
       } else {
-        $('#cash-change-display').text('Rp ' + new Intl.NumberFormat('id-ID').format(change)).removeClass('text-danger').addClass('text-success');
-        $('#cash-change-status').text('Kembalikan ke pelanggan');
+        // Lebih -> Ada Kembalian
+        const kembalianFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(diff);
+        $('#cash-change-display').text(kembalianFmt).removeClass('text-danger text-warning').addClass('text-success');
+        $('#cash-change-status').html('<span class="text-success fw-bold"><i class="mdi mdi-hand-coin me-1"></i>Kembalikan ke pelanggan</span>');
+        btnProses.removeClass('btn-warning').addClass('btn-success')
+          .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
       }
     }
 
     // Tombol Uang Cepat (Quick Cash Buttons)
     $(document).on('click', '.btn-quick-cash', function() {
       const mode = $(this).data('mode');
+      const targetAmount = (currentPaymentMode === 'all') ? currentMultiTotal : currentTargetTotal;
       if (mode === 'exact') {
-        $('#cash-received').val(currentRawTotal);
+        $('#cash-received').val(targetAmount);
       } else {
         const amount = parseFloat($(this).data('amount')) || 0;
         $('#cash-received').val(amount);
@@ -690,11 +758,21 @@
       const tagihanId = $('#tagihan_id').val() || $(this).data('tagihan-id') || $(this).attr('data-tagihan-id');
       const metodeBayar = $('#metode_bayar').val();
       const keterangan = $('#keterangan_bayar').val();
+      const received = parseFloat($('#cash-received').val()) || 0;
 
       if (!metodeBayar) {
         Swal.fire({
           title: 'Metode Pembayaran',
           text: 'Silakan pilih metode pembayaran terlebih dahulu!',
+          icon: 'warning'
+        });
+        return;
+      }
+
+      if (received <= 0) {
+        Swal.fire({
+          title: 'Nominal Tidak Valid',
+          text: 'Nominal pembayaran yang diterima harus lebih besar dari Rp 0!',
           icon: 'warning'
         });
         return;
@@ -709,8 +787,8 @@
 
       const paymentSteps = [
         { progress: 20, text: 'Memvalidasi data transaksi kasir...', delay: 250 },
-        { progress: 55, text: 'Mencatat pelunasan & audit trail...', delay: 350 },
-        { progress: 90, text: 'Mengupdate status tagihan lunas...', delay: 300 },
+        { progress: 55, text: 'Mencatat transaksi & audit trail...', delay: 350 },
+        { progress: 90, text: 'Mengupdate status tagihan...', delay: 300 },
         { progress: 100, text: 'Pembayaran sukses diproses!', delay: 200 }
       ];
 
@@ -725,7 +803,10 @@
           data: {
             _token: '{{ csrf_token() }}',
             metode_bayar: metodeBayar,
-            keterangan: keterangan
+            keterangan: keterangan,
+            nominal_bayar: received,
+            uang_diterima: received,
+            bayar_semua: (currentPaymentMode === 'all' ? 1 : 0)
           },
           success: function(response) {
             if (window.GlobalLoading) {
@@ -733,24 +814,59 @@
             }
 
             if (response.success) {
+              const resData = response.data || {};
+              const isCicilan = (resData.mode === 'cicilan');
+              const isBayarSemua = (resData.mode === 'bayar_semua');
+
+              let titleHtml = 'Pembayaran Berhasil!';
+              let badgeHtml = `<span class="badge bg-success">Status: LUNAS (${metodeBayar.toUpperCase()})</span>`;
+              let amountHtml = $('#modal-total-display').text();
+
+              if (isCicilan) {
+                titleHtml = 'Pembayaran Cicilan Diterima!';
+                const nominalBayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(resData.alokasi_bayar || received);
+                const sisaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(resData.sisa || 0);
+                amountHtml = `<span class="text-warning">${nominalBayarFmt}</span>`;
+                badgeHtml = `
+                  <span class="badge bg-warning text-dark mb-1">Status: CICILAN (${metodeBayar.toUpperCase()})</span>
+                  <div class="small text-danger fw-bold mt-1">Sisa Tagihan: ${sisaFmt}</div>
+                `;
+              } else if (isBayarSemua) {
+                titleHtml = 'Pelunasan Multi-Tunggakan Berhasil!';
+                const totalBayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(resData.total_dibayar || received);
+                amountHtml = `<span class="text-success">${totalBayarFmt}</span>`;
+                const stText = resData.is_lunas ? 'LUNAS SEMUA' : 'SEBAGIAN LUNAS';
+                badgeHtml = `
+                  <span class="badge bg-success mb-1">Status: ${stText} (${metodeBayar.toUpperCase()})</span>
+                  <div class="small text-muted mt-1">${resData.tagihan_lunas_count || 0} Periode Tagihan Dilunasi</div>
+                `;
+              }
+
               Swal.fire({
-                title: 'Pembayaran Berhasil!',
+                title: titleHtml,
                 html: `
                   <div class="text-center p-2">
-                    <div class="avatar avatar-lg bg-success-subtle text-success mx-auto mb-3" style="width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                      <i class="mdi mdi-check-decagram fs-2"></i>
+                    <div class="avatar avatar-lg ${isCicilan ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'} mx-auto mb-3" style="width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                      <i class="mdi ${isCicilan ? 'mdi-clock-check-outline' : 'mdi-check-decagram'} fs-2"></i>
                     </div>
                     <h5 class="fw-bold mb-1">${$('#modal-namaPelanggan').text()}</h5>
                     <p class="text-muted small mb-2">Invoice: ${$('#modal-noTagihan').text()}</p>
-                    <div class="fs-4 fw-bold text-success mb-2">${$('#modal-total-display').text()}</div>
-                    <span class="badge bg-success">Status: LUNAS (${metodeBayar.toUpperCase()})</span>
+                    <div class="fs-4 fw-bold mb-2">${amountHtml}</div>
+                    ${badgeHtml}
                   </div>
                 `,
                 icon: null,
-                confirmButtonText: '<i class="mdi mdi-check me-1"></i> Selesai',
+                showCancelButton: true,
+                confirmButtonText: '<i class="mdi mdi-whatsapp me-1"></i> Kirim Kuitansi WA',
+                cancelButtonText: '<i class="mdi mdi-check me-1"></i> Selesai',
                 buttonsStyling: false,
                 customClass: {
-                  confirmButton: "btn btn-success px-4"
+                  confirmButton: "btn btn-success px-3 me-2",
+                  cancelButton: "btn btn-outline-secondary px-3"
+                }
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  kirimKuitansiSmartWA(currentBillData, resData, metodeBayar);
                 }
               });
 
@@ -780,7 +896,7 @@
             });
           }
         });
-      }, 1200);
+      }, 300);
     });
 
     // Delete Tagihan Event
@@ -858,6 +974,10 @@
 
     const periodeStr = `${namaBulan[row.bulan] || row.bulan} ${row.tahun}`;
     const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total);
+    const terbayar = parseFloat(row.terbayar) || 0;
+    const sisa = (row.sisa !== undefined && row.sisa !== null) ? parseFloat(row.sisa) : Math.max(0, parseFloat(row.total || 0) - terbayar);
+    const sisaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(sisa);
+    const terbayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(terbayar);
 
     let statusNote = '';
     if (row.due_diff_days !== null && row.due_diff_days !== undefined) {
@@ -870,16 +990,107 @@
       }
     }
 
+    let nominalBlock = `💰 *Total Tagihan:* *${totalFmt}*\n`;
+    if (terbayar > 0) {
+      nominalBlock = `💵 *Total Tagihan:* ${totalFmt}\n` +
+        `💸 *Sudah Dicicil:* ${terbayarFmt}\n` +
+        `⏳ *Sisa Tagihan:* *${sisaFmt}*\n`;
+    }
+
     const message = `Halo Kak *${row.user_nama}*,\n\n` +
       `Berikut adalah rincian tagihan internet *MRYES NET* Anda:\n\n` +
       `📄 *No. Invoice:* ${row.noTagihan}\n` +
       `📦 *Paket:* ${row.paket_nama || 'Internet Reguler'}\n` +
       `📅 *Periode:* ${periodeStr}\n` +
-      `💰 *Total Tagihan:* *${totalFmt}*\n` +
+      nominalBlock +
       `⏰ *Jatuh Tempo:* ${row.tglJatuhTempo || '-'}\n\n` +
       `${statusNote}\n\n` +
       `Pembayaran dapat dititipkan langsung ke Petugas/Kolektor Lapangan resmi MRYES, atau via transfer bank/QRIS.\n` +
       `_Abaikan pesan ini apabila Anda telah melakukan pembayaran. Terima kasih atas kepercayaan Anda menggunakan layanan MRYES NET!_ 🙏`;
+
+    window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(message)}`, '_blank');
+  }
+
+  // Fungsi Kirim Kuitansi WhatsApp Pintar (Lunas / Cicilan / Multi-Tunggakan)
+  function kirimKuitansiSmartWA(bill, paymentRes, metode) {
+    if (!bill) return;
+    const rawWa = bill.user_wa;
+    if (!rawWa || rawWa === '-' || rawWa.trim() === '') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Nomor WhatsApp Tidak Ditemukan',
+        text: `Pelanggan "${bill.user_nama}" belum memiliki nomor WhatsApp di sistem.`,
+        confirmButtonText: 'OK',
+        customClass: { confirmButton: 'btn btn-primary' }
+      });
+      return;
+    }
+
+    let cleanWa = String(rawWa).replace(/[^0-9]/g, '');
+    if (cleanWa.startsWith('0')) cleanWa = '62' + cleanWa.slice(1);
+
+    const bulanNama = namaBulan[bill.bulan] || bill.bulan;
+    const periodeStr = `${bulanNama} ${bill.tahun}`;
+    const metodeStr = (metode || 'Tunai').toUpperCase();
+    const waktuStr = (typeof moment !== 'undefined') ? moment().format('DD-MM-YYYY HH:mm') : new Date().toLocaleString('id-ID');
+
+    let message = '';
+
+    if (paymentRes && paymentRes.mode === 'cicilan') {
+      const alokasiFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(paymentRes.alokasi_bayar || 0);
+      const sisaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(paymentRes.sisa || 0);
+      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(bill.total || 0);
+
+      message = `Halo Kak *${bill.user_nama}*,\n\n` +
+        `Terima kasih atas pembayaran cicilan tagihan internet *MRYES NET*. Berikut rincian tanda terima pembayaran Anda:\n\n` +
+        `📄 *No. Invoice:* ${bill.noTagihan}\n` +
+        `📦 *Paket:* ${bill.paket_nama || 'Internet'}\n` +
+        `📅 *Periode:* ${periodeStr}\n` +
+        `💵 *Total Tagihan:* ${totalFmt}\n` +
+        `💰 *Nominal Cicilan Masuk:* *${alokasiFmt}*\n` +
+        `⏳ *Sisa Tagihan:* *${sisaFmt}*\n` +
+        `💳 *Metode Pembayaran:* ${metodeStr}\n` +
+        `🗓️ *Waktu Bayar:* ${waktuStr}\n` +
+        `⚠️ *Status:* *BELUM LUNAS (TERCATAT SEBAGAI CICILAN)*\n\n` +
+        `Mohon sisa tagihan dapat diselesaikan sebelum tanggal jatuh tempo. Terima kasih! 🙏`;
+    } else if (paymentRes && paymentRes.mode === 'bayar_semua') {
+      const totalBayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(paymentRes.total_dibayar || 0);
+      const sisaTunggakanFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(paymentRes.sisa_tunggakan || 0);
+
+      let itemsRincian = '';
+      if (paymentRes.items && paymentRes.items.length > 0) {
+        itemsRincian = paymentRes.items.map(item => {
+          const bNama = namaBulan[item.bulan] || item.bulan;
+          const alokFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(item.alokasi);
+          const stLabel = item.is_lunas ? 'LUNAS' : `CICILAN (Sisa Rp ${new Intl.NumberFormat('id-ID').format(item.sisa)})`;
+          return `  • Periode ${bNama} ${item.tahun}: ${alokFmt} (${stLabel})`;
+        }).join('\n');
+      }
+
+      message = `Halo Kak *${bill.user_nama}*,\n\n` +
+        `Terima kasih atas pembayaran akumulasi tagihan internet *MRYES NET*. Berikut rincian tanda terima pelunasan Anda:\n\n` +
+        `👤 *Nama Pelanggan:* ${bill.user_nama}\n` +
+        `📋 *Rincian Tagihan:*\n${itemsRincian}\n\n` +
+        `💰 *Total Pembayaran Masuk:* *${totalBayarFmt}*\n` +
+        `⏳ *Sisa Tunggakan:* *${sisaTunggakanFmt}*\n` +
+        `💳 *Metode Pembayaran:* ${metodeStr}\n` +
+        `🗓️ *Waktu Bayar:* ${waktuStr}\n` +
+        `✅ *Status:* *${paymentRes.is_lunas ? 'LUNAS SEMUA' : 'SEBAGIAN TUNGGAKAN LUNAS'}*\n\n` +
+        `Terima kasih telah setia menggunakan layanan internet cepat *MRYES NET*. 🙏`;
+    } else {
+      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(bill.total || 0);
+
+      message = `Halo Kak *${bill.user_nama}*,\n\n` +
+        `Terima kasih atas pembayaran tagihan internet *MRYES NET*. Berikut adalah bukti kuitansi pelunasan resmi:\n\n` +
+        `📄 *No. Invoice:* ${bill.noTagihan}\n` +
+        `📦 *Paket:* ${bill.paket_nama || 'Internet'}\n` +
+        `📅 *Periode:* ${periodeStr}\n` +
+        `💰 *Total Lunas:* *${totalFmt}*\n` +
+        `💳 *Metode Pembayaran:* ${metodeStr}\n` +
+        `🗓️ *Waktu Bayar:* ${waktuStr}\n` +
+        `✅ *Status:* *LUNAS (TERVERIFIKASI)*\n\n` +
+        `Terima kasih telah setia menggunakan layanan internet cepat *MRYES NET*. Jika ada kendala koneksi atau pertanyaan, silakan hubungi customer service kami. 🙏`;
+    }
 
     window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(message)}`, '_blank');
   }
@@ -1077,8 +1288,13 @@
         <!-- Highlight Showcase: Total & Pelanggan Ringkas -->
         <div class="bg-white bg-opacity-10 rounded-3 p-2 p-sm-3 border border-white border-opacity-10 d-flex align-items-center justify-content-between gap-2">
           <div>
-            <div class="text-uppercase text-white-50 fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Total Tagihan</div>
+            <div class="text-uppercase text-white-50 fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;" id="modal-total-label">Total Tagihan</div>
             <div class="fs-3 fw-bolder text-warning lh-1 my-1" id="modal-total-display">Rp 0</div>
+            <div id="modal-cicilan-info" style="display: none;" class="mt-1">
+              <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.65rem;">
+                <i class="mdi mdi-clock-check-outline me-1"></i>Sudah Dicicil: <span id="modal-cicilan-terbayar">Rp 0</span>
+              </span>
+            </div>
             <small class="text-white-50" style="font-size: 0.7rem;">
               Inv: <span class="text-white fw-semibold" id="modal-noTagihan">-</span>
             </small>
@@ -1094,6 +1310,35 @@
       </div>
 
       <div class="modal-body p-3 bg-light-subtle">
+        <!-- Alert Box Akumulasi Multi-Tunggakan -->
+        <div id="box-multi-tunggakan" class="card border border-warning border-opacity-50 bg-warning-subtle p-2 mb-3 rounded-3" style="display: none;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <i class="mdi mdi-alert-circle text-warning fs-4"></i>
+              <div>
+                <div class="fw-bold text-dark small">Perhatian: Pelanggan Memiliki Multi-Tunggakan</div>
+                <small class="text-muted" style="font-size: 0.72rem;">
+                  Terdapat <strong id="multi-count" class="text-danger">0</strong> tagihan aktif (Total: <strong id="multi-total-tunggakan" class="text-danger">Rp 0</strong>)
+                </small>
+              </div>
+            </div>
+          </div>
+          <div class="row g-1">
+            <div class="col-6">
+              <button type="button" class="btn btn-sm btn-outline-warning w-100 fw-bold py-1 px-2 text-start d-flex flex-column shadow-xs" id="btn-mode-tagihan-ini">
+                <span style="font-size: 0.68rem;" class="text-muted">Bayar Tagihan Ini Saja</span>
+                <span class="fs-6 text-dark" id="txt-sisa-ini">Rp 0</span>
+              </button>
+            </div>
+            <div class="col-6">
+              <button type="button" class="btn btn-sm btn-warning w-100 fw-bold py-1 px-2 text-start d-flex flex-column shadow-xs" id="btn-mode-bayar-semua">
+                <span style="font-size: 0.68rem;" class="text-dark">LUNASI SEMUA TUNGGAKAN</span>
+                <span class="fs-6 text-dark" id="txt-total-semua">Rp 0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <form id="form-bayar">
           <input type="hidden" id="tagihan_id" name="tagihan_id" value="">
           <!-- Step 1: Pilih Metode Bayar (Compact Row) -->
@@ -1152,9 +1397,9 @@
                 </div>
               </div>
               <div class="col-sm-6 text-sm-end pt-1 pt-sm-0 border-sm-start border-success border-opacity-25 ps-sm-3">
-                <div class="small text-muted fw-semibold" style="font-size: 0.72rem;">Uang Kembalian</div>
+                <div class="small text-muted fw-semibold" style="font-size: 0.72rem;">Status / Kembalian</div>
                 <div class="fs-4 fw-bolder text-success" id="cash-change-display">Rp 0</div>
-                <small class="text-muted d-block" id="cash-change-status" style="font-size: 0.7rem;">Uang pas</small>
+                <div id="cash-change-status" style="font-size: 0.7rem;"><span class="text-success fw-bold"><i class="mdi mdi-check me-1"></i>Uang pas</span></div>
               </div>
             </div>
           </div>

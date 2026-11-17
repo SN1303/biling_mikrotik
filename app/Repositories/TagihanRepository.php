@@ -87,6 +87,7 @@ class TagihanRepository
       'ppn',
       'diskon',
       'total',
+      'terbayar',
       'tglJatuhTempo',
       'tglBayar',
       'prosesNama',

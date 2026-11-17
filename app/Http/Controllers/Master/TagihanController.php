@@ -219,7 +219,11 @@ class TagihanController extends Controller
   public function show($id)
   {
     try {
-      $tagihan = app(TagihanRepository::class)->findById($id);
+      $decryptedId = is_numeric($id) ? (int)$id : decrypt($id);
+      $tagihan = \App\Models\Lamtim_tagihans::with([
+        'paket:id,nama,price',
+        'user:id,name,wa,julukan'
+      ])->find($decryptedId);
 
       if (!$tagihan) {
         return response()->json([
@@ -229,10 +233,62 @@ class TagihanController extends Controller
         ], 404);
       }
 
+      $rawId = $tagihan->getRawOriginal('id');
+      $idUser = $tagihan->idUser;
+
+      // Ambil seluruh tagihan belum lunas milik pelanggan ini (termasuk tagihan ini)
+      $allUnpaid = \App\Models\Lamtim_tagihans::where('idUser', $idUser)
+        ->where('statusBayar', 0)
+        ->with('paket:id,nama,price')
+        ->orderBy('tahun', 'asc')
+        ->orderBy('bulan', 'asc')
+        ->orderBy('id', 'asc')
+        ->get();
+
+      $totalTunggakan = $allUnpaid->sum(function ($b) {
+        return max(0, (float)$b->total - (float)($b->terbayar ?? 0));
+      });
+
+      $tagihanCurrentSisa = max(0, (float)$tagihan->total - (float)($tagihan->terbayar ?? 0));
+
       return response()->json([
         'success' => true,
         'message' => 'Detail tagihan berhasil diambil',
-        'data' => $tagihan
+        'data' => [
+          'id' => encrypt($rawId),
+          'id_raw' => $rawId,
+          'idUser' => encrypt($idUser),
+          'user_nama' => optional($tagihan->user)->name,
+          'user_wa' => optional($tagihan->user)->wa,
+          'user_julukan' => optional($tagihan->user)->julukan,
+          'noTagihan' => $tagihan->noTagihan,
+          'bulan' => $tagihan->bulan,
+          'tahun' => $tagihan->tahun,
+          'harga' => (float)$tagihan->harga,
+          'ppn' => (float)$tagihan->ppn,
+          'diskon' => (float)$tagihan->diskon,
+          'total' => (float)$tagihan->total,
+          'terbayar' => (float)($tagihan->terbayar ?? 0),
+          'sisa' => $tagihanCurrentSisa,
+          'tglJatuhTempo' => $tagihan->tglJatuhTempo,
+          'paket_nama' => optional($tagihan->paket)->nama,
+          'unpaid_count' => $allUnpaid->count(),
+          'total_tunggakan' => $totalTunggakan,
+          'unpaid_bills' => $allUnpaid->map(function ($b) {
+            $bRawId = $b->getRawOriginal('id');
+            return [
+              'id' => encrypt($bRawId),
+              'id_raw' => $bRawId,
+              'noTagihan' => $b->noTagihan,
+              'bulan' => $b->bulan,
+              'tahun' => $b->tahun,
+              'paket_nama' => optional($b->paket)->nama,
+              'total' => (float)$b->total,
+              'terbayar' => (float)($b->terbayar ?? 0),
+              'sisa' => max(0, (float)$b->total - (float)($b->terbayar ?? 0)),
+            ];
+          })
+        ]
       ]);
     } catch (\Exception $e) {
       return response()->json([

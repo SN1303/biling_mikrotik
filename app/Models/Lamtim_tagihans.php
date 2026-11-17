@@ -19,6 +19,7 @@ class Lamtim_tagihans extends Model
     'ppn',
     'diskon',
     'total',
+    'terbayar',
     'tglJatuhTempo',
     'tglBayar',
     'prosesNama',
@@ -37,6 +38,7 @@ class Lamtim_tagihans extends Model
     'ppn' => 'decimal:2',
     'diskon' => 'decimal:2',
     'total' => 'decimal:2',
+    'terbayar' => 'decimal:2',
   ];
 
   /**
@@ -60,5 +62,9 @@ class Lamtim_tagihans extends Model
   public function paket()
   {
     return $this->belongsTo(Lamtim_paket::class, 'idPaket', 'id');
+  }
+  public function transaksis()
+  {
+    return $this->hasMany(Lamtim_transaksi::class, 'idTagihan', 'id');
   }
 }
