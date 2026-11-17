@@ -17,12 +17,10 @@ $isFooter = ($isFooter ?? true);
 $customizerHidden = ($customizerHidden ?? '');
 
 /* HTML Classes */
-$navbarDetached = 'navbar-detached';
+$navbarDetached = '';
 $menuFixed = (isset($configData['menuFixed']) ? $configData['menuFixed'] : '');
-if(isset($navbarType)) {
-  $configData['navbarType'] = $navbarType;
-}
-$navbarType = (isset($configData['navbarType']) ? $configData['navbarType'] : '');
+$configData['navbarType'] = '';
+$navbarType = '';
 $footerFixed = (isset($configData['footerFixed']) ? $configData['footerFixed'] : '');
 $menuCollapsed = (isset($configData['menuCollapsed']) ? $configData['menuCollapsed'] : '');
 

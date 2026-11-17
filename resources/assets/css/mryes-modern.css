@@ -479,3 +479,10 @@ body {
   border-top: 1px solid var(--mryes-border-subtle) !important;
   padding: 1rem 1.5rem !important;
 }
+
+/* Hilangkan space kosong sisa Top Navbar */
+.layout-page,
+.layout-navbar-fixed .layout-wrapper .layout-page,
+.layout-navbar-fixed .layout-wrapper:not(.layout-without-menu) .layout-page {
+  padding-top: 0 !important;
+}

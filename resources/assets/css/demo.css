@@ -22,7 +22,7 @@
 
 /* ! For .layout-navbar-fixed added fix padding top tpo .layout-page */
 .layout-navbar-fixed .layout-wrapper:not(.layout-without-menu) .layout-page {
-  padding-top: 64px !important;
+  padding-top: 0 !important;
 }
 
 /* Navbar page z-index issue solution */

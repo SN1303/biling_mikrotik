@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="{{asset('assets/vendor/libs/select2/select2.css')}}" />
 
 <!-- MRYES Modern Design System -->
-<link rel="stylesheet" href="{{ asset('assets/css/mryes-modern.css') }}?v=2.1" />
+<link rel="stylesheet" href="{{ asset('assets/css/mryes-modern.css') }}?v=2.2" />
 
 @yield('vendor-style')
 

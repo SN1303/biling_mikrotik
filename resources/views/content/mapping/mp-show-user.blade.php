@@ -12,19 +12,25 @@ $isFooter = false;
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <style>
   /* Hilangkan padding default layout agar map benar-benar full screen */
+  .layout-page {
+    padding-top: 0 !important;
+  }
+  .content-wrapper {
+    padding-top: 0 !important;
+  }
   .content-wrapper > div.container-p-y,
   .content-wrapper > div.container-fluid,
   .content-wrapper > div.container-xxl {
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
   }
 
   .mapping-wrapper {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 36px);
+    height: calc(100vh - 12px);
     width: 100%;
   }
 
