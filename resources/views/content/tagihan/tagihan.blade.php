@@ -167,27 +167,27 @@
     background: rgba(37, 99, 235, 0.08) !important;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
   }
-    background-color: #f8fafc !important;
-  }
-  #table tbody tr:hover {
-    background-color: rgba(37, 99, 235, 0.02) !important;
-  }
-  .btn-xs {
-    padding: 2px 7px;
-    font-size: 0.72rem;
-    border-radius: 4px;
-  }
 
-  /* Quick filter scrollable di mobile */
-  .quick-filter-scroll-wrapper {
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
+  /* Modal Kasir POS Custom Styling */
+  .btn-quick-cash {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    color: #334155 !important;
+    transition: all 0.15s ease;
   }
-  .quick-filter-scroll-wrapper::-webkit-scrollbar {
-    display: none;
+  .btn-quick-cash:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+  }
+  #cash-calculator-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
   }
 
   /* Responsif Smartphone Khusus HP (< 768px) */
@@ -912,7 +912,8 @@
 
       if (received === 0) {
         $('#cash-change-display').text('Rp 0').removeClass('text-danger text-warning').addClass('text-success');
-        $('#cash-change-status').html('<span class="text-muted">Masukkan nominal uang yang diterima</span>');
+        $('#cash-change-status').html('<span class="text-muted small">Nominal belum diisi</span>');
+        $('#cash-cicilan-alert').slideUp(150);
         btnProses.removeClass('btn-warning').addClass('btn-success')
           .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
       } else if (diff < 0) {
@@ -922,21 +923,26 @@
         const bayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(received);
 
         $('#cash-change-display').text('- ' + kurangFmt).removeClass('text-success').addClass('text-danger');
-        $('#cash-change-status').html(`<span class="badge bg-warning text-dark"><i class="mdi mdi-clock-outline me-1"></i>Dicatat sebagai Cicilan (Sisa ${kurangFmt})</span>`);
+        $('#cash-change-status').html('<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-0.5"><i class="mdi mdi-clock-outline me-1"></i>Cicilan Bertahap</span>');
+
+        $('#cash-cicilan-sisa-badge').text('Sisa: ' + kurangFmt);
+        $('#cash-cicilan-alert').slideDown(150);
 
         btnProses.removeClass('btn-success').addClass('btn-warning')
           .html(`<i class="mdi mdi-cash-plus fs-5"></i><span>Terima Cicilan (${bayarFmt})</span>`);
       } else if (diff === 0) {
         // Uang Pas
         $('#cash-change-display').text('Rp 0').removeClass('text-danger text-warning').addClass('text-success');
-        $('#cash-change-status').html('<span class="text-success fw-bold"><i class="mdi mdi-check me-1"></i>Uang pas</span>');
+        $('#cash-change-status').html('<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5"><i class="mdi mdi-check me-1"></i>Uang Pas</span>');
+        $('#cash-cicilan-alert').slideUp(150);
         btnProses.removeClass('btn-warning').addClass('btn-success')
           .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
       } else {
         // Lebih -> Ada Kembalian
         const kembalianFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(diff);
         $('#cash-change-display').text(kembalianFmt).removeClass('text-danger text-warning').addClass('text-success');
-        $('#cash-change-status').html('<span class="text-success fw-bold"><i class="mdi mdi-hand-coin me-1"></i>Kembalikan ke pelanggan</span>');
+        $('#cash-change-status').html('<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5"><i class="mdi mdi-hand-coin me-1"></i>Kembalikan ke Pelanggan</span>');
+        $('#cash-cicilan-alert').slideUp(150);
         btnProses.removeClass('btn-warning').addClass('btn-success')
           .html('<i class="mdi mdi-check-circle fs-5"></i><span>Konfirmasi Pelunasan</span>');
       }
@@ -1633,24 +1639,24 @@
         </div>
 
         <!-- Highlight Showcase: Total & Pelanggan Ringkas -->
-        <div class="bg-white bg-opacity-10 rounded-3 p-2 p-sm-3 border border-white border-opacity-10 d-flex align-items-center justify-content-between gap-2">
+        <div class="rounded-3 p-2.5 p-sm-3 d-flex align-items-center justify-content-between gap-2 shadow-xs" style="background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
           <div>
-            <div class="text-uppercase text-white-50 fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;" id="modal-total-label">Total Tagihan</div>
+            <div class="text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7) !important;" id="modal-total-label">Total Tagihan</div>
             <div class="fs-3 fw-bolder text-warning lh-1 my-1" id="modal-total-display">Rp 0</div>
             <div id="modal-cicilan-info" style="display: none;" class="mt-1">
               <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.65rem;">
                 <i class="mdi mdi-clock-check-outline me-1"></i>Sudah Dicicil: <span id="modal-cicilan-terbayar">Rp 0</span>
               </span>
             </div>
-            <small class="text-white-50" style="font-size: 0.7rem;">
-              Inv: <span class="text-white fw-semibold" id="modal-noTagihan">-</span>
+            <small style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.7) !important;">
+              Inv: <span class="text-white fw-semibold font-monospace" id="modal-noTagihan">-</span>
             </small>
           </div>
-          <div class="text-end border-start border-white border-opacity-10 ps-2 ps-sm-3">
-            <div class="fw-bold text-white fs-6 text-truncate" style="max-width: 160px;" id="modal-namaPelanggan">-</div>
-            <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25" style="font-size: 0.68rem;" id="modal-paket-badge">-</span>
-            <div class="text-white-50 mt-1" style="font-size: 0.68rem;">
-              Periode: <span class="text-white" id="modal-periode-display">-</span>
+          <div class="text-end border-start ps-2 ps-sm-3" style="border-color: rgba(255, 255, 255, 0.18) !important;">
+            <div class="fw-bold text-white fs-6 text-truncate" style="max-width: 175px;" id="modal-namaPelanggan">-</div>
+            <span class="badge" style="background: rgba(255, 255, 255, 0.18) !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.28) !important; font-size: 0.68rem;" id="modal-paket-badge">-</span>
+            <div class="mt-1" style="font-size: 0.68rem; color: rgba(255, 255, 255, 0.7) !important;">
+              Periode: <span class="text-white fw-medium" id="modal-periode-display">-</span>
             </div>
           </div>
         </div>
@@ -1727,7 +1733,7 @@
           </div>
 
           <!-- Step 2: Kalkulator Pembayaran & Kembalian (Default Langsung Uang Pas) -->
-          <div id="cash-calculator-box" class="card border border-success border-opacity-25 bg-success-subtle p-2 p-sm-3 rounded-3 mb-2">
+          <div id="cash-calculator-box" class="card border rounded-3 p-2.5 p-sm-3 mb-2" style="background: #f8fafc; border-color: #e2e8f0 !important;">
             <div class="row align-items-center g-2">
               <div class="col-sm-6">
                 <label for="cash-received" class="form-label fw-bold text-dark small mb-1">Uang Diterima (Rp)</label>
@@ -1735,18 +1741,33 @@
                   <span class="input-group-text bg-white fw-bold">Rp</span>
                   <input type="number" class="form-control form-control-sm fw-bold fs-6" id="cash-received" placeholder="0" onfocus="this.select()" onclick="this.select()">
                 </div>
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-mode="exact">Uang Pas</button>
-                  <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="50000">50rb</button>
-                  <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="100000">100rb</button>
-                  <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="200000">200rb</button>
-                  <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="500000">500rb</button>
+                <div class="d-flex flex-wrap gap-1 mt-1.5">
+                  <button type="button" class="btn btn-quick-cash" data-mode="exact">Uang Pas</button>
+                  <button type="button" class="btn btn-quick-cash" data-amount="50000">50rb</button>
+                  <button type="button" class="btn btn-quick-cash" data-amount="100000">100rb</button>
+                  <button type="button" class="btn btn-quick-cash" data-amount="200000">200rb</button>
+                  <button type="button" class="btn btn-quick-cash" data-amount="500000">500rb</button>
                 </div>
               </div>
-              <div class="col-sm-6 text-sm-end pt-1 pt-sm-0 border-sm-start border-success border-opacity-25 ps-sm-3">
+              <div class="col-sm-6 text-sm-end pt-1 pt-sm-0 border-sm-start ps-sm-3" style="border-color: #e2e8f0 !important;">
                 <div class="small text-muted fw-semibold" style="font-size: 0.72rem;">Status / Kembalian</div>
                 <div class="fs-4 fw-bolder text-success" id="cash-change-display">Rp 0</div>
-                <div id="cash-change-status" style="font-size: 0.7rem;"><span class="text-success fw-bold"><i class="mdi mdi-check me-1"></i>Uang pas</span></div>
+                <div id="cash-change-status" style="font-size: 0.72rem;">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5">
+                    <i class="mdi mdi-check me-1"></i>Uang Pas
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alert Cicilan Full Width (Anti-Potong / Anti-Truncate) -->
+            <div id="cash-cicilan-alert" class="mt-2 pt-2 border-top" style="display: none; border-color: #fde68a !important;">
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 text-warning-emphasis" style="font-size: 0.73rem;">
+                <span class="d-flex align-items-center gap-1">
+                  <i class="mdi mdi-clock-alert-outline text-warning fs-6"></i>
+                  <span>Nominal pembayaran kurang dari total tagihan</span>
+                </span>
+                <span class="badge bg-warning text-dark fw-bold" id="cash-cicilan-sisa-badge">Sisa: Rp 0</span>
               </div>
             </div>
           </div>
