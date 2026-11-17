@@ -8,23 +8,34 @@
 
 @section('page-style')
 <style>
-  /* Styling KPI Cards */
+  /* Styling KPI Cards Compact & Responsif */
   .metric-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
   }
   .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07) !important;
+  }
+  .metric-card .card-body {
+    padding: 0.75rem 0.9rem !important;
   }
   .metric-icon-box {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+  }
+  .metric-icon-box i {
+    font-size: 1.25rem;
+  }
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
   }
 
   /* Metode Bayar Visual Radio Tiles */
@@ -60,6 +71,98 @@
     padding: 2px 7px;
     font-size: 0.72rem;
     border-radius: 4px;
+  }
+
+  /* Quick filter scrollable di mobile */
+  .quick-filter-scroll-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .quick-filter-scroll-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Responsif Smartphone Khusus HP (< 768px) */
+  @media (max-width: 767.98px) {
+    /* Perkecil Kotak KPI Summary */
+    .metric-card .card-body {
+      padding: 0.45rem 0.65rem !important;
+    }
+    .metric-icon-box {
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 6px !important;
+    }
+    .metric-icon-box i {
+      font-size: 0.95rem !important;
+    }
+    .metric-title {
+      font-size: 0.68rem !important;
+      margin-bottom: 0px !important;
+    }
+    .metric-value {
+      font-size: 0.92rem !important;
+      margin-bottom: 0 !important;
+    }
+    .metric-sub {
+      display: none !important;
+    }
+
+    /* Transformasi DataTables ke Mobile List Cards */
+    #table thead {
+      display: none !important;
+    }
+    #table {
+      border: none !important;
+    }
+    #table tbody tr {
+      display: block !important;
+      margin-bottom: 8px !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 10px !important;
+      background: #ffffff !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      overflow: hidden !important;
+    }
+    #table tbody td {
+      display: block !important;
+      border: none !important;
+      padding: 10px 12px !important;
+    }
+    .card-datatable {
+      padding: 6px !important;
+      background: #f8fafc !important;
+    }
+
+    /* Search Input Full Width di HP */
+    .dataTables_filter {
+      width: 100% !important;
+      text-align: left !important;
+      margin-top: 4px !important;
+    }
+    .dataTables_filter label {
+      width: 100% !important;
+      margin-bottom: 0 !important;
+    }
+    .dataTables_filter input {
+      width: 100% !important;
+      margin-left: 0 !important;
+      font-size: 0.85rem !important;
+      border-radius: 8px !important;
+      height: 38px !important;
+    }
+    .dataTables_length {
+      display: none !important;
+    }
+    .dataTables_info,
+    .dataTables_paginate {
+      text-align: center !important;
+      justify-content: center !important;
+      font-size: 0.8rem !important;
+    }
   }
 </style>
 @endsection
@@ -107,7 +210,7 @@
           data: null,
           orderable: false,
           searchable: false,
-          className: 'text-center align-middle',
+          className: 'text-center align-middle d-none d-md-table-cell',
           render: function(data, type, row, meta) {
             return `<span class="text-muted fw-bold small">${meta.row + meta.settings._iDisplayStart + 1}</span>`;
           }
@@ -115,19 +218,97 @@
         {
           data: 'user_nama',
           name: 'user_nama',
-          className: 'align-middle',
+          className: 'align-middle p-2 p-md-3',
           render: function(data, type, row) {
             const wa = row.user_wa;
             const waButton = wa && wa !== '-'
               ? `<a href="javascript:void(0)" class="btn-wa-direct badge bg-success-subtle text-success border border-success-subtle text-decoration-none" data-id="${row.id}" title="Kirim Pesan WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
               : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
 
+            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total || 0);
+            const namaBulanStr = namaBulan[row.bulan] || row.bulan;
+            const periodeText = `${namaBulanStr} ${row.tahun}`;
+
+            // Perhitungan Jatuh Tempo
+            const days = row.due_diff_days;
+            let dueBadgeMobile = '';
+            if (row.tglJatuhTempo) {
+              if (days !== null && days !== undefined) {
+                if (days < 0) {
+                  dueBadgeMobile = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-semibold" style="font-size: 0.68rem;"><i class="mdi mdi-alert-circle me-1"></i>Lewat ${Math.abs(days)} hr</span>`;
+                } else if (days === 0) {
+                  dueBadgeMobile = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-bold" style="font-size: 0.68rem;"><i class="mdi mdi-clock-alert me-1"></i>Hari Ini!</span>`;
+                } else if (days <= 3) {
+                  dueBadgeMobile = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 0.68rem;"><i class="mdi mdi-clock-outline me-1"></i>Sisa ${days} hr</span>`;
+                } else {
+                  dueBadgeMobile = `<span class="badge bg-light text-secondary border" style="font-size: 0.68rem;">Sisa ${days} hr</span>`;
+                }
+              } else {
+                dueBadgeMobile = `<span class="badge bg-light text-muted" style="font-size: 0.68rem;">${row.tglJatuhTempo}</span>`;
+              }
+            }
+
+            let deleteBtnMobile = '';
+            @if(auth()->user()->hasRole(1, 2))
+            deleteBtnMobile = `
+              <button type="button" class="btn btn-sm btn-outline-danger btn-delete px-2 py-2" data-id="${row.id}" title="Hapus Tagihan" style="border-radius: 8px;">
+                <i class="mdi mdi-trash-can-outline fs-6"></i>
+              </button>
+            `;
+            @endif
+
             return `
-              <div>
+              <!-- DESKTOP VIEW (>= 768px) -->
+              <div class="d-none d-md-block">
                 <div class="fw-bold text-dark fs-6 mb-1">${data || 'Tanpa Nama'}</div>
                 <div class="d-flex align-items-center flex-wrap gap-1">
                   <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${row.noTagihan}</span>
                   ${waButton}
+                </div>
+              </div>
+
+              <!-- MOBILE CARD VIEW (< 768px) - RESPONSIF SMARTPHONE UNTUK KOLEKTOR -->
+              <div class="d-md-none mobile-bill-card">
+                <!-- Baris 1: Nama Pelanggan & Total Tagihan -->
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                  <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fw-bold text-dark fs-6 text-truncate mb-0">
+                      ${data || 'Tanpa Nama'}
+                    </div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      <i class="mdi mdi-receipt-text-outline me-1"></i>${row.noTagihan || '-'}
+                    </small>
+                  </div>
+                  <div class="text-end flex-shrink-0">
+                    <div class="fs-6 fw-bolder text-primary mb-0">${totalFmt}</div>
+                    <div class="mt-1">${dueBadgeMobile}</div>
+                  </div>
+                </div>
+
+                <!-- Baris 2: Paket, Periode & WA Pelanggan -->
+                <div class="d-flex align-items-center justify-content-between gap-1 py-1 px-2 my-2 bg-light rounded-2 border" style="font-size: 0.72rem;">
+                  <div class="text-truncate">
+                    <i class="mdi mdi-speedometer me-1 text-primary"></i>
+                    <span class="fw-semibold text-dark">${row.paket_nama || 'Paket Internet'}</span>
+                    <span class="text-muted">(${periodeText})</span>
+                  </div>
+                  <div>
+                    ${wa && wa !== '-' ? `<a href="https://wa.me/${String(wa).replace(/[^0-9]/g, '').replace(/^0/, '62')}" target="_blank" class="text-success fw-semibold text-decoration-none"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>` : '<span class="text-muted">No WA (-)</span>'}
+                  </div>
+                </div>
+
+                <!-- Baris 3: TOMBOL BAYAR LANGSUNG DI DEPAN MATA (MUDAH DITEKAN JEMPOL) -->
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <button type="button" class="btn btn-success btn-bayar flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-2 shadow-xs fw-bold" data-id="${row.id}" style="font-size: 0.85rem; border-radius: 8px;">
+                    <i class="mdi mdi-cash-check fs-5"></i>
+                    <span>BAYAR SEKARANG</span>
+                  </button>
+
+                  <button type="button" class="btn btn-outline-success btn-wa-direct d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Kirim Pengingat WhatsApp" style="border-radius: 8px; width: 42px; height: 38px;">
+                    <i class="mdi mdi-whatsapp fs-5"></i>
+                  </button>
+
+                  ${deleteBtnMobile}
                 </div>
               </div>
             `;
@@ -136,7 +317,7 @@
         {
           data: 'paket_nama',
           name: 'paket_nama',
-          className: 'align-middle',
+          className: 'align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
             const periodeText = `${namaBulan[row.bulan] || row.bulan} ${row.tahun}`;
             return `
@@ -155,7 +336,7 @@
         {
           data: 'total',
           name: 'total',
-          className: 'align-middle',
+          className: 'align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
             const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
             let detailSub = '';
@@ -175,7 +356,7 @@
         {
           data: 'tglJatuhTempo',
           name: 'tglJatuhTempo',
-          className: 'align-middle',
+          className: 'align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
             if (!data) return '<span class="text-muted">-</span>';
 
@@ -207,7 +388,7 @@
           name: 'action',
           orderable: false,
           searchable: false,
-          className: 'text-center align-middle',
+          className: 'text-center align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
             let deleteBtn = '';
             @if(auth()->user()->hasRole(1, 2))
@@ -727,19 +908,19 @@
   </div>
 </div>
 
-<!-- 4 Executive KPI Summary Cards -->
-<div class="row g-2 g-sm-3 mb-4">
+<!-- 4 Executive KPI Summary Cards (Compact & Responsif) -->
+<div class="row g-2 mb-3" id="kpi-summary-row">
   <!-- Card 1: Total Tagihan Aktif -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #2563eb !important;">
-      <div class="card-body p-3 d-flex align-items-center justify-content-between">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #2563eb !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="text-muted d-block small mb-1 fw-medium">Total Tagihan</span>
-          <div class="fs-4 fw-bold text-dark mb-0" id="total-count">0</div>
-          <small class="text-muted" style="font-size: 0.72rem;">Menunggu pembayaran</small>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Tagihan</span>
+          <div class="metric-value fs-5 fw-bold text-dark mb-0" id="total-count">0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Menunggu bayar</small>
         </div>
         <div class="metric-icon-box bg-primary-subtle text-primary border border-primary-subtle">
-          <i class="mdi mdi-file-clock-outline fs-4"></i>
+          <i class="mdi mdi-file-clock-outline"></i>
         </div>
       </div>
     </div>
@@ -747,15 +928,15 @@
 
   <!-- Card 2: Total Nominal Tertunda -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #ef4444 !important;">
-      <div class="card-body p-3 d-flex align-items-center justify-content-between">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #ef4444 !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="text-muted d-block small mb-1 fw-medium">Belum Terbayar</span>
-          <div class="fs-4 fw-bold text-danger mb-0" id="total-unpaid">Rp 0</div>
-          <small class="text-muted" style="font-size: 0.72rem;">Total tagihan bruto</small>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Belum Terbayar</span>
+          <div class="metric-value fs-5 fw-bold text-danger mb-0" id="total-unpaid">Rp 0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Total piutang</small>
         </div>
         <div class="metric-icon-box bg-danger-subtle text-danger border border-danger-subtle">
-          <i class="mdi mdi-cash-remove fs-4"></i>
+          <i class="mdi mdi-cash-remove"></i>
         </div>
       </div>
     </div>
@@ -763,15 +944,15 @@
 
   <!-- Card 3: Overdue / Lewat Jatuh Tempo -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #f59e0b !important;">
-      <div class="card-body p-3 d-flex align-items-center justify-content-between">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #f59e0b !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="text-warning d-block small mb-1 fw-bold">Lewat Jatuh Tempo</span>
-          <div class="fs-4 fw-bold text-warning mb-0" id="overdue-count">0</div>
-          <small class="text-danger fw-semibold" id="overdue-total" style="font-size: 0.72rem;">Rp 0 macet</small>
+          <span class="metric-title text-warning d-block small mb-1 fw-bold">Lewat Tempo</span>
+          <div class="metric-value fs-5 fw-bold text-warning mb-0" id="overdue-count">0</div>
+          <small class="metric-sub text-danger fw-semibold" id="overdue-total" style="font-size: 0.7rem;">Rp 0 macet</small>
         </div>
         <div class="metric-icon-box bg-warning-subtle text-warning border border-warning-subtle shadow-xs">
-          <i class="mdi mdi-alert-circle-outline fs-4"></i>
+          <i class="mdi mdi-alert-circle-outline"></i>
         </div>
       </div>
     </div>
@@ -779,15 +960,15 @@
 
   <!-- Card 4: Potensi Penerimaan Kas -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #10b981 !important;">
-      <div class="card-body p-3 d-flex align-items-center justify-content-between">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #10b981 !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="text-muted d-block small mb-1 fw-medium">Potensi Kas Masuk</span>
-          <div class="fs-4 fw-bold text-success mb-0" id="potential-income">Rp 0</div>
-          <small class="text-muted" style="font-size: 0.72rem;">Estimasi kas masuk</small>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Potensi Kas</span>
+          <div class="metric-value fs-5 fw-bold text-success mb-0" id="potential-income">Rp 0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Estimasi masuk</small>
         </div>
         <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
-          <i class="mdi mdi-trending-up fs-4"></i>
+          <i class="mdi mdi-trending-up"></i>
         </div>
       </div>
     </div>
@@ -796,29 +977,28 @@
 
 <!-- Main Table Card -->
 <div class="card border-0 shadow-sm">
-  <div class="card-header bg-white border-bottom py-3 px-3 px-sm-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-      <!-- Quick Filter Status Pills -->
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <span class="text-muted small fw-semibold d-none d-sm-inline">Status:</span>
+  <div class="card-header bg-white border-bottom py-2 px-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <!-- Quick Filter Status Pills with Smooth Mobile Horizontal Scroll -->
+      <div class="quick-filter-scroll-wrapper flex-grow-1">
         <div class="btn-group btn-group-sm shadow-xs" role="group" id="quick-filter-group">
           <button type="button" class="btn btn-outline-primary active" data-filter="">
             <i class="mdi mdi-view-list me-1"></i> Semua (<span id="pill-all">0</span>)
           </button>
           <button type="button" class="btn btn-outline-danger" data-filter="overdue">
-            <i class="mdi mdi-alert-circle-outline me-1"></i> Lewat Jatuh Tempo (<span id="pill-overdue">0</span>)
+            <i class="mdi mdi-alert-circle-outline me-1"></i> Lewat Tempo (<span id="pill-overdue">0</span>)
           </button>
           <button type="button" class="btn btn-outline-warning" data-filter="today">
             <i class="mdi mdi-clock-alert-outline me-1"></i> Hari Ini (<span id="pill-today">0</span>)
           </button>
           <button type="button" class="btn btn-outline-success" data-filter="upcoming">
-            <i class="mdi mdi-calendar-check-outline me-1"></i> Belum Jatuh Tempo
+            <i class="mdi mdi-calendar-check-outline me-1"></i> Belum Tempo
           </button>
         </div>
       </div>
 
-      <div class="text-muted small">
-        <i class="mdi mdi-information-outline me-1 text-primary"></i> Klik tombol <span class="badge bg-success-subtle text-success border border-success-subtle py-1">Bayar</span> untuk melunasi
+      <div class="text-muted small d-none d-md-block">
+        <i class="mdi mdi-information-outline me-1 text-primary"></i> Klik <span class="badge bg-success-subtle text-success border border-success-subtle py-1">Bayar</span> untuk melunasi
       </div>
     </div>
   </div>
@@ -827,112 +1007,108 @@
     <table id="table" class="datatables-basic table table-bordered table-hover align-middle mb-0 w-100">
       <thead class="table-light">
         <tr>
-          <th style="width: 50px;" class="text-center">NO</th>
-          <th style="min-width: 200px;">PELANGGAN & INVOICE</th>
-          <th style="min-width: 160px;">PAKET & PERIODE</th>
-          <th style="min-width: 140px;">TOTAL TAGIHAN</th>
-          <th style="min-width: 150px;">JATUH TEMPO</th>
-          <th style="min-width: 150px;" class="text-center">AKSI</th>
+          <th style="width: 45px;" class="text-center d-none d-md-table-cell">NO</th>
+          <th>PELANGGAN & INVOICE</th>
+          <th class="d-none d-md-table-cell" style="width: 170px;">PAKET & PERIODE</th>
+          <th class="d-none d-md-table-cell" style="width: 140px;">TOTAL TAGIHAN</th>
+          <th class="d-none d-md-table-cell" style="width: 140px;">JATUH TEMPO</th>
+          <th class="d-none d-md-table-cell text-center" style="width: 150px;">AKSI</th>
         </tr>
       </thead>
     </table>
   </div>
 </div>
 
-<!-- Modal Bayar Modern Kasir POS -->
+<!-- Modal Bayar Modern Kasir POS (Compact & Ringan untuk HP) -->
 <div class="modal fade" id="modalBayar" tabindex="-1" aria-labelledby="modalBayarLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg" style="border-radius: 18px; overflow: hidden;">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
 
       <!-- Top Cashier Header -->
-      <div class="p-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-        <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="p-3 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <div class="d-flex align-items-center justify-content-between mb-2">
           <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success p-2 rounded-circle shadow-xs">
-              <i class="mdi mdi-cash-register fs-4 text-white"></i>
+            <span class="badge bg-success p-1 rounded-circle shadow-xs">
+              <i class="mdi mdi-cash-register fs-5 text-white"></i>
             </span>
             <div>
-              <h5 class="modal-title fw-bold text-white mb-0" id="modalBayarLabel">Kasir Pembayaran Tagihan</h5>
-              <small class="text-white-50">Sistem Pencatatan Transaksi Kasir & Kolektor</small>
+              <h6 class="modal-title fw-bold text-white mb-0" id="modalBayarLabel">Kasir Pembayaran</h6>
+              <small class="text-white-50" style="font-size: 0.7rem;">Pencatatan Transaksi & Pelunasan</small>
             </div>
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
-        <!-- Big Highlight Showcase -->
-        <div class="bg-white bg-opacity-10 rounded-3 p-3 border border-white border-opacity-10 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <!-- Highlight Showcase: Total & Pelanggan Ringkas -->
+        <div class="bg-white bg-opacity-10 rounded-3 p-2 p-sm-3 border border-white border-opacity-10 d-flex align-items-center justify-content-between gap-2">
           <div>
-            <div class="text-uppercase small text-white-50 fw-semibold tracking-wider">Total Harus Dibayar</div>
-            <div class="fs-1 fw-bolder text-warning" id="modal-total-display">Rp 0</div>
-            <div class="small text-white-50 mt-1">
-              No. Invoice: <span class="text-white fw-semibold" id="modal-noTagihan">-</span>
-            </div>
+            <div class="text-uppercase text-white-50 fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Total Tagihan</div>
+            <div class="fs-3 fw-bolder text-warning lh-1 my-1" id="modal-total-display">Rp 0</div>
+            <small class="text-white-50" style="font-size: 0.7rem;">
+              Inv: <span class="text-white fw-semibold" id="modal-noTagihan">-</span>
+            </small>
           </div>
-          <div class="text-sm-end border-sm-start border-white border-opacity-10 ps-sm-3">
-            <div class="fw-bold text-white fs-6" id="modal-namaPelanggan">-</div>
-            <div class="text-white-50 small" id="modal-paket-badge">-</div>
-            <div class="text-white-50 small mt-1">
+          <div class="text-end border-start border-white border-opacity-10 ps-2 ps-sm-3">
+            <div class="fw-bold text-white fs-6 text-truncate" style="max-width: 160px;" id="modal-namaPelanggan">-</div>
+            <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25" style="font-size: 0.68rem;" id="modal-paket-badge">-</span>
+            <div class="text-white-50 mt-1" style="font-size: 0.68rem;">
               Periode: <span class="text-white" id="modal-periode-display">-</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="modal-body p-4 bg-light-subtle">
+      <div class="modal-body p-3 bg-light-subtle">
         <form id="form-bayar">
           <input type="hidden" id="tagihan_id" name="tagihan_id" value="">
-          <!-- Step 1: Pilih Metode Bayar -->
-          <div class="mb-4">
-            <label class="form-label fw-bold text-dark mb-2">
-              <i class="mdi mdi-wallet-outline text-primary me-1"></i>Pilih Metode Pembayaran <span class="text-danger">*</span>
+          <!-- Step 1: Pilih Metode Bayar (Compact Row) -->
+          <div class="mb-3">
+            <label class="form-label fw-bold text-dark small mb-1">
+              <i class="mdi mdi-wallet-outline text-primary me-1"></i>Metode Pembayaran <span class="text-danger">*</span>
             </label>
-            <div class="row g-2" id="metode-cards">
-              <div class="col-6 col-sm-3">
+            <div class="row g-1 g-sm-2" id="metode-cards">
+              <div class="col-3">
                 <input type="radio" class="btn-check" name="metode_bayar_radio" id="metode_cod" value="cod" checked autocomplete="off">
-                <label class="btn btn-outline-secondary w-100 p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_cod">
-                  <i class="mdi mdi-cash-multiple fs-2 text-success mb-1"></i>
-                  <span class="fw-bold d-block text-dark small">Tunai / COD</span>
-                  <small class="text-muted" style="font-size: 0.7rem;">Bayar di tempat</small>
+                <label class="btn btn-outline-secondary w-100 p-2 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_cod" style="min-height: 56px;">
+                  <i class="mdi mdi-cash-multiple fs-4 text-success"></i>
+                  <span class="fw-bold d-block text-dark mt-1" style="font-size: 0.72rem;">Tunai</span>
                 </label>
               </div>
-              <div class="col-6 col-sm-3">
+              <div class="col-3">
                 <input type="radio" class="btn-check" name="metode_bayar_radio" id="metode_transfer" value="transfer" autocomplete="off">
-                <label class="btn btn-outline-secondary w-100 p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_transfer">
-                  <i class="mdi mdi-bank-transfer fs-2 text-primary mb-1"></i>
-                  <span class="fw-bold d-block text-dark small">Transfer Bank</span>
-                  <small class="text-muted" style="font-size: 0.7rem;">BCA, BRI, Mandiri</small>
+                <label class="btn btn-outline-secondary w-100 p-2 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_transfer" style="min-height: 56px;">
+                  <i class="mdi mdi-bank-transfer fs-4 text-primary"></i>
+                  <span class="fw-bold d-block text-dark mt-1" style="font-size: 0.72rem;">Transfer</span>
                 </label>
               </div>
-              <div class="col-6 col-sm-3">
+              <div class="col-3">
                 <input type="radio" class="btn-check" name="metode_bayar_radio" id="metode_qris" value="qris" autocomplete="off">
-                <label class="btn btn-outline-secondary w-100 p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_qris">
-                  <i class="mdi mdi-qrcode-scan fs-2 text-info mb-1"></i>
-                  <span class="fw-bold d-block text-dark small">QRIS</span>
-                  <small class="text-muted" style="font-size: 0.7rem;">Scan barcode</small>
+                <label class="btn btn-outline-secondary w-100 p-2 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_qris" style="min-height: 56px;">
+                  <i class="mdi mdi-qrcode-scan fs-4 text-info"></i>
+                  <span class="fw-bold d-block text-dark mt-1" style="font-size: 0.72rem;">QRIS</span>
                 </label>
               </div>
-              <div class="col-6 col-sm-3">
+              <div class="col-3">
                 <input type="radio" class="btn-check" name="metode_bayar_radio" id="metode_ewallet" value="ewallet" autocomplete="off">
-                <label class="btn btn-outline-secondary w-100 p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_ewallet">
-                  <i class="mdi mdi-cellphone-nfc fs-2 text-warning mb-1"></i>
-                  <span class="fw-bold d-block text-dark small">E-Wallet</span>
-                  <small class="text-muted" style="font-size: 0.7rem;">Dana, Ovo, Gopay</small>
+                <label class="btn btn-outline-secondary w-100 p-2 d-flex flex-column align-items-center justify-content-center text-center rounded-3 metode-card" for="metode_ewallet" style="min-height: 56px;">
+                  <i class="mdi mdi-cellphone-nfc fs-4 text-warning"></i>
+                  <span class="fw-bold d-block text-dark mt-1" style="font-size: 0.72rem;">E-Wallet</span>
                 </label>
               </div>
             </div>
             <input type="hidden" id="metode_bayar" name="metode_bayar" value="cod">
           </div>
 
-          <!-- Step 2: Kalkulator Kembalian Tunai (Muncul saat COD / Tunai) -->
-          <div id="cash-calculator-box" class="card border border-success border-opacity-25 bg-success-subtle p-3 rounded-3 mb-3">
+          <!-- Step 2: Kalkulator Kembalian Tunai (Compact) -->
+          <div id="cash-calculator-box" class="card border border-success border-opacity-25 bg-success-subtle p-2 p-sm-3 rounded-3 mb-2">
             <div class="row align-items-center g-2">
               <div class="col-sm-6">
-                <label for="cash-received" class="form-label fw-bold text-dark small mb-1">Uang Diterima dari Pelanggan</label>
+                <label for="cash-received" class="form-label fw-bold text-dark small mb-1">Uang Diterima (Rp)</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text bg-white fw-bold">Rp</span>
                   <input type="number" class="form-control form-control-sm fw-bold fs-6" id="cash-received" placeholder="0">
                 </div>
-                <div class="d-flex flex-wrap gap-1 mt-2">
+                <div class="d-flex flex-wrap gap-1 mt-1">
                   <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-mode="exact">Uang Pas</button>
                   <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="50000">50rb</button>
                   <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="100000">100rb</button>
@@ -940,32 +1116,32 @@
                   <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-amount="500000">500rb</button>
                 </div>
               </div>
-              <div class="col-sm-6 text-sm-end pt-2 pt-sm-0 border-sm-start border-success border-opacity-25 ps-sm-3">
-                <div class="small text-muted fw-semibold">Uang Kembalian</div>
-                <div class="fs-3 fw-bolder text-success" id="cash-change-display">Rp 0</div>
-                <div class="small text-muted" id="cash-change-status">Uang pas / pas bayar</div>
+              <div class="col-sm-6 text-sm-end pt-1 pt-sm-0 border-sm-start border-success border-opacity-25 ps-sm-3">
+                <div class="small text-muted fw-semibold" style="font-size: 0.72rem;">Uang Kembalian</div>
+                <div class="fs-4 fw-bolder text-success" id="cash-change-display">Rp 0</div>
+                <small class="text-muted d-block" id="cash-change-status" style="font-size: 0.7rem;">Uang pas</small>
               </div>
             </div>
           </div>
 
-          <!-- Step 3: Keterangan Catatan Tambahan -->
-          <div class="mb-2">
-            <label for="keterangan_bayar" class="form-label fw-bold text-dark small mb-1">
-              Catatan / Referensi Transaksi (Opsional)
+          <!-- Step 3: Keterangan Catatan Tambahan (Compact) -->
+          <div class="mb-1">
+            <label for="keterangan_bayar" class="form-label fw-semibold text-muted small mb-1" style="font-size: 0.72rem;">
+              Catatan / Referensi (Opsional)
             </label>
             <input type="text" id="keterangan_bayar" name="keterangan" class="form-control form-control-sm"
-              placeholder="Contoh: Titip ke Bu Siti / Ref transfer BCA / Bayar via kurir">
+              placeholder="Contoh: Titip ke tetangga / ref transfer">
           </div>
         </form>
       </div>
 
-      <div class="modal-footer bg-white border-top p-3 d-flex align-items-center justify-content-between">
-        <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">
+      <div class="modal-footer bg-white border-top p-2 px-3 d-flex align-items-center justify-content-between">
+        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">
           <i class="mdi mdi-close me-1"></i>Batal
         </button>
-        <button type="submit" form="form-bayar" class="btn btn-success btn-lg px-4 shadow-sm fw-bold d-flex align-items-center gap-2" id="btn-proses-bayar">
+        <button type="submit" form="form-bayar" class="btn btn-success px-3 py-2 shadow-sm fw-bold d-flex align-items-center gap-1" id="btn-proses-bayar">
           <i class="mdi mdi-check-circle fs-5"></i>
-          <span>Konfirmasi & Lunaskan Tagihan</span>
+          <span>Konfirmasi Pelunasan</span>
         </button>
       </div>
     </div>
