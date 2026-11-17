@@ -10,7 +10,7 @@ $configData = Helper::appClasses();
 /* Display elements */
 $contentNavbar = ($contentNavbar ?? true);
 $containerNav = ($containerNav ?? 'container-xxl');
-$isNavbar = ($isNavbar ?? true);
+$isNavbar = false;
 $isMenu = ($isMenu ?? true);
 $isFlex = ($isFlex ?? false);
 $isFooter = ($isFooter ?? true);

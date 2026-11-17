@@ -242,6 +242,41 @@ $currentUser = auth()->user();
     </li>
     @endif
 
+    {{-- ================= AKUN & KELUAR ================= --}}
+    <li class="menu-header fw-medium mt-3">
+      <span class="menu-header-text">Akun</span>
+    </li>
+    <li class="menu-item">
+      <a href="{{ route('logout') }}" class="menu-link text-danger" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
+        <i class="menu-icon tf-icons mdi mdi-logout text-danger"></i>
+        <div>Keluar / Logout</div>
+      </a>
+      <form method="POST" id="sidebar-logout-form" action="{{ route('logout') }}" class="d-none">
+        @csrf
+      </form>
+    </li>
+
   </ul>
+
+  @if($currentUser)
+  <div class="p-3 border-top mt-auto bg-menu-theme">
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2 overflow-hidden">
+        <div class="avatar avatar-sm flex-shrink-0">
+          <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px; background: linear-gradient(135deg, #2563eb, #0ea5e9); font-size: 0.8rem;">
+            {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
+          </div>
+        </div>
+        <div class="text-truncate" style="line-height: 1.2;">
+          <div class="fw-semibold text-dark text-truncate" style="font-size: 0.8125rem;">{{ $currentUser->name ?? '-' }}</div>
+          <small class="text-muted" style="font-size: 0.7rem;">{{ $currentUser->role_name ?? 'User' }}</small>
+        </div>
+      </div>
+      <a href="{{ route('logout') }}" class="btn btn-sm btn-icon btn-text-danger rounded-pill" title="Logout" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
+        <i class="mdi mdi-power fs-5"></i>
+      </a>
+    </div>
+  </div>
+  @endif
 
 </aside>
