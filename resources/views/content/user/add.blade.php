@@ -60,29 +60,33 @@
     // 2. Leaflet Mini Map Setup
     let initialLat = -5.2600;
     let initialLng = 105.7000;
-    let map = L.map('mini-map-customer').setView([initialLat, initialLng], 11);
+    let map = L.map('mini-map-customer', { maxZoom: 21 }).setView([initialLat, initialLng], 11);
 
     // Definisi Layer Peta (Google Satellite, Google Hybrid, Google Roads, OpenStreetMap)
     const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
+      maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '© Google Maps'
     });
 
     const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
+      maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '© Google Maps'
     });
 
     const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 21,
+      maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '© Google Maps'
     });
 
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: 21,
+      maxNativeZoom: 19,
       attribution: '© OpenStreetMap'
     });
 

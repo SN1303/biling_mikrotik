@@ -392,29 +392,33 @@
   const longitude = "{{ config('services.mapping.longitude-server') }}";
   const centerLatLng = [parseFloat(latitude), parseFloat(longitude)];
 
-  const map = L.map('map').setView(centerLatLng, 12);
+  const map = L.map('map', { maxZoom: 21 }).setView(centerLatLng, 12);
 
   // Definisi Layer Peta (Google Satellite, Google Hybrid, Google Roads, OpenStreetMap)
   const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     attribution: '© Google Maps'
   });
 
   const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     attribution: '© Google Maps'
   });
 
   const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     attribution: '© Google Maps'
   });
 
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: '© OpenStreetMap'
   });
 

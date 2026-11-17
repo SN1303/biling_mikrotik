@@ -1115,17 +1115,17 @@ function initMap() {
   let center = [-5.1477, 105.2611], zoom = 14;
   if (saved) { try { const s = JSON.parse(saved); center = [s.lat, s.lng]; zoom = s.zoom; } catch(e){} }
 
-  map = L.map('map', { center, zoom, zoomControl: true });
+  map = L.map('map', { center, zoom, zoomControl: true, maxZoom: 21 });
   map.on('moveend zoomend', () => {
     const c = map.getCenter();
     localStorage.setItem('mapState', JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
   });
 
-  tileLayers.googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
-  tileLayers.googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
-  tileLayers.google = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
-  tileLayers.openstreetmap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
-  tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
+  tileLayers.googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 21, maxNativeZoom: 20, subdomains: ['0','1','2','3'] });
+  tileLayers.googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 21, maxNativeZoom: 20, subdomains: ['0','1','2','3'] });
+  tileLayers.google = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 21, maxNativeZoom: 20, subdomains: ['0','1','2','3'] });
+  tileLayers.openstreetmap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 21, maxNativeZoom: 19 });
+  tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri ArcGIS', maxZoom: 21, maxNativeZoom: 18 });
 
   // Restore saved map layer (default ke Google Hybrid)
   const savedLayer = localStorage.getItem('mapLayerType') || 'googleHybrid';
