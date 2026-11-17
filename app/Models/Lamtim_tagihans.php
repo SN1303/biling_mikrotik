@@ -63,8 +63,13 @@ class Lamtim_tagihans extends Model
   {
     return $this->belongsTo(Lamtim_paket::class, 'idPaket', 'id');
   }
+  public function getIdRawAttribute()
+  {
+    return $this->getRawOriginal('id');
+  }
+
   public function transaksis()
   {
-    return $this->hasMany(Lamtim_transaksi::class, 'idTagihan', 'id');
+    return $this->hasMany(Lamtim_transaksi::class, 'idTagihan', 'id_raw');
   }
 }

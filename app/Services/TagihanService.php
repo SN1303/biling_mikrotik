@@ -462,16 +462,22 @@ class TagihanService
   {
     try {
       $where = [];
-      // filter tahun + bulan + status bayar
+      // filter tahun + bulan
       if (!empty($request->tahun)) {
         $where['tahun'] = $request->tahun;
       }
       if (!empty($request->bulan)) {
         $where['bulan'] = $request->bulan;
       }
-      $where['statusBayar'] = $request->status_bayar ?? 0;
 
-      $query = $this->repository->getDatatablesJson($where);
+      if ($request->status_bayar == 1) {
+        // Tagihan Lunas & Cicilan Berjalan (Ada Uang Masuk)
+        $query = $this->repository->getLunasDanCicilanJson($where);
+      } else {
+        // Tagihan Aktif (Belum Lunas)
+        $where['statusBayar'] = 0;
+        $query = $this->repository->getDatatablesJson($where);
+      }
 
       $today = date('Y-m-d');
 
@@ -487,7 +493,7 @@ class TagihanService
       $summaryData = [
         'total_count' => $summaryQuery->count(),
         'total_unpaid' => $request->status_bayar == 1
-          ? $summaryQuery->sum('total')
+          ? $summaryQuery->sum(fn($item) => $item->statusBayar == 1 ? (float)$item->total : (float)($item->terbayar ?? 0))
           : $summaryQuery->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
         'total_harga' => $summaryQuery->sum('harga'),
         'total_ppn' => $summaryQuery->sum('ppn'),
@@ -495,6 +501,8 @@ class TagihanService
         'overdue_count' => $overdueItems->count(),
         'overdue_total' => $overdueItems->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
         'today_due_count' => $todayDueItems->count(),
+        'lunas_count' => $summaryQuery->where('statusBayar', 1)->count(),
+        'cicilan_count' => $summaryQuery->where('statusBayar', 0)->count(),
       ];
       $summaryData['potential_income'] = $summaryData['total_unpaid'];
       $summaryData['average_amount'] = $summaryData['total_count'] > 0 ?
@@ -514,6 +522,15 @@ class TagihanService
           $query = $query->filter(function ($item) use ($today) {
             return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo > $today;
           });
+        }
+      }
+
+      // Filter khusus tab halaman lunas: Semua vs Lunas Penuh vs Cicilan Berjalan
+      if ($request->status_bayar == 1 && !empty($request->filter_lunas)) {
+        if ($request->filter_lunas === 'lunas') {
+          $query = $query->filter(fn($item) => $item->statusBayar == 1);
+        } elseif ($request->filter_lunas === 'cicilan') {
+          $query = $query->filter(fn($item) => $item->statusBayar == 0 && (float)($item->terbayar ?? 0) > 0);
         }
       }
 
@@ -576,6 +593,24 @@ class TagihanService
         ->addColumn('paket_harga', function ($row) {
           return optional($row->paket)->price;
         })
+        ->addColumn('transaksi_list', function ($row) {
+          return $row->transaksis ? $row->transaksis->map(function ($t) {
+            return [
+              'id' => $t->id,
+              'total' => (float)$t->total,
+              'metode' => $t->metodeBayar,
+              'tglBayar' => $t->tglBayar ? (is_string($t->tglBayar) ? $t->tglBayar : $t->tglBayar->format('Y-m-d H:i:s')) : null,
+              'prosesNama' => $t->prosesNama,
+              'keterangan' => $t->keterangan
+            ];
+          })->values() : [];
+        })
+        ->addColumn('is_cicilan', function ($row) {
+          return ($row->statusBayar == 0 && (float)($row->terbayar ?? 0) > 0);
+        })
+        ->addColumn('aksi', function ($row) {
+          return $row->aksi ?? ($row->statusBayar == 1 ? 'Pembayaran' : 'Penagihan');
+        })
         ->editColumn('created_at', function ($row) {
           return $row->created_at
             ? Carbon::parse($row->created_at)->format('d-m-Y H:i:s')
@@ -601,6 +636,9 @@ class TagihanService
           'tglBayar',
           'prosesNama',
           'metode',
+          'aksi',
+          'transaksi_list',
+          'is_cicilan',
           'create_by',
           'updated_at',
           'created_at',

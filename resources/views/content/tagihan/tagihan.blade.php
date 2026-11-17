@@ -168,6 +168,83 @@
       font-size: 0.8rem !important;
     }
   }
+
+  /* Struk Kuitansi Container */
+  .receipt-box {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'Courier New', Courier, monospace, system-ui;
+    color: #1e293b;
+  }
+  .receipt-header {
+    text-align: center;
+    border-bottom: 2px dashed #94a3b8;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .receipt-stamp-paid {
+    border: 2px solid #10b981;
+    color: #10b981;
+    font-weight: 900;
+    padding: 2px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    letter-spacing: 2px;
+    transform: rotate(-3deg);
+  }
+  .receipt-stamp-cicilan {
+    border: 2px solid #f59e0b;
+    color: #f59e0b;
+    font-weight: 900;
+    padding: 2px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    letter-spacing: 2px;
+    transform: rotate(-3deg);
+  }
+  .receipt-stamp-gratis {
+    border: 2px solid #06b6d4;
+    color: #06b6d4;
+    font-weight: 900;
+    padding: 2px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    letter-spacing: 2px;
+    transform: rotate(-3deg);
+  }
+  .receipt-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.88rem;
+  }
+  .receipt-divider {
+    border-top: 1px dashed #cbd5e1;
+    margin: 10px 0;
+  }
+
+  /* Print Struk CSS Styling */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #struk-print-wrapper, #struk-print-wrapper * {
+      visibility: visible;
+    }
+    #struk-print-wrapper {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 10px;
+    }
+    .modal-footer, .btn-close {
+      display: none !important;
+    }
+  }
 </style>
 @endsection
 
@@ -317,6 +394,13 @@
                     <span>BAYAR SEKARANG</span>
                   </button>
 
+                  ${parseFloat(row.terbayar || 0) > 0 ? `
+                  <!-- Tombol Lihat Struk Bukti Cicilan -->
+                  <button type="button" class="btn btn-outline-primary btn-lihat-struk d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Lihat Struk / Bukti Cicilan" style="border-radius: 8px; width: 42px; height: 38px;">
+                    <i class="mdi mdi-printer fs-5"></i>
+                  </button>
+                  ` : ''}
+
                   <button type="button" class="btn btn-outline-success btn-wa-direct d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Kirim Pengingat WhatsApp" style="border-radius: 8px; width: 42px; height: 38px;">
                     <i class="mdi mdi-whatsapp fs-5"></i>
                   </button>
@@ -418,6 +502,14 @@
             `;
             @endif
 
+            const hasCicilan = parseFloat(row.terbayar || 0) > 0;
+            const strukBtnDesktop = hasCicilan ? `
+              <!-- Tombol Preview Struk Cicilan -->
+              <button type="button" class="btn btn-sm btn-outline-primary btn-lihat-struk d-inline-flex align-items-center p-1" data-id="${data}" title="Lihat Struk / Bukti Cicilan">
+                <i class="mdi mdi-printer fs-6"></i>
+              </button>
+            ` : '';
+
             return `
               <div class="d-inline-flex align-items-center gap-1">
                 <!-- Tombol Bayar Langsung -->
@@ -425,6 +517,8 @@
                   <i class="mdi mdi-cash-check"></i>
                   <span class="fw-semibold">Bayar</span>
                 </button>
+
+                ${strukBtnDesktop}
 
                 <!-- Tombol WhatsApp -->
                 <button type="button" class="btn btn-sm btn-outline-success btn-wa-direct d-inline-flex align-items-center p-1" data-id="${data}" title="Kirim Pengingat WhatsApp">
@@ -436,12 +530,19 @@
                   <button type="button" class="btn btn-sm btn-icon btn-light rounded-circle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="mdi mdi-dots-vertical"></i>
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="min-width: 160px; border-radius: 8px;">
+                  <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="min-width: 175px; border-radius: 8px;">
                     <li>
                       <a class="dropdown-item btn-bayar text-success py-1" href="javascript:void(0);" data-id="${data}">
                         <i class="mdi mdi-credit-card-outline me-2"></i> Kasir Pembayaran
                       </a>
                     </li>
+                    ${hasCicilan ? `
+                    <li>
+                      <a class="dropdown-item btn-lihat-struk py-1 text-primary" href="javascript:void(0);" data-id="${data}">
+                        <i class="mdi mdi-printer-outline me-2"></i> Bukti Cicilan / Struk
+                      </a>
+                    </li>
+                    ` : ''}
                     <li>
                       <a class="dropdown-item btn-wa-direct py-1" href="javascript:void(0);" data-id="${data}">
                         <i class="mdi mdi-whatsapp me-2 text-success"></i> Ingatkan Pelanggan
@@ -1094,6 +1195,136 @@
 
     window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(message)}`, '_blank');
   }
+
+  // Helper untuk mengambil Row Data dari DataTables
+  function getRowDataById(id) {
+    const allRows = table.rows().data().toArray();
+    if (allRows && allRows.length > 0) {
+      const found = allRows.find(item => item.id == id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Event Handler: Buka Modal Struk / Cetak Kuitansi dari Tagihan Aktif
+  $(document).on('click', '.btn-lihat-struk', function(e) {
+    e.preventDefault();
+    const id = $(this).attr('data-id');
+    const row = getRowDataById(id);
+    if (!row) {
+      Swal.fire('Perhatian', 'Data tagihan tidak ditemukan.', 'warning');
+      return;
+    }
+
+    currentBillData = row;
+    const bulanNama = namaBulan[row.bulan] || row.bulan;
+    const periodeStr = `${bulanNama} ${row.tahun}`;
+    const hargaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.harga || 0);
+    const ppnFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.ppn || 0);
+    const diskonFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.diskon || 0);
+    const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total || 0);
+    const terbayarFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.terbayar || 0);
+    const sisaVal = (row.sisa !== undefined && row.sisa !== null) ? row.sisa : Math.max(0, (row.total || 0) - (row.terbayar || 0));
+    const sisaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(sisaVal);
+
+    const isCicilan = (parseFloat(row.terbayar || 0) > 0);
+
+    let tglBayarStr = row.tglBayar || '-';
+    if (row.tglBayar && moment(row.tglBayar).isValid()) {
+      tglBayarStr = moment(row.tglBayar).format('DD/MM/YYYY HH:mm');
+    }
+
+    $('#struk-noTagihan').text(row.noTagihan || '-');
+    $('#struk-namaPelanggan').text(row.user_nama || '-');
+    $('#struk-paket').text(row.paket_nama || 'Paket Internet');
+    $('#struk-periode').text(periodeStr);
+    $('#struk-tglBayar').text(tglBayarStr);
+    $('#struk-metode').text((row.metode || 'Tunai').toUpperCase());
+    $('#struk-kasir').text(row.prosesNama || '-');
+
+    const $stamp = $('#struk-stamp');
+    $stamp.removeClass('receipt-stamp-paid receipt-stamp-cicilan receipt-stamp-gratis');
+
+    if (isCicilan) {
+      $stamp.addClass('receipt-stamp-cicilan').text('CICILAN');
+      $('#struk-modal-title').text('Tanda Terima Cicilan');
+      $('#struk-rincian-lunas').hide();
+      $('#struk-rincian-cicilan').show();
+      $('#struk-label-total').text('TOTAL DITERIMA:');
+      $('#struk-total').removeClass('text-success text-info').addClass('text-warning').text(terbayarFmt);
+
+      $('#struk-cicil-total').text(totalFmt);
+      $('#struk-cicil-terbayar').text(terbayarFmt);
+      $('#struk-cicil-sisa').text(sisaFmt);
+    } else {
+      $stamp.addClass('receipt-stamp-paid').text('LUNAS');
+      $('#struk-modal-title').text('Kuitansi Pembayaran');
+      $('#struk-rincian-lunas').show();
+      $('#struk-rincian-cicilan').hide();
+      $('#struk-harga').text(hargaFmt);
+      $('#struk-ppn').text(ppnFmt);
+      $('#struk-diskon').text(diskonFmt);
+      $('#struk-label-total').text('TOTAL DIBAYAR:');
+      $('#struk-total').removeClass('text-warning text-info').addClass('text-success').text(totalFmt);
+    }
+
+    // Riwayat Transaksi Bertahap
+    let trxList = [];
+    if (typeof row.transaksi_list === 'string') {
+      try { trxList = JSON.parse(row.transaksi_list); } catch (e) { trxList = []; }
+    } else if (Array.isArray(row.transaksi_list)) {
+      trxList = row.transaksi_list;
+    }
+
+    if (trxList && trxList.length > 0) {
+      $('#struk-riwayat-wrapper').show();
+      $('#struk-riwayat-count').text(`${trxList.length} transaksi`);
+      let listHtml = '';
+      trxList.forEach((t, idx) => {
+        let tglStr = t.tglBayar || '-';
+        if (t.tglBayar && moment(t.tglBayar).isValid()) {
+          tglStr = moment(t.tglBayar).format('DD/MM/YY HH:mm');
+        }
+        const nomFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(t.total || 0);
+        listHtml += `
+          <div class="d-flex align-items-center justify-content-between py-1 ${idx > 0 ? 'border-top border-light' : ''}">
+            <div>
+              <span class="badge bg-secondary-subtle text-dark me-1 fw-bold" style="font-size: 0.65rem;">#${idx + 1}</span>
+              <span class="text-muted">${tglStr}</span>
+              <span class="badge bg-white text-secondary border ms-1" style="font-size: 0.65rem;">${(t.metode || 'Tunai').toUpperCase()}</span>
+              ${t.prosesNama ? `<span class="text-muted ms-1" style="font-size: 0.68rem;">(${t.prosesNama})</span>` : ''}
+            </div>
+            <div class="fw-bold text-warning">${nomFmt}</div>
+          </div>
+        `;
+      });
+      $('#struk-riwayat-list').html(listHtml);
+    } else {
+      $('#struk-riwayat-wrapper').hide();
+    }
+
+    const modalElement = document.getElementById('modalStruk');
+    if (modalElement) {
+      const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+      modalInstance.show();
+    }
+  });
+
+  // Tombol Cetak Struk di Dalam Modal
+  $(document).on('click', '#btn-cetak-struk-action', function() {
+    window.print();
+  });
+
+  // Tombol Kirim WA dari dalam Modal Struk
+  $(document).on('click', '#btn-wa-struk-action', function() {
+    if (currentBillData) {
+      kirimKuitansiSmartWA(currentBillData, {
+        mode: 'cicilan',
+        alokasi_bayar: currentBillData.terbayar,
+        sisa: currentBillData.sisa
+      }, currentBillData.metode);
+    }
+  });
 </script>
 @endsection
 
@@ -1423,6 +1654,138 @@
           <i class="mdi mdi-check-circle fs-5"></i>
           <span>Konfirmasi Pelunasan</span>
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Struk / Cetak Kuitansi Cerdas (Dukungan Bukti Cicilan & Lunas) -->
+<div class="modal fade" id="modalStruk" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header bg-light py-2 px-3 border-bottom">
+        <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-1 mb-0">
+          <i class="mdi mdi-receipt-text-check text-primary fs-5"></i>
+          <span id="struk-modal-title">Tanda Terima Cicilan</span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-3" id="struk-print-wrapper">
+        <div class="receipt-box shadow-none">
+          <!-- Receipt Header -->
+          <div class="receipt-header">
+            <h5 class="fw-bold mb-1 text-dark">MRYES NET</h5>
+            <div class="small text-muted mb-2">Layanan Internet Cepat & Stabil</div>
+            <div id="struk-stamp" class="receipt-stamp-cicilan">CICILAN</div>
+          </div>
+
+          <!-- Receipt Details -->
+          <div class="receipt-item-row">
+            <span class="text-muted">No. Invoice:</span>
+            <span class="fw-bold font-monospace" id="struk-noTagihan">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Pelanggan:</span>
+            <span class="fw-bold text-dark" id="struk-namaPelanggan">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Paket:</span>
+            <span class="fw-semibold text-primary" id="struk-paket">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Periode:</span>
+            <span class="fw-semibold" id="struk-periode">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Waktu Bayar:</span>
+            <span id="struk-tglBayar">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Metode:</span>
+            <span class="badge bg-label-dark" id="struk-metode">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Petugas Kasir:</span>
+            <span id="struk-kasir">-</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Rincian Biaya: Lunas Penuh / Normal -->
+          <div id="struk-rincian-lunas" style="display: none;">
+            <div class="receipt-item-row">
+              <span class="text-muted">Harga Paket:</span>
+              <span id="struk-harga">Rp 0</span>
+            </div>
+            <div class="receipt-item-row">
+              <span class="text-muted">PPN (11%):</span>
+              <span id="struk-ppn">Rp 0</span>
+            </div>
+            <div class="receipt-item-row">
+              <span class="text-muted">Potongan Diskon:</span>
+              <span class="text-success" id="struk-diskon">Rp 0</span>
+            </div>
+          </div>
+
+          <!-- Rincian Biaya: Cicilan Berjalan -->
+          <div id="struk-rincian-cicilan">
+            <div class="receipt-item-row">
+              <span class="text-muted">Total Tagihan:</span>
+              <span class="fw-semibold" id="struk-cicil-total">Rp 0</span>
+            </div>
+            <div class="receipt-item-row">
+              <span class="text-muted">Total Masuk (Terbayar):</span>
+              <span class="fw-bold text-warning" id="struk-cicil-terbayar">Rp 0</span>
+            </div>
+            <div class="receipt-item-row">
+              <span class="text-muted">Sisa Belum Lunas:</span>
+              <span class="fw-bold text-danger" id="struk-cicil-sisa">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-item-row fs-6 fw-bold">
+            <span class="text-dark" id="struk-label-total">TOTAL DITERIMA:</span>
+            <span class="text-warning" id="struk-total">Rp 0</span>
+          </div>
+
+          <!-- Riwayat Pembayaran Masuk Bertahap -->
+          <div id="struk-riwayat-wrapper" class="mt-3 pt-2 border-top border-dashed" style="display: none;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="fw-bold text-dark" style="font-size: 0.75rem;">
+                <i class="mdi mdi-history me-1 text-primary"></i>RIWAYAT PEMBAYARAN MASUK:
+              </span>
+              <span class="badge bg-light text-muted border" id="struk-riwayat-count" style="font-size: 0.65rem;">0 transaksi</span>
+            </div>
+            <div id="struk-riwayat-list" class="bg-light bg-opacity-75 rounded-2 p-2 border" style="font-size: 0.75rem;"></div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Footer Struk -->
+          <div class="text-center small text-muted mt-2" style="font-size: 0.72rem;">
+            <div>Bukti tanda terima ini sah dan diterbitkan oleh sistem komputerisasi MRYES NET.</div>
+            <div class="fw-semibold mt-1">Terima kasih atas pembayaran Anda!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light p-2 d-flex align-items-center justify-content-between border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+          Tutup
+        </button>
+        <div class="d-flex align-items-center gap-1">
+          <button type="button" class="btn btn-sm btn-success d-flex align-items-center gap-1 fw-semibold shadow-xs" id="btn-wa-struk-action">
+            <i class="mdi mdi-whatsapp"></i>
+            <span>Kirim WA</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-primary d-flex align-items-center gap-1 fw-semibold shadow-xs" id="btn-cetak-struk-action">
+            <i class="mdi mdi-printer"></i>
+            <span>Cetak Slip</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

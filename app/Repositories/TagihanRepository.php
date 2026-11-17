@@ -75,7 +75,6 @@ class TagihanRepository
    */
   public function getDatatablesJson(array $where = [])
   {
-
     $columns = [
       'id',
       'idUser',
@@ -93,6 +92,7 @@ class TagihanRepository
       'tglBayar',
       'prosesNama',
       'metode',
+      'aksi',
       'created_at',
       'updated_at',
       'create_by',
@@ -101,7 +101,8 @@ class TagihanRepository
     $query = $this->model::query()
       ->with([
         'paket:id,nama,price',
-        'user:id,name,julukan,wa,email'
+        'user:id,name,julukan,wa,email',
+        'transaksis:id,idTagihan,idUser,total,metodeBayar,tglBayar,prosesNama,keterangan'
       ]);
 
     if (!empty($where)) {
@@ -109,6 +110,55 @@ class TagihanRepository
     }
 
     return $query->select($columns)->get();
+  }
+
+  /**
+   * Mengambil riwayat lunas DAN cicilan berjalan (uang sudah masuk)
+   */
+  public function getLunasDanCicilanJson(array $where = [])
+  {
+    $columns = [
+      'id',
+      'idUser',
+      'idPaket',
+      'noTagihan',
+      'bulan',
+      'tahun',
+      'statusBayar',
+      'harga',
+      'ppn',
+      'diskon',
+      'total',
+      'terbayar',
+      'tglJatuhTempo',
+      'tglBayar',
+      'prosesNama',
+      'metode',
+      'aksi',
+      'created_at',
+      'updated_at',
+      'create_by',
+    ];
+
+    $query = $this->model::query()
+      ->with([
+        'paket:id,nama,price',
+        'user:id,name,julukan,wa,email',
+        'transaksis:id,idTagihan,idUser,total,metodeBayar,tglBayar,prosesNama,keterangan'
+      ])
+      ->where(function ($q) {
+        $q->where('statusBayar', 1)
+          ->orWhere(function ($sub) {
+            $sub->where('statusBayar', 0)
+                ->where('terbayar', '>', 0);
+          });
+      });
+
+    if (!empty($where)) {
+      $query->where($where);
+    }
+
+    return $query->select($columns)->orderBy('tglBayar', 'desc')->get();
   }
 
   public function generateTagihanBulananRepo()
