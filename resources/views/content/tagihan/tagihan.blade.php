@@ -129,8 +129,11 @@
       overflow: hidden !important;
     }
     #table tbody td {
-      display: block !important;
+      display: none !important;
       border: none !important;
+    }
+    #table tbody td.col-mobile-card {
+      display: block !important;
       padding: 10px 12px !important;
     }
     .card-datatable {
@@ -219,7 +222,7 @@
         {
           data: 'user_nama',
           name: 'user_nama',
-          className: 'align-middle p-2 p-md-3',
+          className: 'align-middle p-2 p-md-3 col-mobile-card',
           render: function(data, type, row) {
             const wa = row.user_wa;
             const waButton = wa && wa !== '-'
