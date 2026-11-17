@@ -27,7 +27,7 @@ class StaffController extends Controller
   public function json(Request $request): JsonResponse
   {
     $query = User::query()
-      ->whereIn('idRole', [1, 2, 3, 4, 6])
+      ->whereIn('idRole', [1, 2, 3, 4, 6, 7])
       ->select(['id', 'name', 'julukan', 'email', 'wa', 'idRole', 'isActive', 'created_at']);
 
     return DataTables::of($query)
@@ -39,6 +39,7 @@ class StaffController extends Controller
           3 => '<span class="badge bg-label-success"><i class="mdi mdi-cash-register me-1"></i>Bendahara</span>',
           4 => '<span class="badge bg-label-warning"><i class="mdi mdi-wrench me-1"></i>Teknisi</span>',
           6 => '<span class="badge bg-label-info"><i class="mdi mdi-cash-multiple me-1"></i>Kolektor</span>',
+          7 => '<span class="badge bg-label-dark"><i class="mdi mdi-wrench-clock me-1"></i>Teknisi & Kolektor</span>',
           default => '<span class="badge bg-label-secondary">Lainnya</span>',
         };
       })
@@ -94,7 +95,7 @@ class StaffController extends Controller
       'name' => ['required', 'string', 'max:100'],
       'email' => ['required', 'email', 'max:100', 'unique:users,email'],
       'wa' => ['required', 'string', 'max:25'],
-      'idRole' => ['required', 'in:1,2,3,4,6'],
+      'idRole' => ['required', 'in:1,2,3,4,6,7'],
       'password' => ['required', 'string', 'min:8'],
       'isActive' => ['nullable', 'in:0,1'],
     ], [
@@ -145,7 +146,7 @@ class StaffController extends Controller
    */
   public function show($id): JsonResponse
   {
-    $user = User::whereIn('idRole', [1, 2, 3, 4, 6])->find($id);
+    $user = User::whereIn('idRole', [1, 2, 3, 4, 6, 7])->find($id);
 
     if (!$user) {
       return response()->json([
@@ -173,7 +174,7 @@ class StaffController extends Controller
    */
   public function update(Request $request, $id): JsonResponse
   {
-    $user = User::whereIn('idRole', [1, 2, 3, 4, 6])->find($id);
+    $user = User::whereIn('idRole', [1, 2, 3, 4, 6, 7])->find($id);
 
     if (!$user) {
       return response()->json([
@@ -188,7 +189,7 @@ class StaffController extends Controller
       'name' => ['required', 'string', 'max:100'],
       'email' => ['required', 'email', 'max:100', 'unique:users,email,' . $user->id],
       'wa' => ['required', 'string', 'max:25'],
-      'idRole' => ['required', 'in:1,2,3,4,6'],
+      'idRole' => ['required', 'in:1,2,3,4,6,7'],
       'isActive' => ['required', 'in:0,1'],
       'password' => ['nullable', 'string', 'min:8'],
     ], [
@@ -255,7 +256,7 @@ class StaffController extends Controller
    */
   public function toggleStatus($id): JsonResponse
   {
-    $user = User::whereIn('idRole', [1, 2, 3, 4, 6])->find($id);
+    $user = User::whereIn('idRole', [1, 2, 3, 4, 6, 7])->find($id);
 
     if (!$user) {
       return response()->json([
@@ -295,7 +296,7 @@ class StaffController extends Controller
    */
   public function resetPassword(Request $request, $id): JsonResponse
   {
-    $user = User::whereIn('idRole', [1, 2, 3, 4, 6])->find($id);
+    $user = User::whereIn('idRole', [1, 2, 3, 4, 6, 7])->find($id);
 
     if (!$user) {
       return response()->json([
@@ -339,7 +340,7 @@ class StaffController extends Controller
    */
   public function destroy($id): JsonResponse
   {
-    $user = User::whereIn('idRole', [1, 2, 3, 4, 6])->find($id);
+    $user = User::whereIn('idRole', [1, 2, 3, 4, 6, 7])->find($id);
 
     if (!$user) {
       return response()->json([

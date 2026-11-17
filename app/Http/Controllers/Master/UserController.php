@@ -31,10 +31,10 @@ class UserController extends Controller
     if (auth()->user()->isBendahara()) abort(403, 'Akses ditolak');
   }
 
-  // Teknisi (role 4) tidak boleh hapus
+  // Teknisi (role 4) dan Teknisi & Kolektor (role 7) tidak boleh hapus
   private function denyTeknisi()
   {
-    if (auth()->user()->isTeknisi()) abort(403, 'Akses ditolak');
+    if (auth()->user()->isTeknisi() || auth()->user()->isTeknisiKolektor()) abort(403, 'Akses ditolak');
   }
 
   /**

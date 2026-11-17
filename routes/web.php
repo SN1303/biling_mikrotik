@@ -34,8 +34,8 @@ Route::middleware(['auth'])->group(function () {
       require __DIR__ . '/modules/settings.php';
     });
 
-  // Admin + Teknisi (role 1,2,4) — network devices, mapping, pelanggan CRUD
-  Route::middleware('role:1,2,4')->group(function () {
+  // Admin + Teknisi + Teknisi-Kolektor (role 1,2,4,7) — network devices, mapping, pelanggan CRUD
+  Route::middleware('role:1,2,4,7')->group(function () {
     require __DIR__ . '/modules/odc.php';
     require __DIR__ . '/modules/odp.php';
     require __DIR__ . '/modules/google-map.php';
@@ -43,14 +43,14 @@ Route::middleware(['auth'])->group(function () {
     require __DIR__ . '/modules/area.php';
   });
 
-  // Admin + Teknisi + Bendahara + Kolektor (role 1,2,3,4,6) — pelanggan
-  Route::middleware('role:1,2,3,4,6')->group(function () {
+  // Admin + Teknisi + Bendahara + Kolektor + Teknisi-Kolektor (role 1,2,3,4,6,7) — pelanggan
+  Route::middleware('role:1,2,3,4,6,7')->group(function () {
     require __DIR__ . '/modules/user.php';
     require __DIR__ . '/modules/select.php';
   });
 
-  // Admin + Bendahara + Kolektor (role 1,2,3,6) — billing/tagihan
-  Route::middleware('role:1,2,3,6')->group(function () {
+  // Admin + Bendahara + Kolektor + Teknisi-Kolektor (role 1,2,3,6,7) — billing/tagihan
+  Route::middleware('role:1,2,3,6,7')->group(function () {
     require __DIR__ . '/modules/tagihan.php';
   });
 });

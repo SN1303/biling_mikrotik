@@ -205,7 +205,7 @@ if ($hour >= 5 && $hour < 11) {
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
-          @if($currentUser && $currentUser->hasRole(1, 2, 4))
+          @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
           <a href="{{ route('user.create') }}" class="btn btn-light text-dark fw-bold d-flex align-items-center gap-1 shadow-sm">
             <i class="mdi mdi-account-plus text-primary"></i>
             <span>Pelanggan Baru</span>
@@ -393,7 +393,7 @@ if ($hour >= 5 && $hour < 11) {
           </h5>
           <small class="text-muted">Transaksi pelunasan tagihan realtime yang berhasil dicatat sistem</small>
         </div>
-        @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
+        @if($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7))
         <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
           <i class="mdi mdi-format-list-bulleted"></i>
           <span>Lihat Semua Transaksi</span>
@@ -474,7 +474,7 @@ if ($hour >= 5 && $hour < 11) {
 
 <!-- Operational Quick Navigation Grid -->
 <div class="row g-3">
-  @if($currentUser && $currentUser->hasRole(1, 2, 4))
+  @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
   <div class="col-md-3 col-sm-6">
     <a href="{{ route('user.create') }}" class="card text-decoration-none h-100 metric-card p-3 border">
       <div class="d-flex align-items-center gap-3">

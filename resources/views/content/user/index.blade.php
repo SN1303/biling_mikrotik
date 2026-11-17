@@ -36,7 +36,7 @@
             searchable: false,
             render: function (data, type, row) {
               let actions = '';
-              @if(auth()->user()->hasRole(1,2,4))
+              @if(auth()->user()->hasRole(1,2,4,7))
               actions += `<a class="dropdown-item fw-bold" href="/user/${data}/edit">
                     <i class="mdi mdi-pencil-outline me-1"></i> Edit
                   </a>`;

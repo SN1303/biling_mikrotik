@@ -9,6 +9,7 @@
   .badge-role-3 { background-color: rgba(113, 221, 55, 0.12); color: #71dd37; border: 1px solid rgba(113, 221, 55, 0.25); }
   .badge-role-4 { background-color: rgba(255, 171, 0, 0.12); color: #ffab00; border: 1px solid rgba(255, 171, 0, 0.25); }
   .badge-role-6 { background-color: rgba(3, 195, 236, 0.12); color: #03c3ec; border: 1px solid rgba(3, 195, 236, 0.25); }
+  .badge-role-7 { background-color: rgba(113, 88, 226, 0.12); color: #7158e2; border: 1px solid rgba(113, 88, 226, 0.25); }
   .staff-card-header {
     background: linear-gradient(135deg, rgba(105, 108, 255, 0.04) 0%, rgba(105, 108, 255, 0.01) 100%);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -423,6 +424,7 @@
         <span class="badge badge-role-3 small"><i class="mdi mdi-cash-register me-1"></i>Bendahara (3)</span>
         <span class="badge badge-role-4 small"><i class="mdi mdi-wrench me-1"></i>Teknisi (4)</span>
         <span class="badge badge-role-6 small"><i class="mdi mdi-cash-multiple me-1"></i>Kolektor (6)</span>
+        <span class="badge badge-role-7 small"><i class="mdi mdi-wrench-clock me-1"></i>Teknisi & Kolektor (7)</span>
       </div>
     </div>
   </div>
@@ -497,6 +499,7 @@
               <option value="3">🟢 Bendahara (Akses Tagihan, Billing, & Pelanggan Read-Only)</option>
               <option value="4">🟠 Teknisi (Akses Jaringan, ODC, ODP, & Pelanggan)</option>
               <option value="6">🔵 Kolektor (Akses Tagihan & Pembayaran Lapangan)</option>
+              <option value="7">🟣 Teknisi & Kolektor (Akses Jaringan, ODC, ODP, Pelanggan, & Tagihan)</option>
             </select>
           </div>
 
@@ -586,6 +589,7 @@
               <option value="3">🟢 Bendahara</option>
               <option value="4">🟠 Teknisi</option>
               <option value="6">🔵 Kolektor</option>
+              <option value="7">🟣 Teknisi & Kolektor</option>
             </select>
           </div>
 

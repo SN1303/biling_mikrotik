@@ -40,7 +40,7 @@ $currentUser = auth()->user();
     </li>
 
     {{-- ================= JARINGAN & SERVER ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 4))
+    @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
     <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Jaringan & Server</span>
     </li>
@@ -112,7 +112,7 @@ $currentUser = auth()->user();
     @endif
 
     {{-- ================= PELANGGAN ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6))
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6, 7))
     <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Pelanggan</span>
     </li>
@@ -123,7 +123,7 @@ $currentUser = auth()->user();
       </a>
     </li>
 
-    @if($currentUser->hasRole(1, 2, 4))
+    @if($currentUser->hasRole(1, 2, 4, 7))
     <li class="menu-item {{ request()->is('user/create') ? 'active' : '' }}">
       <a href="{{ route('user.create') }}" class="menu-link">
         <i class="menu-icon tf-icons mdi mdi-account-plus-outline"></i>
@@ -183,7 +183,7 @@ $currentUser = auth()->user();
     @endif
 
     {{-- ================= TAGIHAN & KASIR ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 3, 6))
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7))
     <li class="menu-header fw-medium mt-3">
       <span class="menu-header-text">Tagihan & Kasir</span>
     </li>

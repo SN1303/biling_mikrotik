@@ -53,6 +53,7 @@ class User extends Authenticatable
   public function isBendahara()  { return (int) $this->idRole === 3; }
   public function isTeknisi()    { return (int) $this->idRole === 4; }
   public function isKolektor()   { return (int) $this->idRole === 6; }
+  public function isTeknisiKolektor() { return (int) $this->idRole === 7; }
   public function hasRole(...$roles) { return in_array((int) $this->idRole, $roles); }
 
   public function getRoleNameAttribute(): string
@@ -64,6 +65,7 @@ class User extends Authenticatable
       4 => 'Teknisi',
       5 => 'Pelanggan',
       6 => 'Kolektor',
+      7 => 'Teknisi & Kolektor',
       default => 'Lainnya',
     };
   }

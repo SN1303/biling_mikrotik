@@ -5,9 +5,14 @@ use App\Http\Controllers\Master\TagihanController;
 Route::prefix('tagihan')->as('tagihan.')->controller(TagihanController::class)->group(function () {
   Route::get('/', 'index')->name('index');
   Route::get('/lunas', 'lunas')->name('lunas');
-  Route::get('/rekap', 'rekap')->name('rekap');
-  Route::get('/generate', 'generate')->name('generate');
-  Route::post('/generate-tagihan-bulanan', 'generateTagihanBulanan')->name('generate-tagihan-bulanan');
+
+  // Khusus Super Admin, Admin, Bendahara (role 1, 2, 3)
+  Route::middleware('role:1,2,3')->group(function () {
+    Route::get('/rekap', 'rekap')->name('rekap');
+    Route::get('/generate', 'generate')->name('generate');
+    Route::post('/generate-tagihan-bulanan', 'generateTagihanBulanan')->name('generate-tagihan-bulanan');
+  });
+
   Route::get('/data/json', 'json')->name('json');
 
   Route::post('/bayar/{id}', 'bayar')->name('bayar');
