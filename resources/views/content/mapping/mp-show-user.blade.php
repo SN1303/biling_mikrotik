@@ -4,6 +4,7 @@
 $container = 'container-fluid px-2';
 $containerNav = 'container-fluid';
 $isFooter = false;
+$isFlex = true;
 @endphp
 
 @section('title', 'Data Pelanggan Mapping')
