@@ -401,10 +401,16 @@ class UserController extends Controller
     });
 
     $datatable->addColumn('paket', function ($row) {
+      $isPpn = (int) optional($row->user_detail)->statusPpn === 1;
+      $badgePpn = $isPpn
+        ? '<span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;"><i class="mdi mdi-percent me-1"></i>PPN 11%</span>'
+        : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 0.68rem;">Non-PPN</span>';
+
       if ($row->user_mikrotik && $row->user_mikrotik->paket) {
-        return $row->user_mikrotik->paket->nama ?? '-';
+        $namaPaket = e($row->user_mikrotik->paket->nama ?? '-');
+        return '<div><div class="fw-semibold text-dark mb-1">' . $namaPaket . '</div><div>' . $badgePpn . '</div></div>';
       }
-      return '<span class="text-muted">-</span>';
+      return '<div><span class="text-muted d-block mb-1">-</span><div>' . $badgePpn . '</div></div>';
     });
 
     $datatable->addColumn('googleMap', function ($row) {
