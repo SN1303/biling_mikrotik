@@ -1,15 +1,61 @@
 @extends('layouts/layoutMaster')
 
+@php
+$container = 'container-fluid px-2';
+$containerNav = 'container-fluid';
+$isFooter = false;
+@endphp
+
 @section('title', 'Data Pelanggan Mapping')
 
 @section("vendor-style")
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <style>
+  /* Hilangkan padding default layout agar map benar-benar full screen */
+  .content-wrapper > div.container-p-y,
+  .content-wrapper > div.container-fluid,
+  .content-wrapper > div.container-xxl {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .mapping-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 36px);
+    width: 100%;
+  }
+
+  .mapping-toolbar {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 7px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  #map-container {
+    position: relative;
+    flex-grow: 1;
+    width: 100%;
+    min-height: 580px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border: 1px solid #cbd5e1;
+  }
+
   #map {
-    height: 100vh;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 580px;
     position: relative;
     z-index: 1;
-    transition: all 0.3s ease;
+    border-radius: 8px;
   }
 
   .filter-overlay {
@@ -477,6 +523,14 @@
 
   // Inisialisasi peta
   const map = L.map('map').setView(centerLatLng, 13);
+
+  // Resize handler agar ukuran map selalu maksimal & mulus
+  setTimeout(function() {
+    map.invalidateSize();
+  }, 250);
+  window.addEventListener('resize', function() {
+    map.invalidateSize();
+  });
 
   // Definisi Layer Peta (Google Satellite, Google Hybrid, Google Roads, OpenStreetMap)
   const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
@@ -1266,77 +1320,68 @@ fetch(`/mapping/json/mapping/show/user`)
 @endsection
 
 @section('content')
-<div class="card p-3">
-  <div class="row g-4 align-items-start">
-    <div class="col-md-12">
-      <div id="formMapping">
-        {{-- Filter Section --}}
-        <div class="row mb-3 filter-overlay">
-          <div class="col-md-12">
-            <div class="card shadow-lg">
-              <div class="card-body">
-                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                  <h6 class="card-title mb-0">Filter Tampilan</h6>
-                  <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <span class="fw-semibold text-muted small"><i class="mdi mdi-layers-outline me-1"></i> Mode Peta:</span>
-                    <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher">
-                      <button type="button" class="btn btn-primary active btn-map-type" data-layer="googleHybrid" title="Peta Satelit dengan Nama Jalan">
-                        <i class="mdi mdi-satellite-variant me-1"></i> Satelit Hybrid
-                      </button>
-                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleSat" title="Citra Satelit Asli">
-                        <i class="mdi mdi-earth me-1"></i> Satelit Murni
-                      </button>
-                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleStreets" title="Peta Jalan Google Maps">
-                        <i class="mdi mdi-google-maps me-1"></i> Google Jalan
-                      </button>
-                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="osm" title="Peta OpenStreetMap">
-                        <i class="mdi mdi-map-outline me-1"></i> OSM
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
-                  <div class="btn-group" role="group" aria-label="Filter tampilan">
-                    <button type="button" class="btn btn-primary active" onclick="filterMap('all')" id="filter-all">
-                      <i class="mdi mdi-view-grid"></i> Semua
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="filterMap('odc')" id="filter-odc">
-                      <i class="mdi mdi-server"></i> ODC Saja
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="filterMap('odp')" id="filter-odp">
-                      <i class="mdi mdi-router"></i> ODP Saja
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="filterMap('user')" id="filter-user">
-                      <i class="mdi mdi-account"></i> Pelanggan Saja
-                    </button>
-                  </div>
-                  <div class="d-flex gap-2" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
-                    <button type="button" class="btn btn-secondary" onclick="toggleDistanceLabels()" id="toggle-distance" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
-                      <i class="mdi mdi-ruler"></i> <span id="distance-label-text">Sembunyikan</span> Jarak
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="toggleNameLabels()" id="toggle-name" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
-                      <i class="mdi mdi-label"></i> <span id="name-label-text">Tampilkan</span> Nama
-                    </button>
-                    <button type="button" class="btn btn-outline-info" onclick="toggleUserNameLabels()" id="toggle-user-name" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
-                      <i class="mdi mdi-account-circle"></i> <span id="user-name-label-text">Tampilkan</span> Nama Pelanggan
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="mapping-wrapper">
+  {{-- Compact Top Toolbar --}}
+  <div class="mapping-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2">
+    {{-- Left: Filter Entitas & Label Toggles --}}
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <div class="btn-group btn-group-sm shadow-xs" role="group" aria-label="Filter tampilan">
+        <button type="button" class="btn btn-primary active" onclick="filterMap('all')" id="filter-all" title="Tampilkan Semua Entitas">
+          <i class="mdi mdi-view-grid me-1"></i> Semua
+        </button>
+        <button type="button" class="btn btn-outline-primary" onclick="filterMap('odc')" id="filter-odc" title="Hanya ODC">
+          <i class="mdi mdi-server me-1"></i> ODC
+        </button>
+        <button type="button" class="btn btn-outline-primary" onclick="filterMap('odp')" id="filter-odp" title="Hanya ODP">
+          <i class="mdi mdi-router me-1"></i> ODP
+        </button>
+        <button type="button" class="btn btn-outline-primary" onclick="filterMap('user')" id="filter-user" title="Hanya Pelanggan">
+          <i class="mdi mdi-account me-1"></i> Pelanggan
+        </button>
+      </div>
 
-        {{-- Map Section --}}
-        <div class="row">
-          <div class="col-md-12">
-            <div id="map" style="width: 100%; height: 500px; border-radius: 8px;"></div>
-          </div>
-        </div>
+      <div class="vr mx-1 d-none d-md-inline" style="height: 22px;"></div>
+
+      <div class="btn-group btn-group-sm shadow-xs" role="group" aria-label="Toggle Label">
+        <button type="button" class="btn btn-secondary" onclick="toggleDistanceLabels()" id="toggle-distance" title="Toggle Label Jarak">
+          <i class="mdi mdi-ruler me-1"></i> <span id="distance-label-text">Sembunyikan</span> Jarak
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="toggleNameLabels()" id="toggle-name" title="Toggle Nama ODP/ODC">
+          <i class="mdi mdi-label-outline me-1"></i> <span id="name-label-text">Tampilkan</span> Nama
+        </button>
+        <button type="button" class="btn btn-outline-info" onclick="toggleUserNameLabels()" id="toggle-user-name" title="Toggle Nama Pelanggan">
+          <i class="mdi mdi-account-circle-outline me-1"></i> <span id="user-name-label-text">Tampilkan</span> Pelanggan
+        </button>
       </div>
     </div>
+
+    {{-- Right: Mode Peta & Shortcut Tab Baru --}}
+    <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+      <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher">
+        <button type="button" class="btn btn-primary active btn-map-type" data-layer="googleHybrid" title="Peta Satelit dengan Nama Jalan">
+          <i class="mdi mdi-satellite-variant me-1"></i> Satelit Hybrid
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleSat" title="Citra Satelit Asli">
+          <i class="mdi mdi-earth me-1"></i> Satelit Murni
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleStreets" title="Peta Jalan Google Maps">
+          <i class="mdi mdi-google-maps me-1"></i> Google Jalan
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="osm" title="Peta OpenStreetMap">
+          <i class="mdi mdi-map-outline me-1"></i> OSM
+        </button>
+      </div>
+
+      <a href="{{ route('google-map.standalone') }}" target="_blank" class="btn btn-sm btn-outline-dark d-flex align-items-center gap-1 shadow-xs" title="Buka Mode Peta Standalone Layar Penuh di Tab Baru">
+        <i class="mdi mdi-open-in-new"></i>
+        <span class="d-none d-sm-inline">Peta Tab Baru</span>
+      </a>
+    </div>
+  </div>
+
+  {{-- Maximized Map Container --}}
+  <div id="map-container">
+    <div id="map"></div>
   </div>
 </div>
-
-
 @endsection
