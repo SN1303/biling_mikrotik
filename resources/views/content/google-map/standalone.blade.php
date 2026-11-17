@@ -1121,14 +1121,37 @@ function initMap() {
     localStorage.setItem('mapState', JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
   });
 
+  tileLayers.googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
+  tileLayers.googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
+  tileLayers.google = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20, subdomains: ['0','1','2','3'] });
   tileLayers.openstreetmap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
   tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
-  tileLayers.google = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { attribution: '&copy; Google', maxZoom: 20, subdomains: ['0','1','2','3'] });
-  tileLayers.googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google', maxZoom: 20, subdomains: ['0','1','2','3'] });
-  // Restore saved map layer
-  const savedLayer = localStorage.getItem('mapLayerType') || 'google';
-  currentLayer = tileLayers[savedLayer] ? savedLayer : 'google';
+
+  // Restore saved map layer (default ke Google Hybrid)
+  const savedLayer = localStorage.getItem('mapLayerType') || 'googleHybrid';
+  currentLayer = tileLayers[savedLayer] ? savedLayer : 'googleHybrid';
   tileLayers[currentLayer].addTo(map);
+
+  const baseMaps = {
+    "Satelit Hybrid": tileLayers.googleHybrid,
+    "Satelit Murni": tileLayers.googleSatellite,
+    "Google Jalan": tileLayers.google,
+    "OpenStreetMap": tileLayers.openstreetmap,
+    "ArcGIS Satelit": tileLayers.satellite
+  };
+  L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+  map.on('baselayerchange', function(e) {
+    for (const [key, layer] of Object.entries(tileLayers)) {
+      if (layer === e.layer) {
+        currentLayer = key;
+        localStorage.setItem('mapLayerType', key);
+        updateLayerButton();
+        break;
+      }
+    }
+  });
+
   updateLayerButton();
 
   // Apply dark mode if saved (hanya tile peta yang gelap via CSS filter)
@@ -1150,8 +1173,20 @@ function initMap() {
 
 function updateLayerButton() {
   const btn = document.getElementById('toggleMapType');
-  const labels = { google: 'G-SAT', googleSatellite: 'OSM', openstreetmap: 'SATELIT', satellite: 'GOOGLE' };
-  const icons = { google: 'satellite-variant', googleSatellite: 'map', openstreetmap: 'satellite-variant', satellite: 'google' };
+  const labels = {
+    googleHybrid: 'HYBRID',
+    googleSatellite: 'G-SAT',
+    google: 'JALAN',
+    openstreetmap: 'OSM',
+    satellite: 'ESRI'
+  };
+  const icons = {
+    googleHybrid: 'satellite-variant',
+    googleSatellite: 'earth',
+    google: 'google-maps',
+    openstreetmap: 'map-outline',
+    satellite: 'satellite-uplink'
+  };
   btn.innerHTML = `<i class="mdi mdi-${icons[currentLayer] || 'map'}"></i> ${labels[currentLayer] || 'MAP'}`;
 }
 
@@ -1810,7 +1845,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // =============== MAP TYPE TOGGLE ===============
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('toggleMapType').addEventListener('click', function() {
-    const order = ['google', 'googleSatellite', 'openstreetmap', 'satellite'];
+    const order = ['googleHybrid', 'googleSatellite', 'google', 'openstreetmap', 'satellite'];
     const idx = order.indexOf(currentLayer);
     const next = order[(idx + 1) % order.length];
     map.removeLayer(tileLayers[currentLayer]);

@@ -163,17 +163,23 @@
       }
     });
 
-    // 3. Logika Ekstrak Koordinat dari Google Maps URL
+    // 3. Logika Ekstrak Koordinat dari Google Maps URL / Teks Koordinat
     function extractCoordinatesFromUrl(url) {
       if (!url || !url.trim()) return;
 
       let rawUrl = url.trim();
 
       // Ekstrak URL jika ada teks pengantar (misal dari pesan WA: "Lokasi: https://...")
-      const urlRegex = /(https?:\/\/[^\s]+)/;
+      const urlRegex = /(https?:\/\/[^\s]+)/i;
       const urlMatch = rawUrl.match(urlRegex);
       if (urlMatch) {
-        rawUrl = urlMatch[1];
+        rawUrl = urlMatch[1].replace(/[.,;:()\[\]"'<>]+$/, '');
+      } else {
+        const domainRegex = /((?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|google\.com\/maps)[^\s]*)/i;
+        const domainMatch = rawUrl.match(domainRegex);
+        if (domainMatch) {
+          rawUrl = 'https://' + domainMatch[1].replace(/[.,;:()\[\]"'<>]+$/, '');
+        }
       }
 
       // Decode URL entities dan %2C
@@ -184,71 +190,71 @@
         decodedUrl = rawUrl;
       }
 
-      // Pola 1: Cek format langsung angka -5.xxxx, 105.xxxx atau -5.xxxx,+105.xxxx
-      const directRegex = /(-?\d{1,2}\.\d+)\s*,\s*\+?(-?\d{1,3}\.\d+)/;
-      const directMatch = decodedUrl.match(directRegex);
-      if (directMatch) {
-        const lat = parseFloat(directMatch[1]);
-        const lng = parseFloat(directMatch[2]);
-        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      function applyCoord(lat, lng, sourceLabel) {
+        lat = parseFloat(lat);
+        lng = parseFloat(lng);
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat !== 0 || lng !== 0)) {
           $('#latitude').val(lat.toFixed(6));
           $('#longitude').val(lng.toFixed(6));
           updateMarker(lat, lng);
-          toastr.success('Koordinat berhasil dideteksi langsung!');
-          return;
+          toastr.success('Koordinat berhasil diekstrak (' + sourceLabel + ')!');
+          return true;
         }
+        return false;
       }
 
-      // Pola 2: Cek pola URL @lat,lng
+      // Pola 1: @lat,lng dalam URL (misal: @-5.382123,105.258123,17z)
       const atRegex = /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/;
       const atMatch = decodedUrl.match(atRegex);
-      if (atMatch) {
-        const lat = parseFloat(atMatch[1]);
-        const lng = parseFloat(atMatch[2]);
-        $('#latitude').val(lat.toFixed(6));
-        $('#longitude').val(lng.toFixed(6));
-        updateMarker(lat, lng);
-        toastr.success('Koordinat berhasil diekstrak dari link Google Maps!');
-        return;
-      }
+      if (atMatch && applyCoord(atMatch[1], atMatch[2], 'link Google Maps')) return;
 
-      // Pola 3: Cek pola /search/lat,+lng atau /place/lat,+lng
-      const searchRegex = /(?:search|place)\/(-?\d{1,2}\.\d+)(?:,|\+|\s)+\+?(-?\d{1,3}\.\d+)/;
-      const searchMatch = decodedUrl.match(searchRegex);
-      if (searchMatch) {
-        const lat = parseFloat(searchMatch[1]);
-        const lng = parseFloat(searchMatch[2]);
-        $('#latitude').val(lat.toFixed(6));
-        $('#longitude').val(lng.toFixed(6));
-        updateMarker(lat, lng);
-        toastr.success('Koordinat berhasil diekstrak dari link pencarian!');
-        return;
-      }
-
-      // Pola 4: Cek pola ?q=lat,lng atau &ll=lat,lng atau q=loc:lat,lng
-      const qRegex = /(?:[?&](?:q|ll|destination)=(?:loc:)?)(-?\d{1,2}\.\d+)(?:,|\+|\s)+(-?\d{1,3}\.\d+)/;
+      // Pola 2: URL params: ?q=, &ll=, query=, daddr=, saddr=, center=, destination=
+      const qRegex = /(?:[?&](?:q|query|ll|daddr|saddr|center|destination)=(?:loc:)?)(-?\d{1,2}\.\d+)(?:,|\+|\s)+(-?\d{1,3}\.\d+)/i;
       const qMatch = decodedUrl.match(qRegex);
-      if (qMatch) {
-        const lat = parseFloat(qMatch[1]);
-        const lng = parseFloat(qMatch[2]);
-        $('#latitude').val(lat.toFixed(6));
-        $('#longitude').val(lng.toFixed(6));
-        updateMarker(lat, lng);
-        toastr.success('Koordinat berhasil diekstrak dari query link!');
-        return;
-      }
+      if (qMatch && applyCoord(qMatch[1], qMatch[2], 'parameter link')) return;
 
-      // Pola 5: Cek pola internal data=!3dlat!4dlng
+      // Pola 3: Path /search/lat,lng atau /place/lat,lng atau /dir/.../lat,lng
+      const searchRegex = /(?:\/search|\/place|\/dir(?:\/[^\/]*)*)\/(-?\d{1,2}\.\d+)(?:,|\+|\s)+\+?(-?\d{1,3}\.\d+)/i;
+      const searchMatch = decodedUrl.match(searchRegex);
+      if (searchMatch && applyCoord(searchMatch[1], searchMatch[2], 'link navigasi/pencarian')) return;
+
+      // Pola 4: Internal data=!3dlat!4dlng
       const dataRegex = /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/;
       const dataMatch = decodedUrl.match(dataRegex);
-      if (dataMatch) {
-        const lat = parseFloat(dataMatch[1]);
-        const lng = parseFloat(dataMatch[2]);
-        $('#latitude').val(lat.toFixed(6));
-        $('#longitude').val(lng.toFixed(6));
-        updateMarker(lat, lng);
-        toastr.success('Koordinat berhasil diekstrak dari link Google Maps!');
-        return;
+      if (dataMatch && applyCoord(dataMatch[1], dataMatch[2], 'data lokasi Google')) return;
+
+      // Pola 5: Staticmap center=lat,lng
+      const centerRegex = /center=(-?\d{1,2}\.\d+)(?:%2C|,)(-?\d{1,3}\.\d+)/i;
+      const centerMatch = decodedUrl.match(centerRegex);
+      if (centerMatch && applyCoord(centerMatch[1], centerMatch[2], 'embed peta')) return;
+
+      // Pola 6: Format standar lat, lng angka langsung (-5.123456, 105.123456 atau -5.123456 105.123456)
+      const directRegex = /(-?\d{1,2}\.\d+)[\s,;]+\+?(-?\d{1,3}\.\d+)/;
+      const directMatch = decodedUrl.match(directRegex);
+      if (directMatch && applyCoord(directMatch[1], directMatch[2], 'input koordinat langsung')) return;
+
+      // Pola 7: Format Derajat Menit Detik (DMS): 5°22'55.6"S 105°46'52.4"E
+      const dmsRegex = /(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)["\s]*([NS])[,;\s]+(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)["\s]*([EW])/i;
+      const dmsMatch = decodedUrl.match(dmsRegex);
+      if (dmsMatch) {
+        let lat = parseFloat(dmsMatch[1]) + (parseFloat(dmsMatch[2]) / 60.0) + (parseFloat(dmsMatch[3]) / 3600.0);
+        if (dmsMatch[4].toUpperCase() === 'S') lat = -lat;
+        let lng = parseFloat(dmsMatch[5]) + (parseFloat(dmsMatch[6]) / 60.0) + (parseFloat(dmsMatch[7]) / 3600.0);
+        if (dmsMatch[8].toUpperCase() === 'W') lng = -lng;
+        if (applyCoord(lat, lng, 'format derajat DMS')) return;
+      }
+
+      // Pola 8: Indikator arah: 5.123456S, 105.123456E
+      const cardRegex = /([NS])?\s*([+-]?\d{1,2}\.\d+)\s*([NS])?[\s,;]+([EW])?\s*([+-]?\d{1,3}\.\d+)\s*([EW])?/i;
+      const cardMatch = decodedUrl.match(cardRegex);
+      if (cardMatch) {
+        const dirLat = (cardMatch[1] || cardMatch[3] || '').toUpperCase();
+        let lat = parseFloat(cardMatch[2]);
+        if (dirLat === 'S') lat = -Math.abs(lat);
+        const dirLng = (cardMatch[4] || cardMatch[6] || '').toUpperCase();
+        let lng = parseFloat(cardMatch[5]);
+        if (dirLng === 'W') lng = -Math.abs(lng);
+        if (applyCoord(lat, lng, 'format mata angin')) return;
       }
 
       // Jika belum terdeteksi secara instan (misal shortlink maps.app.goo.gl), kirim ke endpoint server
@@ -262,10 +268,7 @@
         success: function(res) {
           $('#btn-extract-maps').prop('disabled', false).html('<i class="mdi mdi-crosshairs-gps me-1"></i> Ekstrak');
           if (res.success && res.latitude && res.longitude) {
-            $('#latitude').val(parseFloat(res.latitude).toFixed(6));
-            $('#longitude').val(parseFloat(res.longitude).toFixed(6));
-            updateMarker(res.latitude, res.longitude);
-            toastr.success('Koordinat Google Maps berhasil diurai!');
+            applyCoord(res.latitude, res.longitude, 'shortlink server');
           } else {
             toastr.warning('Tidak dapat mengekstrak koordinat dari link tersebut. Silakan klik langsung titik lokasi pada peta.');
           }

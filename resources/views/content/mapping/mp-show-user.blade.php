@@ -478,11 +478,67 @@
   // Inisialisasi peta
   const map = L.map('map').setView(centerLatLng, 13);
 
-  // Tile layer dari OpenStreetMap
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 35,
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
+  // Definisi Layer Peta (Google Satellite, Google Hybrid, Google Roads, OpenStreetMap)
+  const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '© Google Maps'
+  });
+
+  const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '© Google Maps'
+  });
+
+  const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '© Google Maps'
+  });
+
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  });
+
+  // Default aktif: Google Satelit Hybrid
+  googleHybrid.addTo(map);
+
+  const baseMaps = {
+    "Satelit Hybrid": googleHybrid,
+    "Satelit Murni": googleSat,
+    "Google Jalan": googleStreets,
+    "OpenStreetMap": osm
+  };
+
+  // Kontrol layer Leaflet bawaan (pojok kanan atas)
+  L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+  // Event handler tombol switcher visual
+  $(document).on('click', '.btn-map-type', function() {
+    const selected = $(this).data('layer');
+    [googleHybrid, googleSat, googleStreets, osm].forEach(l => {
+      if (map.hasLayer(l)) map.removeLayer(l);
+    });
+
+    if (selected === 'googleHybrid') googleHybrid.addTo(map);
+    else if (selected === 'googleSat') googleSat.addTo(map);
+    else if (selected === 'googleStreets') googleStreets.addTo(map);
+    else if (selected === 'osm') osm.addTo(map);
+
+    $('.btn-map-type').removeClass('btn-primary active').addClass('btn-outline-secondary');
+    $(this).removeClass('btn-outline-secondary').addClass('btn-primary active');
+  });
+
+  // Sinkronisasi tombol ketika layer diganti via Leaflet control
+  map.on('baselayerchange', function(e) {
+    $('.btn-map-type').removeClass('btn-primary active').addClass('btn-outline-secondary');
+    if (e.layer === googleHybrid) $('[data-layer="googleHybrid"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+    else if (e.layer === googleSat) $('[data-layer="googleSat"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+    else if (e.layer === googleStreets) $('[data-layer="googleStreets"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+    else if (e.layer === osm) $('[data-layer="osm"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+  });
 
   // Custom fullscreen control (native browser API)
   L.Control.FullscreenCustom = L.Control.extend({
@@ -1219,7 +1275,26 @@ fetch(`/mapping/json/mapping/show/user`)
           <div class="col-md-12">
             <div class="card shadow-lg">
               <div class="card-body">
-                <h6 class="card-title mb-3">Filter Tampilan</h6>
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                  <h6 class="card-title mb-0">Filter Tampilan</h6>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="fw-semibold text-muted small"><i class="mdi mdi-layers-outline me-1"></i> Mode Peta:</span>
+                    <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher">
+                      <button type="button" class="btn btn-primary active btn-map-type" data-layer="googleHybrid" title="Peta Satelit dengan Nama Jalan">
+                        <i class="mdi mdi-satellite-variant me-1"></i> Satelit Hybrid
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleSat" title="Citra Satelit Asli">
+                        <i class="mdi mdi-earth me-1"></i> Satelit Murni
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleStreets" title="Peta Jalan Google Maps">
+                        <i class="mdi mdi-google-maps me-1"></i> Google Jalan
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="osm" title="Peta OpenStreetMap">
+                        <i class="mdi mdi-map-outline me-1"></i> OSM
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
                   <div class="btn-group" role="group" aria-label="Filter tampilan">
                     <button type="button" class="btn btn-primary active" onclick="filterMap('all')" id="filter-all">
