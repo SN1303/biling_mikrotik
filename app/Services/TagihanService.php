@@ -358,18 +358,47 @@ class TagihanService
 
       $query = $this->repository->getDatatablesJson($where);
 
-      // ✅ Hitung summary data SEBELUM DataTables processing
+      $today = date('Y-m-d');
+
+      // ✅ Hitung summary data SEBELUM filtering quick filter
       $summaryQuery = clone $query;
+      $overdueItems = $summaryQuery->filter(function ($item) use ($today) {
+        return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo < $today;
+      });
+      $todayDueItems = $summaryQuery->filter(function ($item) use ($today) {
+        return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo === $today;
+      });
+
       $summaryData = [
         'total_count' => $summaryQuery->count(),
         'total_unpaid' => $summaryQuery->sum('total'),
         'total_harga' => $summaryQuery->sum('harga'),
         'total_ppn' => $summaryQuery->sum('ppn'),
         'total_diskon' => $summaryQuery->sum('diskon'),
+        'overdue_count' => $overdueItems->count(),
+        'overdue_total' => $overdueItems->sum('total'),
+        'today_due_count' => $todayDueItems->count(),
       ];
       $summaryData['potential_income'] = $summaryData['total_unpaid'];
       $summaryData['average_amount'] = $summaryData['total_count'] > 0 ?
         $summaryData['total_unpaid'] / $summaryData['total_count'] : 0;
+
+      // Filter cepat status jatuh tempo (opsional dari tab)
+      if (!empty($request->quick_filter)) {
+        if ($request->quick_filter === 'overdue') {
+          $query = $query->filter(function ($item) use ($today) {
+            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo < $today;
+          });
+        } elseif ($request->quick_filter === 'today') {
+          $query = $query->filter(function ($item) use ($today) {
+            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo === $today;
+          });
+        } elseif ($request->quick_filter === 'upcoming') {
+          $query = $query->filter(function ($item) use ($today) {
+            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo > $today;
+          });
+        }
+      }
 
       // ✅ TAMBAHAN: Untuk halaman tagihan lunas, ambil juga data tagihan belum bayar
       $unpaidSummary = [];
@@ -407,6 +436,15 @@ class TagihanService
             ? "{$nama} ({$julukan})"
             : $nama;
         })
+        ->addColumn('user_wa', function ($row) {
+          return optional($row->user)->wa;
+        })
+        ->addColumn('due_diff_days', function ($row) use ($today) {
+          if (empty($row->tglJatuhTempo)) return null;
+          $due = Carbon::parse($row->tglJatuhTempo)->startOfDay();
+          $now = Carbon::parse($today)->startOfDay();
+          return (int) $now->diffInDays($due, false); // < 0 jika overdue
+        })
         ->addColumn('paket_harga', function ($row) {
           return optional($row->paket)->price;
         })
@@ -438,7 +476,9 @@ class TagihanService
           'created_at',
           'paket_nama',
           'paket_harga',
-          'user_nama'
+          'user_nama',
+          'user_wa',
+          'due_diff_days'
         ])
         // ✅ Tambahkan summary data + unpaid summary ke response DataTables
         ->with([

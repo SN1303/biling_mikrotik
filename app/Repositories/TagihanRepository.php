@@ -99,7 +99,7 @@ class TagihanRepository
     $query = $this->model::query()
       ->with([
         'paket:id,nama,price',
-        'user:id,name,julukan'
+        'user:id,name,julukan,wa,email'
       ]);
 
     if (!empty($where)) {
