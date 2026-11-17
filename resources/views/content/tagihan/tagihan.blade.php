@@ -15,7 +15,7 @@
   }
   .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08) !important;
   }
   .metric-icon-box {
     width: 44px;
@@ -50,6 +50,8 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-weight: 700;
+    white-space: nowrap;
+    background-color: #f8fafc !important;
   }
   #table tbody tr:hover {
     background-color: rgba(37, 99, 235, 0.02) !important;
@@ -103,25 +105,21 @@
       columns: [
         {
           data: null,
-          defaultContent: '',
-          orderable: false,
-          searchable: false
-        },
-        {
-          data: null,
           orderable: false,
           searchable: false,
+          className: 'text-center align-middle',
           render: function(data, type, row, meta) {
-            return `<span class="text-muted fw-semibold">${meta.row + meta.settings._iDisplayStart + 1}</span>`;
+            return `<span class="text-muted fw-bold small">${meta.row + meta.settings._iDisplayStart + 1}</span>`;
           }
         },
         {
           data: 'user_nama',
           name: 'user_nama',
+          className: 'align-middle',
           render: function(data, type, row) {
             const wa = row.user_wa;
             const waButton = wa && wa !== '-'
-              ? `<a href="javascript:void(0)" class="btn-wa-direct badge bg-success-subtle text-success border border-success-subtle text-decoration-none" title="Kirim Pesan WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
+              ? `<a href="javascript:void(0)" class="btn-wa-direct badge bg-success-subtle text-success border border-success-subtle text-decoration-none" data-id="${row.id}" title="Kirim Pesan WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
               : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
 
             return `
@@ -138,12 +136,13 @@
         {
           data: 'paket_nama',
           name: 'paket_nama',
+          className: 'align-middle',
           render: function(data, type, row) {
             const periodeText = `${namaBulan[row.bulan] || row.bulan} ${row.tahun}`;
             return `
               <div>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold mb-1">
-                  <i class="mdi mdi-speedometer me-1"></i>${data || 'Paket Reguler'}
+                  <i class="mdi mdi-speedometer me-1"></i>${data || 'Paket Internet'}
                 </span>
                 <div class="small text-muted d-flex align-items-center gap-1">
                   <i class="mdi mdi-calendar-month-outline text-secondary"></i>
@@ -156,6 +155,7 @@
         {
           data: 'total',
           name: 'total',
+          className: 'align-middle',
           render: function(data, type, row) {
             const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
             let detailSub = '';
@@ -175,6 +175,7 @@
         {
           data: 'tglJatuhTempo',
           name: 'tglJatuhTempo',
+          className: 'align-middle',
           render: function(data, type, row) {
             if (!data) return '<span class="text-muted">-</span>';
 
@@ -206,7 +207,7 @@
           name: 'action',
           orderable: false,
           searchable: false,
-          className: 'text-center',
+          className: 'text-center align-middle',
           render: function(data, type, row) {
             let deleteBtn = '';
             @if(auth()->user()->hasRole(1, 2))
@@ -222,18 +223,18 @@
 
             return `
               <div class="d-inline-flex align-items-center gap-1">
-                <!-- Tombol Bayar Cepat -->
-                <button type="button" class="btn btn-sm btn-success btn-bayar d-inline-flex align-items-center gap-1 shadow-xs px-2 py-1" data-id="${data}" title="Bayar Tagihan">
+                <!-- Tombol Bayar Langsung -->
+                <button type="button" class="btn btn-sm btn-success btn-bayar d-inline-flex align-items-center gap-1 shadow-xs px-2 py-1" data-id="${data}" title="Bayar Sekarang">
                   <i class="mdi mdi-cash-check"></i>
                   <span class="fw-semibold">Bayar</span>
                 </button>
 
-                <!-- Tombol WhatsApp Pengingat -->
-                <button type="button" class="btn btn-sm btn-outline-success btn-wa-direct d-inline-flex align-items-center p-1" title="Kirim Pengingat WhatsApp">
+                <!-- Tombol WhatsApp -->
+                <button type="button" class="btn btn-sm btn-outline-success btn-wa-direct d-inline-flex align-items-center p-1" data-id="${data}" title="Kirim Pengingat WhatsApp">
                   <i class="mdi mdi-whatsapp fs-6"></i>
                 </button>
 
-                <!-- Opsi Tambahan -->
+                <!-- Dropdown Opsi -->
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-icon btn-light rounded-circle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="mdi mdi-dots-vertical"></i>
@@ -245,7 +246,7 @@
                       </a>
                     </li>
                     <li>
-                      <a class="dropdown-item btn-wa-direct py-1" href="javascript:void(0);">
+                      <a class="dropdown-item btn-wa-direct py-1" href="javascript:void(0);" data-id="${data}">
                         <i class="mdi mdi-whatsapp me-2 text-success"></i> Ingatkan Pelanggan
                       </a>
                     </li>
@@ -257,20 +258,11 @@
           }
         }
       ],
-      columnDefs: [
-        {
-          className: 'control',
-          targets: 0,
-          searchable: false,
-          orderable: false,
-          render: function() { return ''; }
-        }
-      ],
-      order: [[5, 'asc']], // Urutkan berdasarkan jatuh tempo terdekat
+      order: [[4, 'asc']], // Urutkan berdasarkan jatuh tempo terdekat
       dom:
-        '<"row mx-2 my-2"<"col-sm-12 col-md-6 d-flex align-items-center"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>' +
+        '<"card-body py-2 px-3 border-bottom"<"row align-items-center g-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>>' +
         't' +
-        '<"row mx-2 my-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+        '<"card-body py-2 px-3"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
       displayLength: 20,
       lengthMenu: [10, 20, 35, 50, 100],
       language: {
@@ -284,12 +276,6 @@
         paginate: {
           next: '<i class="mdi mdi-chevron-right"></i>',
           previous: '<i class="mdi mdi-chevron-left"></i>'
-        }
-      },
-      responsive: {
-        details: {
-          type: 'column',
-          target: 0
         }
       },
       initComplete: function() {
@@ -359,25 +345,59 @@
     });
 
     // Event Handler Buka Kasir Pembayaran (Modal Bayar)
-    $('#table').on('click', '.btn-bayar', function() {
-      const id = $(this).data('id');
-      const rowData = table.row($(this).closest('tr')).data();
+    $(document).on('click', '.btn-bayar', function(e) {
+      e.preventDefault();
+      const id = $(this).attr('data-id');
+      console.log('Klik bayar ID:', id);
 
-      if (!rowData) return;
+      let rowData = null;
+      const allRows = table.rows().data().toArray();
+      if (allRows && allRows.length > 0) {
+        rowData = allRows.find(item => item.id == id);
+      }
 
-      currentRawTotal = rowData.total || 0;
+      if (!rowData) {
+        const tr = $(this).closest('tr');
+        rowData = table.row(tr).data();
+      }
+
+      if (!rowData) {
+        console.warn('Row data tidak ditemukan di memori, ambil via AJAX:', id);
+        if (window.GlobalLoading) GlobalLoading.show('Memuat data tagihan...');
+        $.ajax({
+          url: `{{ url('tagihan') }}/${id}`,
+          type: 'GET',
+          success: function(res) {
+            if (window.GlobalLoading) GlobalLoading.hide();
+            bukaModalKasir(id, res);
+          },
+          error: function() {
+            if (window.GlobalLoading) GlobalLoading.hide();
+            Swal.fire('Error', 'Gagal memuat rincian tagihan.', 'error');
+          }
+        });
+        return;
+      }
+
+      bukaModalKasir(id, rowData);
+    });
+
+    function bukaModalKasir(id, rowData) {
+      currentRawTotal = parseFloat(rowData.total) || 0;
       const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(currentRawTotal);
-      const periodeStr = `${namaBulan[rowData.bulan] || rowData.bulan} ${rowData.tahun}`;
+      const bulanNama = namaBulan[rowData.bulan] || rowData.bulan;
+      const periodeStr = `${bulanNama} ${rowData.tahun}`;
 
       // Populate Modal Info
-      $('#modal-noTagihan').text(rowData.noTagihan);
-      $('#modal-namaPelanggan').text(rowData.user_nama);
+      $('#modal-noTagihan').text(rowData.noTagihan || '-');
+      $('#modal-namaPelanggan').text(rowData.user_nama || 'Pelanggan');
       $('#modal-paket-badge').text(rowData.paket_nama || 'Paket Internet');
       $('#modal-periode-display').text(periodeStr);
       $('#modal-total-display').text(totalFmt);
 
       // Set ID tagihan ke form
-      $('#form-bayar').data('tagihan-id', id);
+      $('#form-bayar').data('tagihan-id', id).attr('data-tagihan-id', id);
+      $('#tagihan_id').val(id);
 
       // Default Metode: Tunai / COD
       $('#metode_cod').prop('checked', true);
@@ -386,12 +406,18 @@
 
       // Reset Kalkulator
       $('#cash-received').val('');
-      $('#cash-change-display').text('Rp 0');
+      $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
       $('#cash-change-status').text('Masukkan nominal uang yang diterima');
       $('#keterangan_bayar').val('');
 
-      $('#modalBayar').modal('show');
-    });
+      // Tampilkan Modal
+      const modalEl = document.getElementById('modalBayar');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      } else {
+        $('#modalBayar').modal('show');
+      }
+    }
 
     // Ganti Metode Bayar Radio Tile
     $('input[name="metode_bayar_radio"]').on('change', function() {
@@ -445,7 +471,7 @@
     $('#form-bayar').on('submit', function(e) {
       e.preventDefault();
 
-      const tagihanId = $(this).data('tagihan-id');
+      const tagihanId = $('#tagihan_id').val() || $(this).data('tagihan-id') || $(this).attr('data-tagihan-id');
       const metodeBayar = $('#metode_bayar').val();
       const keterangan = $('#keterangan_bayar').val();
 
@@ -458,7 +484,12 @@
         return;
       }
 
-      $('#modalBayar').modal('hide');
+      const modalEl = document.getElementById('modalBayar');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      } else {
+        $('#modalBayar').modal('hide');
+      }
 
       const paymentSteps = [
         { progress: 20, text: 'Memvalidasi data transaksi kasir...', delay: 250 },
@@ -537,8 +568,8 @@
     });
 
     // Delete Tagihan Event
-    $('#table').on('click', '.btn-delete', function() {
-      const id = $(this).data('id');
+    $(document).on('click', '.btn-delete', function() {
+      const id = $(this).attr('data-id');
 
       Swal.fire({
         title: "Hapus Tagihan Ini?",
@@ -583,9 +614,11 @@
     });
 
     // Event Handler Tombol WhatsApp
-    $('#table').on('click', '.btn-wa-direct', function(e) {
+    $(document).on('click', '.btn-wa-direct', function(e) {
       e.preventDefault();
-      const rowData = table.row($(this).closest('tr')).data();
+      const id = $(this).attr('data-id');
+      const allRows = table.rows().data().toArray();
+      const rowData = allRows ? allRows.find(item => item.id == id) : null;
       if (rowData) {
         kirimPengingatWA(rowData);
       }
@@ -639,58 +672,58 @@
 
 @section('content')
 
-<!-- Header & Periode Bar -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-  <div>
-    <div class="d-flex align-items-center gap-2">
-      <h4 class="fw-bold mb-0 text-dark">
-        <i class="mdi mdi-receipt-text-outline text-primary me-2"></i>Tagihan Aktif
-      </h4>
-      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill small">Belum Lunas</span>
-    </div>
-    <p class="text-muted small mb-0 mt-1">Monitoring dan kasir penagihan tagihan pelanggan yang belum terbayar</p>
-  </div>
-
-  <!-- Right: Filters & Action -->
-  <div class="d-flex flex-wrap align-items-center gap-2">
-    <!-- Filter Box Ringkas -->
-    <div class="d-flex align-items-center gap-1 bg-white border rounded-3 p-1 shadow-xs">
-      <div class="d-flex align-items-center px-2 text-muted small">
-        <i class="mdi mdi-calendar-range me-1 text-primary"></i> Periode:
+<!-- Header Card & Periode Filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3 px-3 px-sm-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <h4 class="fw-bold mb-0 text-dark">
+            <i class="mdi mdi-receipt-text-outline text-primary me-2"></i>Tagihan Aktif
+          </h4>
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill small">Belum Lunas</span>
+        </div>
+        <p class="text-muted small mb-0 mt-1">Monitoring dan kasir penagihan tagihan pelanggan yang belum terbayar</p>
       </div>
-      <select id="filter-bulan" class="form-select form-select-sm border-0 bg-transparent fw-semibold" style="width: 125px;">
-        <option value="">Semua Bulan</option>
-        @php
-          $namaBulanList = [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-          ];
-        @endphp
-        @foreach($namaBulanList as $key => $nama)
-          <option value="{{ $key }}" {{ $key == $currentMonth ? 'selected' : '' }}>{{ $nama }}</option>
-        @endforeach
-      </select>
-      <select id="filter-tahun" class="form-select form-select-sm border-0 bg-transparent fw-semibold" style="width: 100px;">
-        <option value="">Semua Thn</option>
-        @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
-          @foreach($filterData['tahun'] as $tahun)
-            <option value="{{ $tahun }}" {{ $tahun == $currentYear ? 'selected' : '' }}>{{ $tahun }}</option>
-          @endforeach
-        @else
-          <option value="{{ $currentYear }}" selected>{{ $currentYear }}</option>
-        @endif
-      </select>
-      <button type="button" class="btn btn-sm btn-icon btn-light rounded-circle" id="btn-refresh-table" title="Refresh Data">
-        <i class="mdi mdi-refresh text-primary"></i>
-      </button>
-    </div>
 
-    <!-- Tombol Riwayat Lunas -->
-    <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-xs">
-      <i class="mdi mdi-check-decagram-outline"></i>
-      <span>Riwayat Lunas</span>
-    </a>
+      <!-- Right: Filters & Action -->
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
+          <span class="text-muted small px-2 fw-semibold"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 130px;">
+            <option value="">Semua Bulan</option>
+            @php
+              $namaBulanList = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+              ];
+            @endphp
+            @foreach($namaBulanList as $key => $nama)
+              <option value="{{ $key }}" {{ $key == $currentMonth ? 'selected' : '' }}>{{ $nama }}</option>
+            @endforeach
+          </select>
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 100px;">
+            <option value="">Semua Thn</option>
+            @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
+              @foreach($filterData['tahun'] as $tahun)
+                <option value="{{ $tahun }}" {{ $tahun == $currentYear ? 'selected' : '' }}>{{ $tahun }}</option>
+              @endforeach
+            @else
+              <option value="{{ $currentYear }}" selected>{{ $currentYear }}</option>
+            @endif
+          </select>
+          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data">
+            <i class="mdi mdi-refresh"></i>
+          </button>
+        </div>
+
+        <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-xs py-2">
+          <i class="mdi mdi-check-decagram-outline"></i>
+          <span>Riwayat Lunas</span>
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -698,7 +731,7 @@
 <div class="row g-2 g-sm-3 mb-4">
   <!-- Card 1: Total Tagihan Aktif -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #2563eb !important;">
       <div class="card-body p-3 d-flex align-items-center justify-content-between">
         <div>
           <span class="text-muted d-block small mb-1 fw-medium">Total Tagihan</span>
@@ -714,7 +747,7 @@
 
   <!-- Card 2: Total Nominal Tertunda -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #ef4444 !important;">
       <div class="card-body p-3 d-flex align-items-center justify-content-between">
         <div>
           <span class="text-muted d-block small mb-1 fw-medium">Belum Terbayar</span>
@@ -730,14 +763,14 @@
 
   <!-- Card 3: Overdue / Lewat Jatuh Tempo -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100 border-start border-danger border-3">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #f59e0b !important;">
       <div class="card-body p-3 d-flex align-items-center justify-content-between">
         <div>
-          <span class="text-danger d-block small mb-1 fw-bold">Lewat Jatuh Tempo</span>
-          <div class="fs-4 fw-bold text-danger mb-0" id="overdue-count">0</div>
+          <span class="text-warning d-block small mb-1 fw-bold">Lewat Jatuh Tempo</span>
+          <div class="fs-4 fw-bold text-warning mb-0" id="overdue-count">0</div>
           <small class="text-danger fw-semibold" id="overdue-total" style="font-size: 0.72rem;">Rp 0 macet</small>
         </div>
-        <div class="metric-icon-box bg-danger text-white shadow-xs">
+        <div class="metric-icon-box bg-warning-subtle text-warning border border-warning-subtle shadow-xs">
           <i class="mdi mdi-alert-circle-outline fs-4"></i>
         </div>
       </div>
@@ -746,7 +779,7 @@
 
   <!-- Card 4: Potensi Penerimaan Kas -->
   <div class="col-6 col-lg-3">
-    <div class="card metric-card border-0 shadow-sm h-100">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 4px solid #10b981 !important;">
       <div class="card-body p-3 d-flex align-items-center justify-content-between">
         <div>
           <span class="text-muted d-block small mb-1 fw-medium">Potensi Kas Masuk</span>
@@ -764,40 +797,42 @@
 <!-- Main Table Card -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white border-bottom py-3 px-3 px-sm-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
       <!-- Quick Filter Status Pills -->
-      <div class="btn-group btn-group-sm shadow-xs" role="group" id="quick-filter-group">
-        <button type="button" class="btn btn-outline-primary active" data-filter="">
-          <i class="mdi mdi-view-list me-1"></i> Semua (<span id="pill-all">0</span>)
-        </button>
-        <button type="button" class="btn btn-outline-danger" data-filter="overdue">
-          <i class="mdi mdi-alert-circle-outline me-1"></i> Lewat Jatuh Tempo (<span id="pill-overdue">0</span>)
-        </button>
-        <button type="button" class="btn btn-outline-warning" data-filter="today">
-          <i class="mdi mdi-clock-alert-outline me-1"></i> Hari Ini (<span id="pill-today">0</span>)
-        </button>
-        <button type="button" class="btn btn-outline-success" data-filter="upcoming">
-          <i class="mdi mdi-calendar-check-outline me-1"></i> Belum Jatuh Tempo
-        </button>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="text-muted small fw-semibold d-none d-sm-inline">Status:</span>
+        <div class="btn-group btn-group-sm shadow-xs" role="group" id="quick-filter-group">
+          <button type="button" class="btn btn-outline-primary active" data-filter="">
+            <i class="mdi mdi-view-list me-1"></i> Semua (<span id="pill-all">0</span>)
+          </button>
+          <button type="button" class="btn btn-outline-danger" data-filter="overdue">
+            <i class="mdi mdi-alert-circle-outline me-1"></i> Lewat Jatuh Tempo (<span id="pill-overdue">0</span>)
+          </button>
+          <button type="button" class="btn btn-outline-warning" data-filter="today">
+            <i class="mdi mdi-clock-alert-outline me-1"></i> Hari Ini (<span id="pill-today">0</span>)
+          </button>
+          <button type="button" class="btn btn-outline-success" data-filter="upcoming">
+            <i class="mdi mdi-calendar-check-outline me-1"></i> Belum Jatuh Tempo
+          </button>
+        </div>
       </div>
 
-      <div class="text-muted small d-none d-md-block">
-        <i class="mdi mdi-information-outline me-1 text-primary"></i> Klik <b>Bayar</b> untuk melunasi langsung di kasir
+      <div class="text-muted small">
+        <i class="mdi mdi-information-outline me-1 text-primary"></i> Klik tombol <span class="badge bg-success-subtle text-success border border-success-subtle py-1">Bayar</span> untuk melunasi
       </div>
     </div>
   </div>
 
   <div class="card-datatable table-responsive pt-0">
-    <table id="table" class="datatables-basic table table-hover align-middle mb-0 w-100">
+    <table id="table" class="datatables-basic table table-bordered table-hover align-middle mb-0 w-100">
       <thead class="table-light">
         <tr>
-          <th></th>
-          <th style="width: 40px;">NO</th>
-          <th>PELANGGAN & INVOICE</th>
-          <th>PAKET & PERIODE</th>
-          <th>TOTAL TAGIHAN</th>
-          <th>JATUH TEMPO</th>
-          <th class="text-center" style="min-width: 160px;">AKSI</th>
+          <th style="width: 50px;" class="text-center">NO</th>
+          <th style="min-width: 200px;">PELANGGAN & INVOICE</th>
+          <th style="min-width: 160px;">PAKET & PERIODE</th>
+          <th style="min-width: 140px;">TOTAL TAGIHAN</th>
+          <th style="min-width: 150px;">JATUH TEMPO</th>
+          <th style="min-width: 150px;" class="text-center">AKSI</th>
         </tr>
       </thead>
     </table>
@@ -845,6 +880,7 @@
 
       <div class="modal-body p-4 bg-light-subtle">
         <form id="form-bayar">
+          <input type="hidden" id="tagihan_id" name="tagihan_id" value="">
           <!-- Step 1: Pilih Metode Bayar -->
           <div class="mb-4">
             <label class="form-label fw-bold text-dark mb-2">
