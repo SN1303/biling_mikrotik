@@ -266,7 +266,9 @@
             // Metode Bayar Badge
             const metodeLower = String(row.metode || '').toLowerCase();
             let metodeBadge = '';
-            if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
+            if (metodeLower.includes('gratis') || parseFloat(row.total || 0) <= 0) {
+              metodeBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle"><i class="mdi mdi-gift-outline me-1"></i>Gratis</span>`;
+            } else if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
               metodeBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="mdi mdi-cash me-1"></i>Tunai</span>`;
             } else if (metodeLower.includes('transfer') || metodeLower.includes('bank')) {
               metodeBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="mdi mdi-bank-transfer me-1"></i>Transfer</span>`;
@@ -418,7 +420,9 @@
 
             const metodeLower = String(row.metode || '').toLowerCase();
             let metodeBadge = '';
-            if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
+            if (metodeLower.includes('gratis') || parseFloat(row.total || 0) <= 0) {
+              metodeBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle"><i class="mdi mdi-gift-outline me-1"></i>Gratis</span>`;
+            } else if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
               metodeBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="mdi mdi-cash me-1"></i>Tunai</span>`;
             } else if (metodeLower.includes('transfer') || metodeLower.includes('bank')) {
               metodeBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="mdi mdi-bank-transfer me-1"></i>Transfer</span>`;
@@ -614,24 +618,31 @@
 
       const bulanNama = namaBulan[row.bulan] || row.bulan;
       const periodeStr = `${bulanNama} ${row.tahun}`;
-      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total);
-      const metodeStr = (row.metode || 'Tunai').toUpperCase();
+      const isGratis = (row.metode && String(row.metode).toLowerCase().includes('gratis')) || (parseFloat(row.total || 0) <= 0);
+      const totalFmt = isGratis ? 'Rp 0 (BEBAS BIAYA / GRATIS)' : ('Rp ' + new Intl.NumberFormat('id-ID').format(row.total));
+      const metodeStr = isGratis ? 'GRATIS / PROMO' : ((row.metode || 'Tunai').toUpperCase());
 
       let tglBayarStr = row.tglBayar || '-';
       if (row.tglBayar && moment(row.tglBayar).isValid()) {
         tglBayarStr = moment(row.tglBayar).format('DD-MM-YYYY HH:mm');
       }
 
+      const openingText = isGratis
+        ? `Berikut adalah bukti konfirmasi layanan internet *MRYES NET* periode ${periodeStr}:`
+        : `Terima kasih atas pembayaran tagihan internet *MRYES NET*. Berikut adalah bukti kuitansi pelunasan resmi:`;
+
+      const statusText = isGratis ? '*LUNAS (PAKET GRATIS / BEBAS BIAYA)*' : '*LUNAS (TERVERIFIKASI)*';
+
       const message = `Halo Kak *${row.user_nama}*,\n\n` +
-        `Terima kasih atas pembayaran tagihan internet *MRYES NET*. Berikut adalah bukti kuitansi pelunasan resmi:\n\n` +
+        `${openingText}\n\n` +
         `📄 *No. Kuitansi/Invoice:* ${row.noTagihan}\n` +
         `📦 *Paket:* ${row.paket_nama || 'Internet Reguler'}\n` +
         `📅 *Periode:* ${periodeStr}\n` +
-        `💰 *Total Lunas:* *${totalFmt}*\n` +
+        `💰 *Total:* *${totalFmt}*\n` +
         `💳 *Metode Pembayaran:* ${metodeStr}\n` +
-        `🗓️ *Waktu Bayar:* ${tglBayarStr}\n` +
-        `👤 *Petugas Kasir:* ${row.prosesNama || '-'}\n` +
-        `✅ *Status:* *LUNAS (TERVERIFIKASI)*\n\n` +
+        `🗓️ *Waktu Proses:* ${tglBayarStr}\n` +
+        `👤 *Petugas/Admin:* ${row.prosesNama || '-'}\n` +
+        `✅ *Status:* ${statusText}\n\n` +
         `Terima kasih telah setia menggunakan layanan internet cepat *MRYES NET*. Jika ada kendala koneksi atau pertanyaan, silakan hubungi customer service kami. 🙏`;
 
       window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(message)}`, '_blank');

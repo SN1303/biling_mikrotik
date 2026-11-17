@@ -249,7 +249,8 @@
           const data = await response.json();
 
           if (data.success) {
-            const { inserted = 0, skipped = 0, errors = [] } = data.data || {};
+            const { inserted = 0, gratis = 0, skipped = 0, errors = [] } = data.data || {};
+            const createdUnpaid = Math.max(0, inserted - gratis);
 
             if (msgBox) {
               msgBox.innerHTML = `
@@ -266,13 +267,19 @@
                         </div>
                       </div>
                       <div class="row g-2">
-                        <div class="col-6">
+                        <div class="col-4">
                           <div class="result-stat rounded" style="background:#e8fadf;">
-                            <div class="result-value text-success">${inserted}</div>
-                            <div class="result-label text-success">Dibuat</div>
+                            <div class="result-value text-success">${createdUnpaid}</div>
+                            <div class="result-label text-success">Tagihan Baru</div>
                           </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
+                          <div class="result-stat rounded" style="background:#e0f2fe;">
+                            <div class="result-value text-info">${gratis}</div>
+                            <div class="result-label text-info">Otomatis Lunas (Gratis)</div>
+                          </div>
+                        </div>
+                        <div class="col-4">
                           <div class="result-stat rounded" style="background:#fff2d6;">
                             <div class="result-value text-warning">${skipped}</div>
                             <div class="result-label text-warning">Dilewati</div>
@@ -293,8 +300,9 @@
             Swal.fire({
               title: 'Berhasil!',
               html: `<p>Tagihan periode <strong>${periodeText}</strong> berhasil digenerate.</p>
-                <div class="d-flex justify-content-center gap-4 mt-2">
-                  <div class="text-center"><div class="fs-4 fw-bold text-success">${inserted}</div><small class="text-muted">Dibuat</small></div>
+                <div class="d-flex justify-content-center gap-3 mt-2">
+                  <div class="text-center"><div class="fs-4 fw-bold text-success">${createdUnpaid}</div><small class="text-muted">Tagihan Baru</small></div>
+                  <div class="text-center"><div class="fs-4 fw-bold text-info">${gratis}</div><small class="text-muted">Lunas (Gratis)</small></div>
                   <div class="text-center"><div class="fs-4 fw-bold text-warning">${skipped}</div><small class="text-muted">Dilewati</small></div>
                 </div>`,
               icon: 'success',
@@ -307,7 +315,7 @@
             const statGen = document.getElementById('stat-generated');
             const statUnpaid = document.getElementById('stat-unpaid');
             if (statGen) statGen.textContent = parseInt(statGen.textContent) + inserted;
-            if (statUnpaid) statUnpaid.textContent = parseInt(statUnpaid.textContent) + inserted;
+            if (statUnpaid) statUnpaid.textContent = parseInt(statUnpaid.textContent) + createdUnpaid;
           } else {
             if (msgBox) {
               msgBox.innerHTML = `

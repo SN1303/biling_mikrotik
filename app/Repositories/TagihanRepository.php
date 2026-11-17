@@ -11,6 +11,7 @@ namespace App\Repositories;
 
 use App\Models\Lamtim_diskon;
 use App\Models\Lamtim_tagihans;
+use App\Models\Lamtim_transaksi;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -114,6 +115,7 @@ class TagihanRepository
   {
     $result = [
       'inserted' => 0,
+      'gratis' => 0,
       'skipped' => 0,
       'errors' => [],
       //'processed_users' => [],
@@ -171,20 +173,50 @@ class TagihanRepository
         $ppn = $isPpnActive ? round($hargaPaket * $ppnPercentage) : 0;
         $total = $hargaPaket + $ppn - $nilaiDiskon;
 
-        $this->model::create([
+        // Opsi B User Gratisan: Jika total <= 0, otomatis langsung berstatus LUNAS (Gratis)
+        $isGratis = ($total <= 0);
+        $finalTotal = max(0, $total);
+
+        $tagihan = $this->model::create([
           'idUser' => $user->id,
           'idPaket' => $user->user_mikrotik->idPaket,
           'noTagihan' => strtoupper($user->id . '-' . $now->month . $now->year . '-' . uniqid()),
           'bulan' => $now->month,
           'tahun' => $now->year,
           'tglJatuhTempo' => $now->addDays(30),
-          'create_by' => Auth::id(),
-          'statusBayar' => 0,
+          'create_by' => Auth::id() ?? 1,
+          'statusBayar' => $isGratis ? 1 : 0,
+          'terbayar' => 0,
+          'tglBayar' => $isGratis ? Carbon::now() : null,
+          'prosesBy' => $isGratis ? (Auth::id() ?? 1) : null,
+          'prosesNama' => $isGratis ? (Auth::check() ? Auth::user()->name : 'Sistem') : null,
+          'metode' => $isGratis ? 'gratis' : null,
+          'aksi' => $isGratis ? 'Gratis' : 'Penagihan',
           'harga' => $hargaPaket,
           'ppn' => $ppn,
           'diskon' => $nilaiDiskon,
-          'total' => $total,
+          'total' => $finalTotal,
         ]);
+
+        if ($isGratis) {
+          $rawTagihanId = $tagihan->getRawOriginal('id');
+          Lamtim_transaksi::create([
+            'idUser' => $user->id,
+            'idTagihan' => $rawTagihanId,
+            'metodeBayar' => 'gratis',
+            'namaPaket' => optional($user->user_mikrotik->paket)->nama ?? 'Paket Gratis',
+            'tglBayar' => Carbon::now(),
+            'prosesBy' => Auth::id() ?? 1,
+            'prosesNama' => Auth::check() ? Auth::user()->name : 'Sistem',
+            'harga' => $hargaPaket,
+            'ppn' => $ppn,
+            'diskon' => $nilaiDiskon,
+            'total' => 0,
+            'keterangan' => 'Paket Gratis / Bebas Biaya',
+          ]);
+          $result['gratis'] = ($result['gratis'] ?? 0) + 1;
+        }
+
         $result['inserted']++;
         //$result['processed_users'][] = $user->id;
       } catch (\Exception $e) {
