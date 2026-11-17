@@ -639,6 +639,14 @@
       }
     });
 
+    // Otomatis Blok / Seleksi Teks saat Kolom Uang Diterima Diklik / Difokuskan
+    $(document).on('focus click', '#cash-received', function() {
+      const input = this;
+      setTimeout(() => {
+        input.select();
+      }, 50);
+    });
+
     // Kalkulator Kembalian Realtime
     $(document).on('input', '#cash-received', function() {
       hitungKembalian();
@@ -1133,7 +1141,7 @@
                 <label for="cash-received" class="form-label fw-bold text-dark small mb-1">Uang Diterima (Rp)</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text bg-white fw-bold">Rp</span>
-                  <input type="number" class="form-control form-control-sm fw-bold fs-6" id="cash-received" placeholder="0">
+                  <input type="number" class="form-control form-control-sm fw-bold fs-6" id="cash-received" placeholder="0" onfocus="this.select()" onclick="this.select()">
                 </div>
                 <div class="d-flex flex-wrap gap-1 mt-1">
                   <button type="button" class="btn btn-xs btn-outline-dark btn-quick-cash" data-mode="exact">Uang Pas</button>
