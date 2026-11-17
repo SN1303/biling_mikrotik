@@ -25,7 +25,7 @@
     transition: all 0.3s ease;
   }
   #mini-map-customer {
-    height: 240px;
+    height: 300px;
     width: 100%;
     border-radius: 0.5rem;
     z-index: 1;
@@ -62,10 +62,67 @@
     let initialLng = 105.7000;
     let map = L.map('mini-map-customer').setView([initialLat, initialLng], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Definisi Layer Peta (Google Satellite, Google Hybrid, Google Roads, OpenStreetMap)
+    const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '© Google Maps'
+    });
+
+    const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '© Google Maps'
+    });
+
+    const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '© Google Maps'
+    });
+
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
-    }).addTo(map);
+    });
+
+    // Default aktif: Google Satelit Hybrid (paling disukai teknisi untuk melihat atap rumah & jalan)
+    googleHybrid.addTo(map);
+
+    const baseMaps = {
+      "Satelit Hybrid": googleHybrid,
+      "Satelit Murni": googleSat,
+      "Google Jalan": googleStreets,
+      "OpenStreetMap": osm
+    };
+
+    // Kontrol layer Leaflet bawaan (pojok kanan atas)
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+    // Event handler tombol switcher visual di atas peta
+    $('.btn-map-type').on('click', function() {
+      const selected = $(this).data('layer');
+      [googleHybrid, googleSat, googleStreets, osm].forEach(l => {
+        if (map.hasLayer(l)) map.removeLayer(l);
+      });
+
+      if (selected === 'googleHybrid') googleHybrid.addTo(map);
+      else if (selected === 'googleSat') googleSat.addTo(map);
+      else if (selected === 'googleStreets') googleStreets.addTo(map);
+      else if (selected === 'osm') osm.addTo(map);
+
+      $('.btn-map-type').removeClass('btn-primary active').addClass('btn-outline-secondary');
+      $(this).removeClass('btn-outline-secondary').addClass('btn-primary active');
+    });
+
+    // Sinkronisasi tombol ketika layer diganti via Leaflet control
+    map.on('baselayerchange', function(e) {
+      $('.btn-map-type').removeClass('btn-primary active').addClass('btn-outline-secondary');
+      if (e.layer === googleHybrid) $('[data-layer="googleHybrid"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+      else if (e.layer === googleSat) $('[data-layer="googleSat"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+      else if (e.layer === googleStreets) $('[data-layer="googleStreets"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+      else if (e.layer === osm) $('[data-layer="osm"]').removeClass('btn-outline-secondary').addClass('btn-primary active');
+    });
 
     let customerMarker = null;
 
@@ -673,8 +730,24 @@
               <!-- Mini Leaflet Map -->
               <div class="col-12">
                 <div class="p-2 border rounded bg-lighter">
-                  <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                    <small class="fw-semibold text-muted"><i class="mdi mdi-map-marker-radius me-1"></i> Pratinjau Peta (Klik peta atau seret marker untuk penyesuaian lokasi):</small>
+                  <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 px-1 gap-2">
+                    <small class="fw-semibold text-muted">
+                      <i class="mdi mdi-map-marker-radius me-1"></i> Pratinjau Peta (Klik/seret marker untuk ubah lokasi):
+                    </small>
+                    <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher">
+                      <button type="button" class="btn btn-primary active btn-map-type" data-layer="googleHybrid" title="Peta Satelit dengan Nama Jalan">
+                        <i class="mdi mdi-satellite-variant me-1"></i> Satelit Hybrid
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleSat" title="Citra Satelit Asli">
+                        <i class="mdi mdi-earth me-1"></i> Satelit Murni
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleStreets" title="Peta Jalan Google Maps">
+                        <i class="mdi mdi-google-maps me-1"></i> Google Jalan
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="osm" title="Peta OpenStreetMap">
+                        <i class="mdi mdi-map-outline me-1"></i> OSM
+                      </button>
+                    </div>
                   </div>
                   <div id="mini-map-customer"></div>
                 </div>
