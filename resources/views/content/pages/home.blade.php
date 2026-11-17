@@ -225,11 +225,11 @@ if ($hour >= 5 && $hour < 11) {
 </div>
 
 <!-- 4 Key Metric Cards -->
-<div class="row g-3 mb-4">
+<div class="row g-2 g-sm-3 mb-4">
   <!-- Total Pelanggan Aktif -->
-  <div class="col-xl-3 col-sm-6">
+  <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between p-3">
+      <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Pelanggan Aktif</span>
           <div class="metric-value mb-1">{{ number_format($stats['total_users']) }}</div>
@@ -245,9 +245,9 @@ if ($hour >= 5 && $hour < 11) {
   </div>
 
   <!-- Router Server Aktif -->
-  <div class="col-xl-3 col-sm-6">
+  <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between p-3">
+      <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Router MikroTik</span>
           <div class="metric-value mb-1">{{ $stats['active_mikrotik'] }} <span class="text-muted fw-normal" style="font-size: 0.95rem;">/ {{ $stats['total_mikrotik'] }}</span></div>
@@ -267,12 +267,12 @@ if ($hour >= 5 && $hour < 11) {
   </div>
 
   <!-- Pendapatan Bulan Ini -->
-  <div class="col-xl-3 col-sm-6">
+  <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between p-3">
+      <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Pendapatan Bulan Ini</span>
-          <div class="metric-value mb-1" style="font-size: 1.35rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
+          <div class="metric-value mb-1" style="font-size: 1.25rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
           <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
             <span>{{ $stats['paid_bills'] }} transaksi terbayar</span>
           </div>
@@ -285,12 +285,12 @@ if ($hour >= 5 && $hour < 11) {
   </div>
 
   <!-- Tagihan Tertunda -->
-  <div class="col-xl-3 col-sm-6">
+  <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between p-3">
+      <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Tagihan Tertunda</span>
-          <div class="metric-value mb-1" style="font-size: 1.35rem; color: #b91c1c;">Rp {{ number_format($stats['pending_revenue'], 0, ',', '.') }}</div>
+          <div class="metric-value mb-1" style="font-size: 1.25rem; color: #b91c1c;">Rp {{ number_format($stats['pending_revenue'], 0, ',', '.') }}</div>
           <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
             <span class="text-danger fw-semibold">{{ $stats['unpaid_bills'] }} invoice</span> belum lunas
           </div>
@@ -473,17 +473,17 @@ if ($hour >= 5 && $hour < 11) {
 </div>
 
 <!-- Operational Quick Navigation Grid -->
-<div class="row g-3">
+<div class="row g-2 g-sm-3">
   @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
-  <div class="col-md-3 col-sm-6">
-    <a href="{{ route('user.create') }}" class="card text-decoration-none h-100 metric-card p-3 border">
-      <div class="d-flex align-items-center gap-3">
-        <div class="rounded-3 p-3 bg-primary-subtle text-primary">
-          <i class="mdi mdi-account-plus mdi-24px"></i>
+  <div class="col-6 col-md-3">
+    <a href="{{ route('user.create') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-primary-subtle text-primary">
+          <i class="mdi mdi-account-plus fs-4"></i>
         </div>
-        <div>
-          <h6 class="text-dark fw-bold mb-0">Tambah Pelanggan</h6>
-          <small class="text-muted">Registrasi data baru</small>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Tambah Pelanggan</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Registrasi baru</small>
         </div>
       </div>
     </a>
@@ -491,15 +491,15 @@ if ($hour >= 5 && $hour < 11) {
   @endif
 
   @if($currentUser && $currentUser->hasRole(1, 2, 3))
-  <div class="col-md-3 col-sm-6">
-    <a href="{{ route('tagihan.generate') }}" class="card text-decoration-none h-100 metric-card p-3 border">
-      <div class="d-flex align-items-center gap-3">
-        <div class="rounded-3 p-3 bg-success-subtle text-success">
-          <i class="mdi mdi-lightning-bolt-circle mdi-24px"></i>
+  <div class="col-6 col-md-3">
+    <a href="{{ route('tagihan.generate') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-success-subtle text-success">
+          <i class="mdi mdi-lightning-bolt-circle fs-4"></i>
         </div>
-        <div>
-          <h6 class="text-dark fw-bold mb-0">Generate Tagihan</h6>
-          <small class="text-muted">Terbitkan tagihan bulan baru</small>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Generate Tagihan</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Terbitkan invoice</small>
         </div>
       </div>
     </a>
@@ -507,15 +507,15 @@ if ($hour >= 5 && $hour < 11) {
   @endif
 
   @if($currentUser && $currentUser->hasRole(1, 2))
-  <div class="col-md-3 col-sm-6">
-    <a href="{{ route('mikrotik.index') }}" class="card text-decoration-none h-100 metric-card p-3 border">
-      <div class="d-flex align-items-center gap-3">
-        <div class="rounded-3 p-3 bg-info-subtle text-info">
-          <i class="mdi mdi-router-wireless mdi-24px"></i>
+  <div class="col-6 col-md-3">
+    <a href="{{ route('mikrotik.index') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-info-subtle text-info">
+          <i class="mdi mdi-router-wireless fs-4"></i>
         </div>
-        <div>
-          <h6 class="text-dark fw-bold mb-0">Server MikroTik</h6>
-          <small class="text-muted">Status koneksi & API</small>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Server MikroTik</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Status koneksi</small>
         </div>
       </div>
     </a>
@@ -523,15 +523,15 @@ if ($hour >= 5 && $hour < 11) {
   @endif
 
   @if($currentUser && $currentUser->hasRole(1, 2, 3))
-  <div class="col-md-3 col-sm-6">
-    <a href="{{ route('tagihan.rekap') }}" class="card text-decoration-none h-100 metric-card p-3 border">
-      <div class="d-flex align-items-center gap-3">
-        <div class="rounded-3 p-3 bg-warning-subtle text-warning">
-          <i class="mdi mdi-file-chart-outline mdi-24px"></i>
+  <div class="col-6 col-md-3">
+    <a href="{{ route('tagihan.rekap') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-warning-subtle text-warning">
+          <i class="mdi mdi-file-chart-outline fs-4"></i>
         </div>
-        <div>
-          <h6 class="text-dark fw-bold mb-0">Rekapitulasi Kas</h6>
-          <small class="text-muted">Laporan kasir & penagihan</small>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Rekapitulasi Kas</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Laporan kasir</small>
         </div>
       </div>
     </a>

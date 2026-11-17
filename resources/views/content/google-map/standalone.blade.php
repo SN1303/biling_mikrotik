@@ -17,8 +17,8 @@
     overflow: hidden !important;
   }
 
-  .layout-navbar, .layout-menu, .layout-footer, .layout-overlay,
-  nav.layout-navbar, aside.layout-menu {
+  .layout-navbar, .mobile-navbar, .layout-menu, .layout-footer, .layout-overlay,
+  nav.layout-navbar, nav.mobile-navbar, aside.layout-menu {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;

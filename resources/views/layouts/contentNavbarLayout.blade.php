@@ -48,6 +48,11 @@ $container = ($configData['contentLayout'] === 'compact') ? 'container-xxl' : 'c
       @if ($isNavbar)
       @include('layouts/sections/navbar/navbar')
       @endif
+
+      <!-- BEGIN: Mobile Navbar (Hanya aktif di layar mobile/tablet < 1200px) -->
+      @if ($isMenu)
+      @include('layouts/sections/navbar/mobileNavbar')
+      @endif
       <!-- END: Navbar-->
 
 
