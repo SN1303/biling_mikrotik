@@ -22,21 +22,7 @@ $currentUser = Auth::user();
       </a>
     </div>
 
-    <div class="navbar-nav-right d-flex align-items-center justify-content-between w-100" id="navbar-collapse">
-      
-      <!-- Left: Status Indicator -->
-      <div class="navbar-nav align-items-center">
-        <div class="nav-item d-flex align-items-center">
-          <div class="navbar-status-pill d-none d-sm-inline-flex align-items-center">
-            <span class="status-dot status-dot-pulse"></span>
-            <span class="d-none d-md-inline text-muted me-1">Sistem ISP:</span>
-            <span class="text-success fw-bold">ONLINE</span>
-          </div>
-          <span class="mx-2 text-muted d-none d-lg-inline" style="opacity: 0.3;">|</span>
-          <span class="d-none d-lg-inline text-muted small fw-medium">MRYES Network & Billing Control</span>
-        </div>
-      </div>
-
+    <div class="navbar-nav-right d-flex align-items-center justify-content-end w-100" id="navbar-collapse">
       <!-- Right: Actions & User Profile -->
       <ul class="navbar-nav flex-row align-items-center ms-auto gap-2">
 
