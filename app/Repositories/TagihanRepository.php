@@ -128,6 +128,7 @@ class TagihanRepository
       })
       ->with(['user_mikrotik:id,idUser,idPaket,diskon'])
       ->with(['user_mikrotik.paket:id,nama,price'])
+      ->with(['user_detail:id,idUser,statusPpn,statusTagihan'])
       ->get(['id', 'name', 'isActive']);
 
     foreach ($users as $user) {
@@ -160,10 +161,13 @@ class TagihanRepository
 
         $now = Carbon::now();
 
-        $hargaPaket = $user->user_mikrotik->paket->price;
-        $ppnPercentage = config('billing.ppn') / 100; // Mengambil nilai PPN dari konfigurasi dan mengubahnya ke desimal
-        // $ppn = $hargaPaket * $ppnPercentage;
-        $ppn = round($hargaPaket * $ppnPercentage);
+        $hargaPaket = (float) ($user->user_mikrotik->paket->price ?? 0);
+
+        // Opsi B: PPN Fleksibel per Pelanggan
+        // PPN hanya dikenakan jika statusPpn pada profil pelanggan bernilai 1 (Aktif)
+        $isPpnActive = (int) optional($user->user_detail)->statusPpn === 1;
+        $ppnPercentage = $isPpnActive ? (config('billing.ppn', 11) / 100) : 0;
+        $ppn = $isPpnActive ? round($hargaPaket * $ppnPercentage) : 0;
         $total = $hargaPaket + $ppn - $nilaiDiskon;
 
         $this->model::create([
@@ -176,7 +180,7 @@ class TagihanRepository
           'create_by' => Auth::id(),
           'statusBayar' => 0,
           'harga' => $hargaPaket,
-          'ppn' => $ppn, // PPN 11%
+          'ppn' => $ppn,
           'diskon' => $nilaiDiskon,
           'total' => $total,
         ]);
