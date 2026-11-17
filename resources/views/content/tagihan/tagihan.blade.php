@@ -49,10 +49,11 @@
     border-color: #cbd5e1 !important;
     background: #f8fafc;
   }
-  .btn-check:checked + .metode-card {
+  .btn-check:checked + .metode-card,
+  .metode-card.active-metode {
     border-color: #2563eb !important;
-    background: rgba(37, 99, 235, 0.06) !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    background: rgba(37, 99, 235, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
   }
 
   /* Table styling */
@@ -581,14 +582,9 @@
       $('#tagihan_id').val(id);
 
       // Default Metode: Tunai / COD
-      $('#metode_cod').prop('checked', true);
-      $('#metode_bayar').val('cod');
-      $('#cash-calculator-box').show();
+      pilihMetodeBayar('cod');
 
-      // Reset Kalkulator
-      $('#cash-received').val('');
-      $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
-      $('#cash-change-status').text('Masukkan nominal uang yang diterima');
+      // Reset Catatan
       $('#keterangan_bayar').val('');
 
       // Tampilkan Modal
@@ -600,15 +596,63 @@
       }
     }
 
-    // Ganti Metode Bayar Radio Tile
-    $('input[name="metode_bayar_radio"]').on('change', function() {
-      const selected = $(this).val();
+    // Fungsi Ganti Metode Pembayaran Kasir (Tunai vs Non-Tunai)
+    function pilihMetodeBayar(selected) {
       $('#metode_bayar').val(selected);
+      $('input[name="metode_bayar_radio"]').prop('checked', false);
+      $(`#metode_${selected}`).prop('checked', true);
+
+      // Highlight visual card aktif
+      $('.metode-card').removeClass('active-metode');
+      $(`label[for="metode_${selected}"]`).addClass('active-metode');
+
+      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(currentRawTotal);
 
       if (selected === 'cod') {
-        $('#cash-calculator-box').slideDown(200);
+        // Tunai / COD: Tampilkan kalkulator kembalian uang tunai
+        $('#cash-calculator-box').show();
+        $('#nontunai-info-box').hide();
+        $('#cash-received').val('');
+        $('#cash-change-display').text('Rp 0').removeClass('text-danger').addClass('text-success');
+        $('#cash-change-status').text('Masukkan nominal uang yang diterima');
+        $('#keterangan_bayar').attr('placeholder', 'Contoh: Titip ke tetangga / bayar tunai di lokasi');
       } else {
-        $('#cash-calculator-box').slideUp(200);
+        // Non-Tunai (Transfer / QRIS / E-Wallet):
+        // UANG DITERIMA OTOMATIS IKUT PAS SESUAI TOTAL TAGIHAN, KEMBALIAN RP 0
+        $('#cash-calculator-box').hide();
+        $('#nontunai-info-box').show();
+        $('#nontunai-amount').text(totalFmt);
+        $('#cash-received').val(currentRawTotal); // Otomatis terisi uang pas
+
+        if (selected === 'transfer') {
+          $('#nontunai-icon').attr('class', 'mdi mdi-bank-transfer fs-5');
+          $('#nontunai-title').text('Pembayaran Transfer Bank');
+          $('#nontunai-desc').text('Uang diterima otomatis pas sesuai tagihan (Kembalian Rp 0)');
+          $('#keterangan_bayar').attr('placeholder', 'No. Ref transfer / An. Rekening pengirim (opsional)');
+        } else if (selected === 'qris') {
+          $('#nontunai-icon').attr('class', 'mdi mdi-qrcode-scan fs-5');
+          $('#nontunai-title').text('Pembayaran QRIS');
+          $('#nontunai-desc').text('Nominal scan otomatis pas sesuai barcode (Kembalian Rp 0)');
+          $('#keterangan_bayar').attr('placeholder', 'NMID / Ref transaksi QRIS (opsional)');
+        } else if (selected === 'ewallet') {
+          $('#nontunai-icon').attr('class', 'mdi mdi-cellphone-nfc fs-5');
+          $('#nontunai-title').text('Pembayaran E-Wallet (DANA/OVO/GoPay)');
+          $('#nontunai-desc').text('Nominal otomatis pas terdebet (Kembalian Rp 0)');
+          $('#keterangan_bayar').attr('placeholder', 'Nama E-Wallet & No. HP pengirim (opsional)');
+        }
+      }
+    }
+
+    // Event Handler Ganti Metode Bayar (Delegasi Radio & Card Click)
+    $(document).on('change', 'input[name="metode_bayar_radio"]', function() {
+      pilihMetodeBayar($(this).val());
+    });
+
+    $(document).on('click', '.metode-card', function(e) {
+      const forId = $(this).attr('for');
+      if (forId) {
+        const val = $('#' + forId).val();
+        pilihMetodeBayar(val);
       }
     });
 
@@ -1099,7 +1143,7 @@
             <input type="hidden" id="metode_bayar" name="metode_bayar" value="cod">
           </div>
 
-          <!-- Step 2: Kalkulator Kembalian Tunai (Compact) -->
+          <!-- Step 2A: Kalkulator Kembalian Tunai (Muncul HANYA saat Tunai / COD) -->
           <div id="cash-calculator-box" class="card border border-success border-opacity-25 bg-success-subtle p-2 p-sm-3 rounded-3 mb-2">
             <div class="row align-items-center g-2">
               <div class="col-sm-6">
@@ -1120,6 +1164,24 @@
                 <div class="small text-muted fw-semibold" style="font-size: 0.72rem;">Uang Kembalian</div>
                 <div class="fs-4 fw-bolder text-success" id="cash-change-display">Rp 0</div>
                 <small class="text-muted d-block" id="cash-change-status" style="font-size: 0.7rem;">Uang pas</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2B: Konfirmasi Non-Tunai (Transfer / QRIS / E-Wallet) - Otomatis Uang Pas & Kembalian Rp 0 -->
+          <div id="nontunai-info-box" class="card border border-primary border-opacity-25 bg-primary-subtle p-2 p-sm-3 rounded-3 mb-2" style="display: none;">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0;">
+                  <i class="mdi mdi-check-decagram fs-5" id="nontunai-icon"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block" style="font-size: 0.8rem;" id="nontunai-title">Pembayaran Transfer Bank</span>
+                  <small class="text-muted d-block" style="font-size: 0.7rem;" id="nontunai-desc">Uang diterima otomatis pas sesuai tagihan (Kembalian Rp 0)</small>
+                </div>
+              </div>
+              <div class="text-end flex-shrink-0">
+                <span class="badge bg-primary fs-6 fw-bold shadow-xs" id="nontunai-amount">Rp 0</span>
               </div>
             </div>
           </div>
