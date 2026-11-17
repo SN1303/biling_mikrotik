@@ -8,34 +8,146 @@
 
 @section('page-style')
 <style>
-  /* Styling KPI Cards Compact & Responsif */
+  /* Styling KPI Cards Compact & Sleek */
   .metric-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border-radius: 10px !important;
   }
   .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
   }
   .metric-card .card-body {
-    padding: 0.75rem 0.9rem !important;
+    padding: 0.6rem 0.85rem !important;
   }
   .metric-icon-box {
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
   .metric-icon-box i {
-    font-size: 1.25rem;
+    font-size: 1.15rem !important;
+  }
+  .metric-title {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    margin-bottom: 2px !important;
   }
   .metric-value {
-    font-size: 1.25rem;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+  }
+  .metric-sub {
+    font-size: 0.68rem !important;
+  }
+
+  /* Segmented Filter Pills (Linear / iOS Style - Sleek & Compact) */
+  .filter-segmented-control {
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .btn-filter-pill {
+    padding: 0.28rem 0.65rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    background: transparent;
+    color: #64748b;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    line-height: 1.3 !important;
+  }
+  .btn-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: #0f172a;
+  }
+  .btn-filter-pill.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1) !important;
+  }
+  .btn-filter-pill.active.text-danger {
+    color: #ef4444 !important;
+  }
+  .btn-filter-pill.active.text-warning {
+    color: #d97706 !important;
+  }
+  .btn-filter-pill.active.text-success {
+    color: #10b981 !important;
+  }
+
+  /* Custom Search Box & Length */
+  .search-input-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input-group:focus-within {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+  }
+  .search-input-group .input-group-text,
+  .search-input-group .form-control {
+    border: none !important;
+  }
+
+  /* Table styling */
+  #table thead th {
+    font-size: 0.72rem !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     font-weight: 700;
-    line-height: 1.2;
+    white-space: nowrap;
+    background-color: #f8fafc !important;
+    padding: 0.65rem 0.85rem !important;
+    color: #475569 !important;
+  }
+  #table tbody td {
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.82rem !important;
+  }
+  #table tbody tr:hover {
+    background-color: rgba(37, 99, 235, 0.02) !important;
+  }
+  .btn-xs {
+    padding: 2px 7px;
+    font-size: 0.72rem;
+    border-radius: 4px;
+  }
+
+  /* Override Datatables wrapper padding */
+  .card-datatable .dataTables_wrapper .dataTables_length,
+  .card-datatable .dataTables_wrapper .dataTables_filter {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .card-datatable .dataTables_wrapper .dataTables_info,
+  .card-datatable .dataTables_wrapper .dataTables_paginate {
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* Quick filter scrollable di mobile */
+  .quick-filter-scroll-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .quick-filter-scroll-wrapper::-webkit-scrollbar {
+    display: none;
   }
 
   /* Metode Bayar Visual Radio Tiles */
@@ -55,14 +167,6 @@
     background: rgba(37, 99, 235, 0.08) !important;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
   }
-
-  /* Table styling */
-  #table thead th {
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-weight: 700;
-    white-space: nowrap;
     background-color: #f8fafc !important;
   }
   #table tbody tr:hover {
@@ -142,24 +246,9 @@
     }
 
     /* Search Input Full Width di HP */
-    .dataTables_filter {
+    .search-input-group {
       width: 100% !important;
-      text-align: left !important;
-      margin-top: 4px !important;
-    }
-    .dataTables_filter label {
-      width: 100% !important;
-      margin-bottom: 0 !important;
-    }
-    .dataTables_filter input {
-      width: 100% !important;
-      margin-left: 0 !important;
-      font-size: 0.85rem !important;
-      border-radius: 8px !important;
-      height: 38px !important;
-    }
-    .dataTables_length {
-      display: none !important;
+      margin-top: 4px;
     }
     .dataTables_info,
     .dataTables_paginate {
@@ -558,9 +647,8 @@
       ],
       order: [[4, 'asc']], // Urutkan berdasarkan jatuh tempo terdekat
       dom:
-        '<"card-body py-2 px-3 border-bottom"<"row align-items-center g-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>>' +
         't' +
-        '<"card-body py-2 px-3"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
+        '<"card-body py-2 px-3 border-top bg-light-subtle"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
       displayLength: 20,
       lengthMenu: [10, 20, 35, 50, 100],
       language: {
@@ -581,6 +669,21 @@
           GlobalLoading.hide();
         }
       }
+    });
+
+    // Custom Search with Debounce
+    let searchTimeout;
+    $('#custom-search').on('keyup input', function() {
+      clearTimeout(searchTimeout);
+      const val = this.value;
+      searchTimeout = setTimeout(() => {
+        table.search(val).draw();
+      }, 250);
+    });
+
+    // Custom Length Change
+    $('#custom-length').on('change', function() {
+      table.page.len(parseInt(this.value)).draw();
     });
 
     // Update Summary Cards & Pills
@@ -605,8 +708,8 @@
     }
 
     // Filter Quick Pills Event
-    $('#quick-filter-group').on('click', 'button', function() {
-      $('#quick-filter-group button').removeClass('active');
+    $('#quick-filter-group').on('click', '.btn-filter-pill', function() {
+      $('#quick-filter-group .btn-filter-pill').removeClass('active');
       $(this).addClass('active');
 
       activeQuickFilter = $(this).data('filter');
@@ -1330,25 +1433,25 @@
 
 @section('content')
 
-<!-- Header Card & Periode Filter -->
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body py-3 px-3 px-sm-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+<!-- Header Card & Periode Filter (Compact & Rapi) -->
+<div class="card border-0 shadow-sm mb-2">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
       <div>
         <div class="d-flex align-items-center gap-2">
-          <h4 class="fw-bold mb-0 text-dark">
-            <i class="mdi mdi-receipt-text-outline text-primary me-2"></i>Tagihan Aktif
-          </h4>
-          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill small">Belum Lunas</span>
+          <h5 class="fw-bold mb-0 text-dark">
+            <i class="mdi mdi-receipt-text-outline text-primary me-1"></i>Tagihan Aktif
+          </h5>
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">Belum Lunas</span>
         </div>
-        <p class="text-muted small mb-0 mt-1">Monitoring dan kasir penagihan tagihan pelanggan yang belum terbayar</p>
+        <p class="text-muted small mb-0 mt-0.5" style="font-size: 0.75rem;">Monitoring dan kasir penagihan tagihan pelanggan yang belum terbayar</p>
       </div>
 
       <!-- Right: Filters & Action -->
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
-          <span class="text-muted small px-2 fw-semibold"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
-          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 130px;">
+          <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 120px; font-size: 0.78rem;">
             <option value="">Semua Bulan</option>
             @php
               $namaBulanList = [
@@ -1361,7 +1464,7 @@
               <option value="{{ $key }}" {{ $key == $currentMonth ? 'selected' : '' }}>{{ $nama }}</option>
             @endforeach
           </select>
-          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 100px;">
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 90px; font-size: 0.78rem;">
             <option value="">Semua Thn</option>
             @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
               @foreach($filterData['tahun'] as $tahun)
@@ -1371,12 +1474,12 @@
               <option value="{{ $currentYear }}" selected>{{ $currentYear }}</option>
             @endif
           </select>
-          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data">
+          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data" style="width: 30px; height: 30px;">
             <i class="mdi mdi-refresh"></i>
           </button>
         </div>
 
-        <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-xs py-2">
+        <a href="{{ route('tagihan.lunas') }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-xs py-1 px-2.5" style="font-size: 0.8rem;">
           <i class="mdi mdi-check-decagram-outline"></i>
           <span>Riwayat Lunas</span>
         </a>
@@ -1385,16 +1488,16 @@
   </div>
 </div>
 
-<!-- 4 Executive KPI Summary Cards (Compact & Responsif) -->
-<div class="row g-2 mb-3" id="kpi-summary-row">
+<!-- 4 Executive KPI Summary Cards (Compact & Rapi) -->
+<div class="row g-2 mb-2" id="kpi-summary-row">
   <!-- Card 1: Total Tagihan Aktif -->
   <div class="col-6 col-lg-3">
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #2563eb !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Tagihan</span>
-          <div class="metric-value fs-5 fw-bold text-dark mb-0" id="total-count">0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Menunggu bayar</small>
+          <span class="metric-title d-block">Total Tagihan</span>
+          <div class="metric-value text-dark mb-0" id="total-count">0</div>
+          <small class="metric-sub text-muted">Menunggu bayar</small>
         </div>
         <div class="metric-icon-box bg-primary-subtle text-primary border border-primary-subtle">
           <i class="mdi mdi-file-clock-outline"></i>
@@ -1408,9 +1511,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #ef4444 !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Belum Terbayar</span>
-          <div class="metric-value fs-5 fw-bold text-danger mb-0" id="total-unpaid">Rp 0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Total piutang</small>
+          <span class="metric-title d-block">Belum Terbayar</span>
+          <div class="metric-value text-danger mb-0" id="total-unpaid">Rp 0</div>
+          <small class="metric-sub text-muted">Total piutang</small>
         </div>
         <div class="metric-icon-box bg-danger-subtle text-danger border border-danger-subtle">
           <i class="mdi mdi-cash-remove"></i>
@@ -1424,9 +1527,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #f59e0b !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-warning d-block small mb-1 fw-bold">Lewat Tempo</span>
-          <div class="metric-value fs-5 fw-bold text-warning mb-0" id="overdue-count">0</div>
-          <small class="metric-sub text-danger fw-semibold" id="overdue-total" style="font-size: 0.7rem;">Rp 0 macet</small>
+          <span class="metric-title text-warning d-block">Lewat Tempo</span>
+          <div class="metric-value text-warning mb-0" id="overdue-count">0</div>
+          <small class="metric-sub text-danger fw-semibold" id="overdue-total">Rp 0 macet</small>
         </div>
         <div class="metric-icon-box bg-warning-subtle text-warning border border-warning-subtle shadow-xs">
           <i class="mdi mdi-alert-circle-outline"></i>
@@ -1440,9 +1543,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #10b981 !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Potensi Kas</span>
-          <div class="metric-value fs-5 fw-bold text-success mb-0" id="potential-income">Rp 0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Estimasi masuk</small>
+          <span class="metric-title d-block">Potensi Kas</span>
+          <div class="metric-value text-success mb-0" id="potential-income">Rp 0</div>
+          <small class="metric-sub text-muted">Estimasi masuk</small>
         </div>
         <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
           <i class="mdi mdi-trending-up"></i>
@@ -1452,30 +1555,43 @@
   </div>
 </div>
 
-<!-- Main Table Card -->
+<!-- Main Table Card (Toolbar Terpadu & Rapi) -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white border-bottom py-2 px-3">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <!-- Quick Filter Status Pills with Smooth Mobile Horizontal Scroll -->
-      <div class="quick-filter-scroll-wrapper flex-grow-1">
-        <div class="btn-group btn-group-sm shadow-xs" role="group" id="quick-filter-group">
-          <button type="button" class="btn btn-outline-primary active" data-filter="">
-            <i class="mdi mdi-view-list me-1"></i> Semua (<span id="pill-all">0</span>)
+      <!-- Left: Sleek Segmented Filter Tabs -->
+      <div class="quick-filter-scroll-wrapper">
+        <div class="filter-segmented-control shadow-xs" id="quick-filter-group">
+          <button type="button" class="btn btn-filter-pill active" data-filter="">
+            <i class="mdi mdi-view-list me-1"></i>Semua (<span id="pill-all">0</span>)
           </button>
-          <button type="button" class="btn btn-outline-danger" data-filter="overdue">
-            <i class="mdi mdi-alert-circle-outline me-1"></i> Lewat Tempo (<span id="pill-overdue">0</span>)
+          <button type="button" class="btn btn-filter-pill text-danger" data-filter="overdue">
+            <i class="mdi mdi-alert-circle-outline me-1"></i>Lewat Tempo (<span id="pill-overdue">0</span>)
           </button>
-          <button type="button" class="btn btn-outline-warning" data-filter="today">
-            <i class="mdi mdi-clock-alert-outline me-1"></i> Hari Ini (<span id="pill-today">0</span>)
+          <button type="button" class="btn btn-filter-pill text-warning" data-filter="today">
+            <i class="mdi mdi-clock-alert-outline me-1"></i>Hari Ini (<span id="pill-today">0</span>)
           </button>
-          <button type="button" class="btn btn-outline-success" data-filter="upcoming">
-            <i class="mdi mdi-calendar-check-outline me-1"></i> Belum Tempo
+          <button type="button" class="btn btn-filter-pill text-success" data-filter="upcoming">
+            <i class="mdi mdi-calendar-check-outline me-1"></i>Belum Tempo
           </button>
         </div>
       </div>
 
-      <div class="text-muted small d-none d-md-block">
-        <i class="mdi mdi-information-outline me-1 text-primary"></i> Klik <span class="badge bg-success-subtle text-success border border-success-subtle py-1">Bayar</span> untuk melunasi
+      <!-- Right: Integrated Search Box & Length Selector -->
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <div class="input-group input-group-sm search-input-group shadow-xs" style="width: 230px;">
+          <span class="input-group-text bg-white border-0 py-1 pe-1 text-muted">
+            <i class="mdi mdi-magnify fs-6"></i>
+          </span>
+          <input type="text" id="custom-search" class="form-control form-control-sm border-0 ps-1" placeholder="Cari nama, invoice, paket..." style="font-size: 0.78rem;">
+        </div>
+
+        <select id="custom-length" class="form-select form-select-sm text-secondary border shadow-xs fw-semibold" style="width: 72px; font-size: 0.78rem;" title="Jumlah data per halaman">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
       </div>
     </div>
   </div>

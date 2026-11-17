@@ -8,47 +8,138 @@
 
 @section('page-style')
 <style>
-  /* Styling KPI Cards Compact & Responsif */
+  /* Styling KPI Cards Compact & Sleek */
   .metric-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border-radius: 10px !important;
   }
   .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
   }
   .metric-card .card-body {
-    padding: 0.75rem 0.9rem !important;
+    padding: 0.6rem 0.85rem !important;
   }
   .metric-icon-box {
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
   .metric-icon-box i {
-    font-size: 1.25rem;
+    font-size: 1.15rem !important;
+  }
+  .metric-title {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    margin-bottom: 2px !important;
   }
   .metric-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+  }
+  .metric-sub {
+    font-size: 0.68rem !important;
+  }
+
+  /* Segmented Filter Pills (Linear / iOS Style - Sleek & Compact) */
+  .filter-segmented-control {
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .btn-filter-pill {
+    padding: 0.28rem 0.65rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    background: transparent;
+    color: #64748b;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    line-height: 1.3 !important;
+  }
+  .btn-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: #0f172a;
+  }
+  .btn-filter-pill.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1) !important;
+  }
+  .btn-filter-pill.active.text-success {
+    color: #10b981 !important;
+  }
+  .btn-filter-pill.active.text-warning {
+    color: #d97706 !important;
+  }
+
+  /* Custom Search Box & Length */
+  .search-input-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input-group:focus-within {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+  }
+  .search-input-group .input-group-text,
+  .search-input-group .form-control {
+    border: none !important;
   }
 
   /* Table styling */
   #table thead th {
-    font-size: 0.75rem;
+    font-size: 0.72rem !important;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-weight: 700;
     white-space: nowrap;
     background-color: #f8fafc !important;
+    padding: 0.65rem 0.85rem !important;
+    color: #475569 !important;
+  }
+  #table tbody td {
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.82rem !important;
   }
   #table tbody tr:hover {
     background-color: rgba(37, 99, 235, 0.02) !important;
+  }
+
+  /* Override Datatables wrapper padding */
+  .card-datatable .dataTables_wrapper .dataTables_length,
+  .card-datatable .dataTables_wrapper .dataTables_filter {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .card-datatable .dataTables_wrapper .dataTables_info,
+  .card-datatable .dataTables_wrapper .dataTables_paginate {
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* Quick filter scrollable di mobile */
+  .quick-filter-scroll-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .quick-filter-scroll-wrapper::-webkit-scrollbar {
+    display: none;
   }
 
   /* Struk Kuitansi Container */
@@ -107,21 +198,29 @@
     margin: 10px 0;
   }
 
-  /* Quick filter scrollable di mobile */
-  .quick-filter-scroll-wrapper {
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-  .quick-filter-scroll-wrapper::-webkit-scrollbar {
-    display: none;
+  /* Print Struk CSS Styling */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #struk-print-wrapper, #struk-print-wrapper * {
+      visibility: visible;
+    }
+    #struk-print-wrapper {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 10px;
+    }
+    .modal-footer, .btn-close {
+      display: none !important;
+    }
   }
 
   /* Responsif Smartphone Khusus HP (< 768px) */
   @media (max-width: 767.98px) {
-    /* Perkecil Kotak KPI Summary di HP */
     .metric-card .card-body {
       padding: 0.45rem 0.65rem !important;
     }
@@ -145,7 +244,6 @@
       display: none !important;
     }
 
-    /* Transformasi DataTables ke Mobile Card View */
     #table thead {
       display: none !important;
     }
@@ -173,26 +271,9 @@
       padding: 6px !important;
       background: #f8fafc !important;
     }
-
-    /* Search Bar Responsif di Mobile */
-    .dataTables_filter {
+    .search-input-group {
       width: 100% !important;
-      text-align: left !important;
-      margin-top: 4px !important;
-    }
-    .dataTables_filter label {
-      width: 100% !important;
-      margin-bottom: 0 !important;
-    }
-    .dataTables_filter input {
-      width: 100% !important;
-      margin-left: 0 !important;
-      font-size: 0.85rem !important;
-      border-radius: 8px !important;
-      height: 38px !important;
-    }
-    .dataTables_length {
-      display: none !important;
+      margin-top: 4px;
     }
     .dataTables_info,
     .dataTables_paginate {
@@ -659,9 +740,8 @@
       ],
       order: [[4, 'desc']], // Urutkan berdasarkan waktu bayar terbaru
       dom:
-        '<"card-body py-2 px-3 border-bottom"<"row align-items-center g-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>>' +
         't' +
-        '<"card-body py-2 px-3"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
+        '<"card-body py-2 px-3 border-top bg-light-subtle"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
       displayLength: 20,
       lengthMenu: [10, 20, 35, 50, 100],
       language: {
@@ -689,6 +769,21 @@
       }
     });
 
+    // Custom Search with Debounce
+    let searchTimeout;
+    $('#custom-search').on('keyup input', function() {
+      clearTimeout(searchTimeout);
+      const val = this.value;
+      searchTimeout = setTimeout(() => {
+        table.search(val).draw();
+      }, 250);
+    });
+
+    // Custom Length Change
+    $('#custom-length').on('change', function() {
+      table.page.len(parseInt(this.value)).draw();
+    });
+
     // Update Summary Cards Tagihan Lunas
     function updateSummaryCards(summary) {
       $('#total-count').text(new Intl.NumberFormat('id-ID').format(summary.total_count || 0));
@@ -711,8 +806,8 @@
     }
 
     // Tab Filter Lunas Penuh vs Cicilan Berjalan
-    $('#filter-lunas-group').on('click', 'button', function() {
-      $('#filter-lunas-group button').removeClass('active');
+    $('#filter-lunas-group').on('click', '.btn-filter-pill', function() {
+      $('#filter-lunas-group .btn-filter-pill').removeClass('active');
       $(this).addClass('active');
 
       activeFilterLunas = $(this).data('filter') || '';
@@ -1148,25 +1243,25 @@
 
 @section('content')
 
-<!-- Header Card & Periode Filter -->
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body py-3 px-3 px-sm-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+<!-- Header Card & Periode Filter (Compact & Rapi) -->
+<div class="card border-0 shadow-sm mb-2">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
       <div>
         <div class="d-flex align-items-center gap-2">
-          <h4 class="fw-bold mb-0 text-dark">
-            <i class="mdi mdi-check-decagram-outline text-success me-2"></i>Riwayat Tagihan Lunas
-          </h4>
-          <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small">Terbayar</span>
+          <h5 class="fw-bold mb-0 text-dark">
+            <i class="mdi mdi-check-decagram-outline text-success me-1"></i>Riwayat Tagihan Lunas
+          </h5>
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">Terbayar</span>
         </div>
-        <p class="text-muted small mb-0 mt-1">Daftar arsip transaksi dan riwayat pembayaran tagihan pelanggan yang telah lunas</p>
+        <p class="text-muted small mb-0 mt-0.5" style="font-size: 0.75rem;">Daftar arsip transaksi dan riwayat pembayaran tagihan pelanggan yang telah lunas</p>
       </div>
 
       <!-- Right: Filters & Action -->
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
-          <span class="text-muted small px-2 fw-semibold"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
-          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 130px;">
+          <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 120px; font-size: 0.78rem;">
             <option value="" selected>Semua Bulan</option>
             @php
               $namaBulanList = [
@@ -1179,7 +1274,7 @@
               <option value="{{ $key }}">{{ $nama }}</option>
             @endforeach
           </select>
-          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 100px;">
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 90px; font-size: 0.78rem;">
             <option value="" selected>Semua Thn</option>
             @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
               @foreach($filterData['tahun'] as $tahun)
@@ -1189,12 +1284,12 @@
               <option value="{{ $currentYear ?? date('Y') }}">{{ $currentYear ?? date('Y') }}</option>
             @endif
           </select>
-          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data">
+          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data" style="width: 30px; height: 30px;">
             <i class="mdi mdi-refresh"></i>
           </button>
         </div>
 
-        <a href="{{ route('tagihan.index') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-xs py-2">
+        <a href="{{ route('tagihan.index') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-xs py-1 px-2.5" style="font-size: 0.8rem;">
           <i class="mdi mdi-receipt-text-outline"></i>
           <span>Tagihan Aktif</span>
         </a>
@@ -1203,16 +1298,16 @@
   </div>
 </div>
 
-<!-- 4 Executive KPI Summary Cards (Compact & Responsif) -->
-<div class="row g-2 mb-3" id="kpi-summary-row">
+<!-- 4 Executive KPI Summary Cards (Compact & Rapi) -->
+<div class="row g-2 mb-2" id="kpi-summary-row">
   <!-- Card 1: Total Lunas -->
   <div class="col-6 col-lg-3">
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #10b981 !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Lunas</span>
-          <div class="metric-value fs-5 fw-bold text-success mb-0" id="total-count">0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Transaksi selesai</small>
+          <span class="metric-title d-block">Total Lunas</span>
+          <div class="metric-value text-success mb-0" id="total-count">0</div>
+          <small class="metric-sub text-muted">Transaksi selesai</small>
         </div>
         <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
           <i class="mdi mdi-check-decagram"></i>
@@ -1226,9 +1321,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #2563eb !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Terbayar</span>
-          <div class="metric-value fs-5 fw-bold text-primary mb-0" id="total-paid">Rp 0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Dana masuk</small>
+          <span class="metric-title d-block">Total Terbayar</span>
+          <div class="metric-value text-primary mb-0" id="total-paid">Rp 0</div>
+          <small class="metric-sub text-muted">Dana masuk</small>
         </div>
         <div class="metric-icon-box bg-primary-subtle text-primary border border-primary-subtle">
           <i class="mdi mdi-cash-check"></i>
@@ -1242,9 +1337,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #06b6d4 !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Diskon</span>
-          <div class="metric-value fs-5 fw-bold text-info mb-0" id="total-diskon-lunas">Rp 0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Potongan harga</small>
+          <span class="metric-title d-block">Total Diskon</span>
+          <div class="metric-value text-info mb-0" id="total-diskon-lunas">Rp 0</div>
+          <small class="metric-sub text-muted">Potongan harga</small>
         </div>
         <div class="metric-icon-box bg-info-subtle text-info border border-info-subtle">
           <i class="mdi mdi-tag-percent-outline"></i>
@@ -1258,9 +1353,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #f59e0b !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title text-muted d-block small mb-1 fw-medium">Belum Bayar</span>
-          <div class="metric-value fs-5 fw-bold text-warning mb-0" id="total-unpaid">Rp 0</div>
-          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Sisa tagihan aktif</small>
+          <span class="metric-title d-block">Belum Bayar</span>
+          <div class="metric-value text-warning mb-0" id="total-unpaid">Rp 0</div>
+          <small class="metric-sub text-muted">Sisa tagihan aktif</small>
         </div>
         <div class="metric-icon-box bg-warning-subtle text-warning border border-warning-subtle">
           <i class="mdi mdi-file-clock-outline"></i>
@@ -1270,27 +1365,40 @@
   </div>
 </div>
 
-<!-- DataTable Card -->
+<!-- Main Table Card (Toolbar Terpadu & Rapi) -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white border-bottom py-2 px-3">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <!-- Quick Filter Tab Pills with Mobile Horizontal Scroll -->
-      <div class="quick-filter-scroll-wrapper flex-grow-1">
-        <div class="btn-group btn-group-sm shadow-xs" role="group" id="filter-lunas-group">
-          <button type="button" class="btn btn-outline-primary active" data-filter="">
-            <i class="mdi mdi-view-list me-1"></i> Semua Transaksi (<span id="tab-count-all">0</span>)
+      <!-- Left: Sleek Segmented Filter Tabs -->
+      <div class="quick-filter-scroll-wrapper">
+        <div class="filter-segmented-control shadow-xs" id="filter-lunas-group">
+          <button type="button" class="btn btn-filter-pill active" data-filter="">
+            <i class="mdi mdi-view-list me-1"></i>Semua (<span id="tab-count-all">0</span>)
           </button>
-          <button type="button" class="btn btn-outline-success" data-filter="lunas">
-            <i class="mdi mdi-check-decagram me-1"></i> Lunas Penuh (<span id="tab-count-lunas">0</span>)
+          <button type="button" class="btn btn-filter-pill text-success" data-filter="lunas">
+            <i class="mdi mdi-check-decagram me-1"></i>Lunas Penuh (<span id="tab-count-lunas">0</span>)
           </button>
-          <button type="button" class="btn btn-outline-warning" data-filter="cicilan">
-            <i class="mdi mdi-clock-outline me-1"></i> Cicilan Berjalan (<span id="tab-count-cicilan">0</span>)
+          <button type="button" class="btn btn-filter-pill text-warning" data-filter="cicilan">
+            <i class="mdi mdi-clock-outline me-1"></i>Cicilan Berjalan (<span id="tab-count-cicilan">0</span>)
           </button>
         </div>
       </div>
 
-      <div class="text-muted small d-none d-md-block">
-        <i class="mdi mdi-information-outline me-1 text-primary"></i> Data mencakup riwayat lunas & cicilan bertahap
+      <!-- Right: Integrated Search Box & Length Selector -->
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <div class="input-group input-group-sm search-input-group shadow-xs" style="width: 230px;">
+          <span class="input-group-text bg-white border-0 py-1 pe-1 text-muted">
+            <i class="mdi mdi-magnify fs-6"></i>
+          </span>
+          <input type="text" id="custom-search" class="form-control form-control-sm border-0 ps-1" placeholder="Cari pelanggan, invoice..." style="font-size: 0.78rem;">
+        </div>
+
+        <select id="custom-length" class="form-select form-select-sm text-secondary border shadow-xs fw-semibold" style="width: 72px; font-size: 0.78rem;" title="Jumlah data per halaman">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
       </div>
     </div>
   </div>
