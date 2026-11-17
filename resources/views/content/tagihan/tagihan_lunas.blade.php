@@ -1,56 +1,446 @@
 @extends('layouts/layoutMaster')
 
-@section('title', 'Data Tagihan Lunas')
+@section('title', 'Riwayat Tagihan Lunas')
 
 @section('vendor-script')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 @endsection
 
+@section('page-style')
+<style>
+  /* Styling KPI Cards Compact & Responsif */
+  .metric-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 10px !important;
+  }
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07) !important;
+  }
+  .metric-card .card-body {
+    padding: 0.75rem 0.9rem !important;
+  }
+  .metric-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .metric-icon-box i {
+    font-size: 1.25rem;
+  }
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* Table styling */
+  #table thead th {
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    white-space: nowrap;
+    background-color: #f8fafc !important;
+  }
+  #table tbody tr:hover {
+    background-color: rgba(37, 99, 235, 0.02) !important;
+  }
+
+  /* Struk Kuitansi Container */
+  .receipt-box {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'Courier New', Courier, monospace, system-ui;
+    color: #1e293b;
+  }
+  .receipt-header {
+    text-align: center;
+    border-bottom: 2px dashed #94a3b8;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .receipt-stamp-paid {
+    border: 2px solid #10b981;
+    color: #10b981;
+    font-weight: 900;
+    padding: 2px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    letter-spacing: 2px;
+    transform: rotate(-3deg);
+  }
+  .receipt-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.88rem;
+  }
+  .receipt-divider {
+    border-top: 1px dashed #cbd5e1;
+    margin: 10px 0;
+  }
+
+  /* Responsif Smartphone Khusus HP (< 768px) */
+  @media (max-width: 767.98px) {
+    /* Perkecil Kotak KPI Summary di HP */
+    .metric-card .card-body {
+      padding: 0.45rem 0.65rem !important;
+    }
+    .metric-icon-box {
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 6px !important;
+    }
+    .metric-icon-box i {
+      font-size: 0.95rem !important;
+    }
+    .metric-title {
+      font-size: 0.68rem !important;
+      margin-bottom: 0px !important;
+    }
+    .metric-value {
+      font-size: 0.92rem !important;
+      margin-bottom: 0 !important;
+    }
+    .metric-sub {
+      display: none !important;
+    }
+
+    /* Transformasi DataTables ke Mobile Card View */
+    #table thead {
+      display: none !important;
+    }
+    #table {
+      border: none !important;
+    }
+    #table tbody tr {
+      display: block !important;
+      margin-bottom: 8px !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 10px !important;
+      background: #ffffff !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      overflow: hidden !important;
+    }
+    #table tbody td {
+      display: none !important;
+      border: none !important;
+    }
+    #table tbody td.col-mobile-card {
+      display: block !important;
+      padding: 10px 12px !important;
+    }
+    .card-datatable {
+      padding: 6px !important;
+      background: #f8fafc !important;
+    }
+
+    /* Search Bar Responsif di Mobile */
+    .dataTables_filter {
+      width: 100% !important;
+      text-align: left !important;
+      margin-top: 4px !important;
+    }
+    .dataTables_filter label {
+      width: 100% !important;
+      margin-bottom: 0 !important;
+    }
+    .dataTables_filter input {
+      width: 100% !important;
+      margin-left: 0 !important;
+      font-size: 0.85rem !important;
+      border-radius: 8px !important;
+      height: 38px !important;
+    }
+    .dataTables_length {
+      display: none !important;
+    }
+    .dataTables_info,
+    .dataTables_paginate {
+      text-align: center !important;
+      justify-content: center !important;
+      font-size: 0.8rem !important;
+    }
+  }
+
+  /* Print Struk CSS Styling */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #struk-print-wrapper, #struk-print-wrapper * {
+      visibility: visible;
+    }
+    #struk-print-wrapper {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 10px;
+    }
+    .modal-footer, .btn-close {
+      display: none !important;
+    }
+  }
+</style>
+@endsection
+
 @section('page-script')
 <script>
-  const baseUrlRoute = "/user";
   let table;
+  let activeBillData = null;
+
+  const namaBulan = [
+    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   $(document).ready(function() {
-    // ✅ Enable dan show loading dengan pengecekan ketersediaan
+    // Enable GlobalLoading jika tersedia
     if (window.GlobalLoading) {
       GlobalLoading.enableAutoLoading();
-      GlobalLoading.show('Memuat data tagihan lunas...');
+      GlobalLoading.show('Memuat riwayat tagihan lunas...');
     }
 
     table = $('#table').DataTable({
-      "processing": true,
-      "serverSide": true,
-      "ajax": {
+      processing: true,
+      serverSide: true,
+      ajax: {
         url: "{{ route('tagihan.json') }}",
         data: function(d) {
-          d.status_bayar = 1; // Untuk data table ambil yang lunas
-          d.bulan = $('#filter-bulan').val();
+          d.status_bayar = 1; // Khusus data lunas
+          const tahun = $('#filter-tahun').val();
+          const bulan = $('#filter-bulan').val();
+          if (tahun) d.tahun = tahun;
+          if (bulan) d.bulan = bulan;
         },
-        // ✅ Process summary data dari response DataTables
         dataSrc: function(json) {
-          // Update summary cards dari response DataTable
+          // Update summary cards dari response
           if (json.summary) {
             updateSummaryCards(json.summary);
           }
-
-          // ✅ Update data tagihan belum bayar dari unpaid_summary
           if (json.unpaid_summary) {
             updateUnpaidSummary(json.unpaid_summary);
           }
-
-          // Return data untuk DataTable
           return json.data;
         }
       },
       columns: [
         {
           data: null,
+          orderable: false,
+          searchable: false,
+          className: 'text-center align-middle d-none d-md-table-cell',
+          render: function(data, type, row, meta) {
+            return `<span class="text-muted fw-bold small">${meta.row + meta.settings._iDisplayStart + 1}</span>`;
+          }
         },
         {
-          "data": null,
-          "render": function(data, type, row, meta) {
-            return meta.row + meta.settings._iDisplayStart + 1;
+          data: 'user_nama',
+          name: 'user_nama',
+          className: 'align-middle p-2 p-md-3 col-mobile-card',
+          render: function(data, type, row) {
+            const wa = row.user_wa;
+            const waBadge = wa && wa !== '-'
+              ? `<a href="https://wa.me/${String(wa).replace(/[^0-9]/g, '').replace(/^0/, '62')}" target="_blank" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none" title="Chat WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
+              : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
+
+            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total || 0);
+            const namaBulanStr = namaBulan[row.bulan] || row.bulan;
+            const periodeText = `${namaBulanStr} ${row.tahun}`;
+
+            // Format tanggal bayar ringkas
+            let tglBayarFmt = row.tglBayar || '-';
+            if (row.tglBayar && moment(row.tglBayar).isValid()) {
+              tglBayarFmt = moment(row.tglBayar).format('DD/MM/YYYY HH:mm');
+            }
+
+            // Metode Bayar Badge
+            const metodeLower = String(row.metode || '').toLowerCase();
+            let metodeBadge = '';
+            if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
+              metodeBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="mdi mdi-cash me-1"></i>Tunai</span>`;
+            } else if (metodeLower.includes('transfer') || metodeLower.includes('bank')) {
+              metodeBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="mdi mdi-bank-transfer me-1"></i>Transfer</span>`;
+            } else if (metodeLower.includes('qris')) {
+              metodeBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle"><i class="mdi mdi-qrcode me-1"></i>QRIS</span>`;
+            } else if (metodeLower.includes('wallet')) {
+              metodeBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="mdi mdi-wallet-outline me-1"></i>E-Wallet</span>`;
+            } else {
+              metodeBadge = `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">${row.metode || 'Lunas'}</span>`;
+            }
+
+            let deleteBtnMobile = '';
+            @if(auth()->user()->hasRole(1, 2))
+            deleteBtnMobile = `
+              <button type="button" class="btn btn-sm btn-outline-danger btn-delete p-2 shadow-xs" data-id="${row.id}" title="Hapus Tagihan" style="border-radius: 8px; width: 38px; height: 38px;">
+                <i class="mdi mdi-trash-can-outline fs-6"></i>
+              </button>
+            `;
+            @endif
+
+            return `
+              <!-- DESKTOP VIEW (>= 768px) -->
+              <div class="d-none d-md-block">
+                <div class="fw-bold text-dark fs-6 mb-1">${data || 'Tanpa Nama'}</div>
+                <div class="d-flex align-items-center flex-wrap gap-1">
+                  <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${row.noTagihan}</span>
+                  ${waBadge}
+                </div>
+              </div>
+
+              <!-- MOBILE CARD VIEW (< 768px) - RESPONSIF SMARTPHONE UNTUK KOLEKTOR -->
+              <div class="d-md-none mobile-paid-card">
+                <!-- Baris 1: Nama Pelanggan & Total Lunas -->
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                  <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fw-bold text-dark fs-6 text-truncate mb-0">
+                      ${data || 'Tanpa Nama'}
+                    </div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      <i class="mdi mdi-receipt-text-outline me-1"></i>${row.noTagihan || '-'}
+                    </small>
+                  </div>
+                  <div class="text-end flex-shrink-0">
+                    <div class="fs-6 fw-bolder text-success mb-0">${totalFmt}</div>
+                    <div class="mt-1">
+                      <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">
+                        <i class="mdi mdi-check-circle me-1"></i>LUNAS
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Baris 2: Paket, Periode & Metode Pembayaran -->
+                <div class="d-flex align-items-center justify-content-between gap-1 py-1 px-2 my-2 bg-light rounded-2 border" style="font-size: 0.72rem;">
+                  <div class="text-truncate">
+                    <i class="mdi mdi-speedometer me-1 text-primary"></i>
+                    <span class="fw-semibold text-dark">${row.paket_nama || 'Paket Internet'}</span>
+                    <span class="text-muted">(${periodeText})</span>
+                  </div>
+                  <div>
+                    ${metodeBadge}
+                  </div>
+                </div>
+
+                <!-- Baris 3: Info Waktu Bayar & Kasir Pemroses -->
+                <div class="d-flex align-items-center justify-content-between gap-1 mb-2 text-muted" style="font-size: 0.72rem;">
+                  <div class="text-truncate">
+                    <i class="mdi mdi-clock-check-outline me-1 text-success"></i>
+                    <span>${tglBayarFmt}</span>
+                  </div>
+                  <div class="text-truncate">
+                    <i class="mdi mdi-account-check-outline me-1 text-primary"></i>
+                    <span>Kasir: ${row.prosesNama || '-'}</span>
+                  </div>
+                </div>
+
+                <!-- Baris 4: ACTION BUTTONS MOBILE (Jempol Friendly) -->
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <!-- Tombol Kirim Kuitansi WA -->
+                  <button type="button" class="btn btn-success btn-kuitansi-wa flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-2 shadow-xs fw-bold" data-id="${row.id}" style="font-size: 0.85rem; border-radius: 8px;">
+                    <i class="mdi mdi-whatsapp fs-5"></i>
+                    <span>KUITANSI WA</span>
+                  </button>
+
+                  <!-- Tombol Lihat Struk Cetak -->
+                  <button type="button" class="btn btn-outline-primary btn-lihat-struk d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Lihat Struk / Cetak" style="border-radius: 8px; width: 42px; height: 38px;">
+                    <i class="mdi mdi-printer fs-5"></i>
+                  </button>
+
+                  <!-- Tombol Batal Pembayaran -->
+                  <button type="button" class="btn btn-outline-warning btn-cancel-payment d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Batal Pembayaran" style="border-radius: 8px; width: 42px; height: 38px;">
+                    <i class="mdi mdi-undo fs-5"></i>
+                  </button>
+
+                  ${deleteBtnMobile}
+                </div>
+              </div>
+            `;
+          }
+        },
+        {
+          data: 'paket_nama',
+          name: 'paket_nama',
+          className: 'align-middle d-none d-md-table-cell',
+          render: function(data, type, row) {
+            const periodeText = `${namaBulan[row.bulan] || row.bulan} ${row.tahun}`;
+            return `
+              <div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold mb-1">
+                  <i class="mdi mdi-speedometer me-1"></i>${data || 'Paket Internet'}
+                </span>
+                <div class="small text-muted d-flex align-items-center gap-1">
+                  <i class="mdi mdi-calendar-month-outline text-secondary"></i>
+                  <span>${periodeText}</span>
+                </div>
+              </div>
+            `;
+          }
+        },
+        {
+          data: 'total',
+          name: 'total',
+          className: 'align-middle d-none d-md-table-cell',
+          render: function(data, type, row) {
+            const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
+            let detailSub = '';
+            if (row.diskon > 0) {
+              detailSub = `<small class="text-success d-block" style="font-size: 0.72rem;"><i class="mdi mdi-tag-outline me-1"></i>Diskon Rp ${new Intl.NumberFormat('id-ID').format(row.diskon)}</small>`;
+            } else if (row.ppn > 0) {
+              detailSub = `<small class="text-muted d-block" style="font-size: 0.72rem;">Termasuk PPN</small>`;
+            }
+            return `
+              <div>
+                <div class="fw-bold text-success fs-6">${totalFmt}</div>
+                ${detailSub}
+              </div>
+            `;
+          }
+        },
+        {
+          data: 'tglBayar',
+          name: 'tglBayar',
+          className: 'align-middle d-none d-md-table-cell',
+          render: function(data, type, row) {
+            let tglFmt = data || '-';
+            if (data && moment(data).isValid()) {
+              tglFmt = moment(data).format('DD/MM/YYYY HH:mm');
+            }
+
+            const metodeLower = String(row.metode || '').toLowerCase();
+            let metodeBadge = '';
+            if (metodeLower.includes('tunai') || metodeLower.includes('cash') || metodeLower.includes('cod')) {
+              metodeBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="mdi mdi-cash me-1"></i>Tunai</span>`;
+            } else if (metodeLower.includes('transfer') || metodeLower.includes('bank')) {
+              metodeBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="mdi mdi-bank-transfer me-1"></i>Transfer</span>`;
+            } else if (metodeLower.includes('qris')) {
+              metodeBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle"><i class="mdi mdi-qrcode me-1"></i>QRIS</span>`;
+            } else if (metodeLower.includes('wallet')) {
+              metodeBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="mdi mdi-wallet-outline me-1"></i>E-Wallet</span>`;
+            } else {
+              metodeBadge = `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">${row.metode || 'Lunas'}</span>`;
+            }
+
+            return `
+              <div>
+                <div class="small fw-semibold text-dark">${tglFmt}</div>
+                <div class="d-flex align-items-center gap-1 mt-1">
+                  ${metodeBadge}
+                </div>
+                <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+                  <i class="mdi mdi-account-check-outline me-1 text-primary"></i>${row.prosesNama || '-'}
+                </div>
+              </div>
+            `;
           }
         },
         {
@@ -58,227 +448,251 @@
           name: 'action',
           orderable: false,
           searchable: false,
-          render: function (data, type, row) {
+          className: 'text-center align-middle d-none d-md-table-cell',
+          render: function(data, type, row) {
+            let deleteBtn = '';
+            @if(auth()->user()->hasRole(1, 2))
+            deleteBtn = `
+              <li><hr class="dropdown-divider my-1"></li>
+              <li>
+                <a class="dropdown-item btn-delete text-danger py-1" href="javascript:void(0);" data-id="${data}">
+                  <i class="mdi mdi-trash-can-outline me-2"></i> Hapus Tagihan
+                </a>
+              </li>
+            `;
+            @endif
+
             return `
-            <div class="dropdown">
-              <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                <i class="mdi mdi-dots-vertical"></i>
-              </button>
-              <div class="dropdown-menu">
-                <a class="dropdown-item btn-cancel-payment text-warning fw-bold" href="javascript:void(0);" data-id="${data}">
-                  <i class="mdi mdi-undo me-1"></i> Batal Pembayaran
-                </a>
-                <a class="dropdown-item btn-delete text-danger fw-bold" href="javascript:void(0);" data-id="${data}">
-                  <i class="mdi mdi-trash-can-outline me-1"></i> Delete
-                </a>
+              <div class="d-inline-flex align-items-center gap-1">
+                <!-- Tombol Kuitansi WA -->
+                <button type="button" class="btn btn-sm btn-success btn-kuitansi-wa d-inline-flex align-items-center gap-1 shadow-xs px-2 py-1" data-id="${data}" title="Kirim Kuitansi WhatsApp">
+                  <i class="mdi mdi-whatsapp"></i>
+                  <span class="fw-semibold">Kuitansi</span>
+                </button>
+
+                <!-- Tombol Preview Struk -->
+                <button type="button" class="btn btn-sm btn-outline-primary btn-lihat-struk d-inline-flex align-items-center p-1" data-id="${data}" title="Lihat Struk / Cetak">
+                  <i class="mdi mdi-printer fs-6"></i>
+                </button>
+
+                <!-- Dropdown Opsi -->
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-icon btn-light rounded-circle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="mdi mdi-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="min-width: 175px; border-radius: 8px;">
+                    <li>
+                      <a class="dropdown-item btn-kuitansi-wa text-success py-1" href="javascript:void(0);" data-id="${data}">
+                        <i class="mdi mdi-whatsapp me-2"></i> Kirim Kuitansi WA
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item btn-lihat-struk py-1 text-primary" href="javascript:void(0);" data-id="${data}">
+                        <i class="mdi mdi-printer-outline me-2"></i> Cetak / Struk
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                      <a class="dropdown-item btn-cancel-payment text-warning fw-semibold py-1" href="javascript:void(0);" data-id="${data}">
+                        <i class="mdi mdi-undo me-2"></i> Batal Pembayaran
+                      </a>
+                    </li>
+                    ${deleteBtn}
+                  </ul>
+                </div>
               </div>
-            </div>
-          `;
+            `;
           }
-        },
-        { data: 'noTagihan'},
-        { data: 'user_nama'},
-        { data: 'paket_nama'},
-        { data: 'bulan'},
-        { data: 'tahun'},
-        {
-          data: 'status_bayar',
-          render: function(data, type, row) {
-            if (data === 'unpaid') {
-              return `<span class="badge bg-danger">${data}</span>`;
-            } else {
-              return `<span class="badge bg-success">${data}</span>`;
-            }
-          }
-        },
-        {
-          data: 'harga',
-          render: function(data, type, row) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
-          }
-        },
-        {
-          data: 'ppn',
-          render: function(data, type, row) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
-          }
-        },
-        {
-          data: 'diskon',
-          render: function(data, type, row) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
-          }
-        },
-        {
-          data: 'total',
-          render: function(data, type, row) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(data);
-          }
-        },
-        { data: 'tglBayar'},
-        { data: 'prosesNama'},
-        { data: 'metode'},
+        }
       ],
-
-      columnDefs: [{
-        className: 'control',
-        targets: 0,
-        searchable: !1,
-        render: function() {
-          return ''
-        }
-      }],
-
-      destroy: !0,
-      dom: '<"card-header flex-column flex-md-row"<"head-label text-center"><"dt-action-buttons text-end pt-3 pt-md-0">>'+
-          '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>' +
-          't' +
-          '<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+      order: [[4, 'desc']], // Urutkan berdasarkan waktu bayar terbaru
+      dom:
+        '<"card-body py-2 px-3 border-bottom"<"row align-items-center g-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>>' +
+        't' +
+        '<"card-body py-2 px-3"<"row align-items-center g-2"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>>',
       displayLength: 20,
-      lengthMenu: [10, 20, 35, 40, 50, 80, 100],
+      lengthMenu: [10, 20, 35, 50, 100],
       language: {
+        search: "",
+        searchPlaceholder: "Cari pelanggan, invoice, paket...",
+        lengthMenu: "Tampilkan _MENU_ data",
+        info: "Menampilkan _START_ s/d _END_ dari _TOTAL_ riwayat lunas",
+        infoEmpty: "Tidak ada riwayat tagihan lunas",
+        infoFiltered: "(disaring dari _MAX_ total data)",
+        emptyTable: "Belum ada transaksi pembayaran lunas untuk periode ini",
         paginate: {
-          next: '<i class="ri-arrow-right-s-line"></i>',
-          previous: '<i class="ri-arrow-left-s-line"></i>'
+          next: '<i class="mdi mdi-chevron-right"></i>',
+          previous: '<i class="mdi mdi-chevron-left"></i>'
         }
       },
-
-      responsive: {
-        details: {
-          display: $.fn.dataTable.Responsive.display.modal({
-            header: function (e) {
-              return "Details Data";
-            }
-          }),
-          type: "column",
-          renderer: function (api, rowIdx, columns) {
-            var data = $.map(columns, function (col) {
-              return col.title ? '<tr data-dt-row="' + col.rowIndex + '" data-dt-column="' + col.columnIndex + '"><td>' + col.title + ':</td> <td>' + col.data + '</td></tr>' : '';
-            }).join('');
-            return data ? $('<table class="table"/><tbody />').append(data) : false;
-          }
-        }
-      },
-
-      "initComplete": function() {
+      initComplete: function() {
         if (window.GlobalLoading) {
           GlobalLoading.hide();
         }
       },
-      "drawCallback": function() {
+      drawCallback: function() {
         if (window.GlobalLoading && window.GlobalLoading.isLoading) {
           GlobalLoading.hide();
         }
       }
     });
 
-    // Tambahkan label di dalam header card
-    $("div.head-label").html('<h5 class="card-title mb-0">Data Tagihan Lunas</h5>');
+    // Update Summary Cards Tagihan Lunas
+    function updateSummaryCards(summary) {
+      $('#total-count').text(new Intl.NumberFormat('id-ID').format(summary.total_count || 0));
+      $('#total-paid').text('Rp ' + new Intl.NumberFormat('id-ID').format(summary.total_unpaid || 0));
+      $('#total-diskon-lunas').text('Rp ' + new Intl.NumberFormat('id-ID').format(summary.total_diskon || 0));
+    }
 
-    // ✅ Event handler untuk tombol delete dengan GlobalLoading
-    $('#table').on('click', '.btn-delete', function() {
-      const id = $(this).data('id');
+    // Update Summary Tagihan Belum Bayar
+    function updateUnpaidSummary(unpaidSummary) {
+      if (unpaidSummary && unpaidSummary.unpaid_total !== undefined) {
+        $('#total-unpaid').text('Rp ' + new Intl.NumberFormat('id-ID').format(unpaidSummary.unpaid_total || 0));
+      } else {
+        $('#total-unpaid').text('Rp 0');
+      }
+    }
 
-      Swal.fire({
-          title: "Yakin ingin menghapus?",
-          text: "Data yang dihapus tidak dapat dikembalikan!",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonText: "YA, HAPUS!",
-          cancelButtonText: "BATAL",
-          buttonsStyling: false,
-          customClass: {
-            confirmButton: "btn btn-primary me-2",
-            cancelButton: "btn btn-outline-danger"
-          }
-        }).then((result) => {
-        if (result.isConfirmed) {
-          const deleteSteps = [
-            { progress: 25, text: 'Memvalidasi data...', delay: 300 },
-            { progress: 60, text: 'Menghapus dari database...', delay: 500 },
-            { progress: 85, text: 'Membersihkan cache...', delay: 200 },
-            { progress: 100, text: 'Data berhasil dihapus!', delay: 200 }
-          ];
-
-          if (window.GlobalLoading) {
-            GlobalLoading.showWithSteps(deleteSteps);
-          }
-
-          setTimeout(() => {
-            $.ajax({
-              url: `{{ url('tagihan/destroy') }}/${id}`,
-              type: 'DELETE',
-              data: {
-                _token: '{{ csrf_token() }}'
-              },
-              success: function(response) {
-                if (window.GlobalLoading) {
-                  GlobalLoading.hide();
-                }
-
-                if (response.success) {
-                  Swal.fire({
-                    title: 'Data Berhasil Dihapus!',
-                    text: 'Tagihan telah dihapus dari sistem.',
-                    icon: 'success',
-                    confirmButtonText: 'OK',
-                    buttonsStyling: false,
-                    customClass: {
-                      confirmButton: "btn btn-success"
-                    }
-                  });
-
-                  if (window.GlobalLoading) {
-                    GlobalLoading.show('Memuat ulang data...');
-                  }
-
-                  table.ajax.reload(() => {
-                    if (window.GlobalLoading) {
-                      GlobalLoading.hide();
-                    }
-                  });
-
-                } else {
-                  Swal.fire({
-                    title: 'Gagal Menghapus Data',
-                    text: response.message || 'Terjadi kesalahan saat menghapus data.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    buttonsStyling: false,
-                    customClass: {
-                      confirmButton: "btn btn-danger"
-                    }
-                  });
-                }
-              },
-              error: function(xhr) {
-                if (window.GlobalLoading) {
-                  GlobalLoading.hide();
-                }
-
-                let message = 'Terjadi kesalahan pada server.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                  message = xhr.responseJSON.message;
-                }
-
-                Swal.fire({
-                  title: 'Error Sistem',
-                  text: message,
-                  icon: 'error',
-                  confirmButtonText: 'OK',
-                  buttonsStyling: false,
-                  customClass: {
-                    confirmButton: "btn btn-danger"
-                  }
-                });
-              }
-            });
-          }, 1200);
+    // Filter Periode (Bulan & Tahun)
+    $('#filter-bulan, #filter-tahun').on('change', function() {
+      if (window.GlobalLoading) {
+        GlobalLoading.show('Memfilter data riwayat lunas...');
+      }
+      table.ajax.reload(() => {
+        if (window.GlobalLoading) {
+          GlobalLoading.hide();
         }
       });
     });
 
-    // ✅ Event handler untuk tombol batal pembayaran dengan GlobalLoading
+    // Tombol Refresh
+    $('#btn-refresh-table').on('click', function() {
+      $(this).find('i').addClass('mdi-spin');
+      table.ajax.reload(() => {
+        $('#btn-refresh-table').find('i').removeClass('mdi-spin');
+      });
+    });
+
+    // Helper untuk mengambil Row Data dari DataTables
+    function getRowDataById(id) {
+      const allRows = table.rows().data().toArray();
+      if (allRows && allRows.length > 0) {
+        const found = allRows.find(item => item.id == id);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // Event Handler: Kirim Kuitansi WhatsApp
+    $(document).on('click', '.btn-kuitansi-wa', function(e) {
+      e.preventDefault();
+      const id = $(this).attr('data-id');
+      const row = getRowDataById(id);
+      if (!row) {
+        Swal.fire('Perhatian', 'Data tagihan tidak ditemukan di tabel.', 'warning');
+        return;
+      }
+      kirimKuitansiWhatsApp(row);
+    });
+
+    // Function: Kirim Kuitansi WhatsApp
+    function kirimKuitansiWhatsApp(row) {
+      const rawWa = row.user_wa;
+      if (!rawWa || rawWa === '-' || rawWa.trim() === '') {
+        Swal.fire({
+          icon: 'info',
+          title: 'Nomor WhatsApp Tidak Ditemukan',
+          text: `Pelanggan "${row.user_nama}" belum memiliki nomor WhatsApp di sistem. Silakan update data pelanggan.`,
+          confirmButtonText: 'OK',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+        return;
+      }
+
+      let cleanWa = String(rawWa).replace(/[^0-9]/g, '');
+      if (cleanWa.startsWith('0')) cleanWa = '62' + cleanWa.slice(1);
+
+      const bulanNama = namaBulan[row.bulan] || row.bulan;
+      const periodeStr = `${bulanNama} ${row.tahun}`;
+      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total);
+      const metodeStr = (row.metode || 'Tunai').toUpperCase();
+
+      let tglBayarStr = row.tglBayar || '-';
+      if (row.tglBayar && moment(row.tglBayar).isValid()) {
+        tglBayarStr = moment(row.tglBayar).format('DD-MM-YYYY HH:mm');
+      }
+
+      const message = `Halo Kak *${row.user_nama}*,\n\n` +
+        `Terima kasih atas pembayaran tagihan internet *MRYES NET*. Berikut adalah bukti kuitansi pelunasan resmi:\n\n` +
+        `📄 *No. Kuitansi/Invoice:* ${row.noTagihan}\n` +
+        `📦 *Paket:* ${row.paket_nama || 'Internet Reguler'}\n` +
+        `📅 *Periode:* ${periodeStr}\n` +
+        `💰 *Total Lunas:* *${totalFmt}*\n` +
+        `💳 *Metode Pembayaran:* ${metodeStr}\n` +
+        `🗓️ *Waktu Bayar:* ${tglBayarStr}\n` +
+        `👤 *Petugas Kasir:* ${row.prosesNama || '-'}\n` +
+        `✅ *Status:* *LUNAS (TERVERIFIKASI)*\n\n` +
+        `Terima kasih telah setia menggunakan layanan internet cepat *MRYES NET*. Jika ada kendala koneksi atau pertanyaan, silakan hubungi customer service kami. 🙏`;
+
+      window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    // Event Handler: Buka Modal Struk / Cetak Kuitansi
+    $(document).on('click', '.btn-lihat-struk', function(e) {
+      e.preventDefault();
+      const id = $(this).attr('data-id');
+      const row = getRowDataById(id);
+      if (!row) {
+        Swal.fire('Perhatian', 'Data transaksi tidak ditemukan.', 'warning');
+        return;
+      }
+
+      activeBillData = row;
+      const bulanNama = namaBulan[row.bulan] || row.bulan;
+      const periodeStr = `${bulanNama} ${row.tahun}`;
+      const hargaFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.harga || 0);
+      const ppnFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.ppn || 0);
+      const diskonFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.diskon || 0);
+      const totalFmt = 'Rp ' + new Intl.NumberFormat('id-ID').format(row.total || 0);
+
+      let tglBayarStr = row.tglBayar || '-';
+      if (row.tglBayar && moment(row.tglBayar).isValid()) {
+        tglBayarStr = moment(row.tglBayar).format('DD/MM/YYYY HH:mm');
+      }
+
+      $('#struk-noTagihan').text(row.noTagihan || '-');
+      $('#struk-namaPelanggan').text(row.user_nama || '-');
+      $('#struk-paket').text(row.paket_nama || 'Paket Internet');
+      $('#struk-periode').text(periodeStr);
+      $('#struk-tglBayar').text(tglBayarStr);
+      $('#struk-metode').text((row.metode || 'Tunai').toUpperCase());
+      $('#struk-kasir').text(row.prosesNama || '-');
+
+      $('#struk-harga').text(hargaFmt);
+      $('#struk-ppn').text(ppnFmt);
+      $('#struk-diskon').text(diskonFmt);
+      $('#struk-total').text(totalFmt);
+
+      const modalElement = document.getElementById('modalStruk');
+      if (modalElement) {
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
+      }
+    });
+
+    // Tombol Cetak Struk di Dalam Modal
+    $('#btn-cetak-struk-action').on('click', function() {
+      window.print();
+    });
+
+    // Tombol Kirim WA dari dalam Modal Struk
+    $('#btn-wa-struk-action').on('click', function() {
+      if (activeBillData) {
+        kirimKuitansiWhatsApp(activeBillData);
+      }
+    });
+
+    // Event Handler: Batal Pembayaran
     $('#table').on('click', '.btn-cancel-payment', function() {
       const id = $(this).data('id');
 
@@ -286,20 +700,19 @@
         title: "Yakin ingin membatalkan pembayaran?",
         html: `
           <div class="text-start">
-            <p class="mb-2"><strong>Peringatan:</strong></p>
+            <p class="mb-2"><strong>Peringatan Sistem:</strong></p>
             <ul class="text-muted small">
-              <li>Status tagihan akan kembali menjadi BELUM LUNAS</li>
-              <li>Data transaksi akan dihapus</li>
-              <li>Tanggal bayar akan dihapus</li>
-              <li>Data metode pembayaran akan dihapus</li>
+              <li>Status tagihan akan kembali menjadi <strong>BELUM LUNAS</strong></li>
+              <li>Data riwayat transaksi kasir akan dihapus</li>
+              <li>Tanggal bayar dan metode pembayaran akan direset</li>
             </ul>
-            <p class="text-danger small mt-2"><i class="mdi mdi-alert-circle"></i> <strong>Aksi ini tidak dapat dibatalkan!</strong></p>
+            <p class="text-danger small mt-2 mb-0"><i class="mdi mdi-alert-circle me-1"></i> Aksi ini akan memindahkan tagihan kembali ke halaman Tagihan Aktif.</p>
           </div>
         `,
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "YA, BATAL PEMBAYARAN!",
-        cancelButtonText: "TIDAK",
+        confirmButtonText: "YA, BATALKAN PEMBAYARAN",
+        cancelButtonText: "TIDAK, TETAPKAN",
         buttonsStyling: false,
         customClass: {
           confirmButton: "btn btn-warning me-2",
@@ -308,11 +721,10 @@
       }).then((result) => {
         if (result.isConfirmed) {
           const cancelSteps = [
-            { progress: 15, text: 'Memvalidasi data pembayaran...', delay: 300 },
-            { progress: 35, text: 'Membatalkan pembayaran...', delay: 500 },
-            { progress: 60, text: 'Menghapus data transaksi...', delay: 600 },
-            { progress: 85, text: 'Mengupdate status tagihan...', delay: 400 },
-            { progress: 100, text: 'Pembayaran berhasil dibatalkan!', delay: 300 }
+            { progress: 20, text: 'Memverifikasi transaksi lunas...', delay: 250 },
+            { progress: 50, text: 'Membatalkan pembayaran...', delay: 350 },
+            { progress: 80, text: 'Mengembalikan ke tagihan aktif...', delay: 300 },
+            { progress: 100, text: 'Pembayaran berhasil dibatalkan!', delay: 200 }
           ];
 
           if (window.GlobalLoading) {
@@ -333,24 +745,20 @@
 
                 if (response.success) {
                   Swal.fire({
-                    title: 'Pembayaran Berhasil Dibatalkan!',
+                    title: 'Pembayaran Dibatalkan!',
                     html: `
                       <div class="text-start">
-                        <p class="text-success mt-2"><i class="mdi mdi-check-circle"></i> Status tagihan telah dikembalikan menjadi BELUM LUNAS</p>
-                        <p class="text-info"><i class="mdi mdi-information"></i> Data transaksi telah dihapus</p>
-                        <p class="text-warning"><i class="mdi mdi-clock"></i> Tanggal bayar telah direset</p>
+                        <p class="text-success mt-1 mb-1"><i class="mdi mdi-check-circle me-1"></i> Status tagihan telah kembali menjadi <strong>BELUM LUNAS</strong>.</p>
+                        <p class="text-muted small">Tagihan telah dipindahkan kembali ke menu <strong>Tagihan Aktif</strong>.</p>
                       </div>
                     `,
                     icon: 'success',
                     confirmButtonText: 'OK',
-                    buttonsStyling: false,
-                    customClass: {
-                      confirmButton: "btn btn-success"
-                    }
+                    customClass: { confirmButton: 'btn btn-success' }
                   });
 
                   if (window.GlobalLoading) {
-                    GlobalLoading.show('Memuat ulang data tagihan...');
+                    GlobalLoading.show('Memuat ulang data...');
                   }
 
                   table.ajax.reload(() => {
@@ -358,17 +766,13 @@
                       GlobalLoading.hide();
                     }
                   });
-
                 } else {
                   Swal.fire({
                     title: 'Gagal Membatalkan Pembayaran',
-                    text: response.message || 'Terjadi kesalahan saat membatalkan pembayaran.',
+                    text: response.message || 'Terjadi kesalahan sistem.',
                     icon: 'error',
                     confirmButtonText: 'OK',
-                    buttonsStyling: false,
-                    customClass: {
-                      confirmButton: "btn btn-danger"
-                    }
+                    customClass: { confirmButton: 'btn btn-danger' }
                   });
                 }
               },
@@ -378,173 +782,203 @@
                 }
 
                 let message = 'Terjadi kesalahan pada server.';
-                let details = '';
-
-                if (xhr.responseJSON) {
-                  message = xhr.responseJSON.message || message;
-                  if (xhr.responseJSON.errors && Array.isArray(xhr.responseJSON.errors)) {
-                    details = xhr.responseJSON.errors.join('<br>');
-                  }
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                  message = xhr.responseJSON.message;
                 }
 
                 Swal.fire({
                   title: 'Error Sistem',
-                  html: `
-                    <div class="text-start">
-                      <p><strong>Pesan:</strong> ${message}</p>
-                      ${details ? `<p><strong>Detail:</strong><br>${details}</p>` : ''}
-                      <p class="text-muted small mt-2">Silakan coba lagi atau hubungi administrator jika masalah berlanjut.</p>
-                    </div>
-                  `,
+                  text: message,
                   icon: 'error',
                   confirmButtonText: 'OK',
-                  buttonsStyling: false,
-                  customClass: {
-                    confirmButton: "btn btn-danger"
-                  }
+                  customClass: { confirmButton: 'btn btn-danger' }
                 });
               }
             });
-          }, 2100);
+          }, 800);
         }
       });
     });
 
-    // ✅ Filter bulan event handler dengan GlobalLoading - akan otomatis update unpaid summary juga
-    $('#filter-bulan').on('change', function() {
-      if (window.GlobalLoading) {
-        GlobalLoading.show('Memfilter data berdasarkan bulan...');
-      }
+    // Event Handler: Hapus Tagihan (Khusus Admin role 1 & 2)
+    $('#table').on('click', '.btn-delete', function() {
+      const id = $(this).data('id');
 
-      // DataTable reload otomatis akan update summary + unpaid summary bersamaan
-      table.ajax.reload(() => {
-        if (window.GlobalLoading) {
-          GlobalLoading.hide();
+      Swal.fire({
+        title: "Yakin ingin menghapus tagihan?",
+        text: "Data tagihan lunas ini akan dihapus permanen dari sistem!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "YA, HAPUS PERMANEN!",
+        cancelButtonText: "BATAL",
+        buttonsStyling: false,
+        customClass: {
+          confirmButton: "btn btn-danger me-2",
+          cancelButton: "btn btn-outline-secondary"
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          if (window.GlobalLoading) {
+            GlobalLoading.show('Menghapus data tagihan...');
+          }
+
+          $.ajax({
+            url: `{{ url('tagihan/destroy') }}/${id}`,
+            type: 'DELETE',
+            data: {
+              _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+              if (window.GlobalLoading) {
+                GlobalLoading.hide();
+              }
+
+              if (response.success) {
+                Swal.fire({
+                  title: 'Data Dihapus!',
+                  text: 'Data tagihan berhasil dihapus dari sistem.',
+                  icon: 'success',
+                  confirmButtonText: 'OK',
+                  customClass: { confirmButton: 'btn btn-success' }
+                });
+
+                table.ajax.reload();
+              } else {
+                Swal.fire('Gagal', response.message || 'Gagal menghapus tagihan.', 'error');
+              }
+            },
+            error: function(xhr) {
+              if (window.GlobalLoading) {
+                GlobalLoading.hide();
+              }
+              Swal.fire('Error', 'Terjadi kesalahan pada server.', 'error');
+            }
+          });
         }
       });
     });
   });
-
-  // ✅ Function untuk update summary cards - tagihan lunas
-  function updateSummaryCards(summaryData) {
-    $('#total-count').text(summaryData.total_count || 0);
-    $('#total-paid').text('Rp ' + formatNumber(summaryData.total_unpaid || 0)); // total yang sudah dibayar
-    $('#total-diskon-lunas').text('Rp ' + formatNumber(summaryData.total_diskon || 0)); // total diskon tagihan lunas
-  }
-
-  // ✅ Function untuk update summary tagihan belum bayar - DATA BARU
-  function updateUnpaidSummary(unpaidSummary) {
-    if (unpaidSummary && unpaidSummary.unpaid_total !== undefined) {
-      $('#total-unpaid').text('Rp ' + formatNumber(unpaidSummary.unpaid_total || 0));
-    } else {
-      $('#total-unpaid').text('Rp 0');
-    }
-  }
-
-  // ✅ Helper function untuk format number
-  function formatNumber(number) {
-    return new Intl.NumberFormat('id-ID').format(number);
-  }
 </script>
 @endsection
 
 @section('content')
-<!-- Bootstrap Summary Section untuk Tagihan Lunas -->
-<div class="row mb-4">
-  <!-- Filter Section -->
-  <div class="col-lg-3 col-md-4 mb-3">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body p-3">
-        <label for="filter-bulan" class="form-label fw-semibold text-muted mb-2">
-          <i class="mdi mdi-filter-variant me-1"></i>Filter Periode
-        </label>
-        <select id="filter-bulan" class="form-select form-select-sm">
-          <option value="">Semua Bulan</option>
-          <option value="1">Januari</option>
-          <option value="2">Februari</option>
-          <option value="3">Maret</option>
-          <option value="4">April</option>
-          <option value="5">Mei</option>
-          <option value="6">Juni</option>
-          <option value="7">Juli</option>
-          <option value="8">Agustus</option>
-          <option value="9">September</option>
-          <option value="10">Oktober</option>
-          <option value="11">November</option>
-          <option value="12">Desember</option>
-        </select>
+
+<!-- Header Card & Periode Filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3 px-3 px-sm-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <h4 class="fw-bold mb-0 text-dark">
+            <i class="mdi mdi-check-decagram-outline text-success me-2"></i>Riwayat Tagihan Lunas
+          </h4>
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small">Terbayar</span>
+        </div>
+        <p class="text-muted small mb-0 mt-1">Daftar arsip transaksi dan riwayat pembayaran tagihan pelanggan yang telah lunas</p>
+      </div>
+
+      <!-- Right: Filters & Action -->
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
+          <span class="text-muted small px-2 fw-semibold"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 130px;">
+            <option value="" selected>Semua Bulan</option>
+            @php
+              $namaBulanList = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+              ];
+            @endphp
+            @foreach($namaBulanList as $key => $nama)
+              <option value="{{ $key }}">{{ $nama }}</option>
+            @endforeach
+          </select>
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 100px;">
+            <option value="" selected>Semua Thn</option>
+            @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
+              @foreach($filterData['tahun'] as $tahun)
+                <option value="{{ $tahun }}">{{ $tahun }}</option>
+              @endforeach
+            @else
+              <option value="{{ $currentYear ?? date('Y') }}">{{ $currentYear ?? date('Y') }}</option>
+            @endif
+          </select>
+          <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data">
+            <i class="mdi mdi-refresh"></i>
+          </button>
+        </div>
+
+        <a href="{{ route('tagihan.index') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-xs py-2">
+          <i class="mdi mdi-receipt-text-outline"></i>
+          <span>Tagihan Aktif</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4 Executive KPI Summary Cards (Compact & Responsif) -->
+<div class="row g-2 mb-3" id="kpi-summary-row">
+  <!-- Card 1: Total Lunas -->
+  <div class="col-6 col-lg-3">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #10b981 !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Lunas</span>
+          <div class="metric-value fs-5 fw-bold text-success mb-0" id="total-count">0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Transaksi selesai</small>
+        </div>
+        <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
+          <i class="mdi mdi-check-decagram"></i>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="col-lg-9 col-md-8">
-    <div class="row g-2">
-      <!-- Total Tagihan Lunas -->
-      <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-3 d-flex align-items-center">
-            <div
-              class="d-flex align-items-center justify-content-center me-3 bg-success bg-opacity-10 text-success rounded-2 flex-shrink-0"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-check-circle fs-5"></i>
-            </div>
-            <div class="flex-grow-1">
-              <small class="text-muted fw-medium">Tagihan Lunas</small>
-              <div class="fs-6 fw-bold text-dark" id="total-count">0</div>
-            </div>
-          </div>
+  <!-- Card 2: Total Terbayar (Nominal) -->
+  <div class="col-6 col-lg-3">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #2563eb !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Terbayar</span>
+          <div class="metric-value fs-5 fw-bold text-primary mb-0" id="total-paid">Rp 0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Dana masuk</small>
+        </div>
+        <div class="metric-icon-box bg-primary-subtle text-primary border border-primary-subtle">
+          <i class="mdi mdi-cash-check"></i>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Total Terbayar -->
-      <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-3 d-flex align-items-center">
-            <div
-              class="d-flex align-items-center justify-content-center me-3 bg-primary bg-opacity-10 text-primary rounded-2 flex-shrink-0"
-              style="width: 40px; height: 40px;">
-              <i class="text-white mdi mdi-cash fs-5"></i>
-            </div>
-            <div class="flex-grow-1">
-              <small class="text-muted fw-medium">Total Terbayar</small>
-              <div class="fs-6 fw-bold text-dark" id="total-paid">Rp 0</div>
-            </div>
-          </div>
+  <!-- Card 3: Total Diskon -->
+  <div class="col-6 col-lg-3">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #06b6d4 !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Total Diskon</span>
+          <div class="metric-value fs-5 fw-bold text-info mb-0" id="total-diskon-lunas">Rp 0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Potongan harga</small>
+        </div>
+        <div class="metric-icon-box bg-info-subtle text-info border border-info-subtle">
+          <i class="mdi mdi-tag-percent-outline"></i>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Total Diskon Lunas -->
-      <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-3 d-flex align-items-center">
-            <div
-              class="d-flex align-items-center justify-content-center me-3 bg-info bg-opacity-10 text-info rounded-2 flex-shrink-0"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-percent fs-5"></i>
-            </div>
-            <div class="flex-grow-1">
-              <small class="text-muted fw-medium">Total Diskon</small>
-              <div class="fs-6 fw-bold text-dark" id="total-diskon-lunas">Rp 0</div>
-            </div>
-          </div>
+  <!-- Card 4: Belum Bayar (Piutang Berjalan) -->
+  <div class="col-6 col-lg-3">
+    <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #f59e0b !important;">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <span class="metric-title text-muted d-block small mb-1 fw-medium">Belum Bayar</span>
+          <div class="metric-value fs-5 fw-bold text-warning mb-0" id="total-unpaid">Rp 0</div>
+          <small class="metric-sub text-muted" style="font-size: 0.7rem;">Sisa tagihan aktif</small>
         </div>
-      </div>
-
-      <!-- Tagihan Belum Bayar -->
-      <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-3 d-flex align-items-center">
-            <div
-              class="d-flex align-items-center justify-content-center me-3 bg-warning bg-opacity-10 text-warning rounded-2 flex-shrink-0"
-              style="width: 40px; height: 40px;">
-              <i class="mdi mdi-file-document-multiple fs-5"></i>
-            </div>
-            <div class="flex-grow-1">
-              <small class="text-muted fw-medium">Belum Bayar</small>
-              <div class="fs-6 fw-bold text-dark" id="total-unpaid">Rp 0</div>
-            </div>
-          </div>
+        <div class="metric-icon-box bg-warning-subtle text-warning border border-warning-subtle">
+          <i class="mdi mdi-file-clock-outline"></i>
         </div>
       </div>
     </div>
@@ -552,30 +986,125 @@
 </div>
 
 <!-- DataTable Card -->
-<div class="card">
+<div class="card border-0 shadow-sm">
   <div class="card-datatable table-responsive pt-0">
-    <table id="table" class="datatables-basic table table-bordered">
+    <table id="table" class="datatables-basic table table-hover mb-0">
       <thead>
         <tr>
-          <th>+</th>
-          <th>NO</th>
-          <th>AKSI</th>
-          <th>NO TAGIHAN</th>
-          <th>NAMA</th>
-          <th>PAKET</th>
-          <th>BULAN</th>
-          <th>TAHUN</th>
-          <th>STATUS</th>
-          <th>HARGA</th>
-          <th>PPN</th>
-          <th>DISKON</th>
-          <th>TOTAL</th>
-          <th>TGL BAYAR</th>
-          <th>ADMIN</th>
-          <th>METODE BAYAR</th>
+          <th style="width: 45px;" class="text-center">NO</th>
+          <th>PELANGGAN & INVOICE</th>
+          <th>PAKET & PERIODE</th>
+          <th>TOTAL DIBAYAR</th>
+          <th>PEMBAYARAN</th>
+          <th class="text-center" style="width: 140px;">AKSI</th>
         </tr>
       </thead>
+      <tbody></tbody>
     </table>
   </div>
 </div>
+
+<!-- Modal Struk / Cetak Kuitansi Modern -->
+<div class="modal fade" id="modalStruk" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header bg-light py-2 px-3 border-bottom">
+        <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-1 mb-0">
+          <i class="mdi mdi-receipt-text-check text-success fs-5"></i>
+          <span>Kuitansi Pembayaran</span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-3" id="struk-print-wrapper">
+        <div class="receipt-box shadow-none">
+          <!-- Receipt Header -->
+          <div class="receipt-header">
+            <h5 class="fw-bold mb-1 text-dark">MRYES NET</h5>
+            <div class="small text-muted mb-2">Layanan Internet Cepat & Stabil</div>
+            <div class="receipt-stamp-paid">LUNAS</div>
+          </div>
+
+          <!-- Receipt Details -->
+          <div class="receipt-item-row">
+            <span class="text-muted">No. Invoice:</span>
+            <span class="fw-bold font-monospace" id="struk-noTagihan">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Pelanggan:</span>
+            <span class="fw-bold text-dark" id="struk-namaPelanggan">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Paket:</span>
+            <span class="fw-semibold text-primary" id="struk-paket">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Periode:</span>
+            <span class="fw-semibold" id="struk-periode">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Waktu Bayar:</span>
+            <span id="struk-tglBayar">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Metode:</span>
+            <span class="badge bg-label-dark" id="struk-metode">-</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Petugas Kasir:</span>
+            <span id="struk-kasir">-</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Rincian Biaya -->
+          <div class="receipt-item-row">
+            <span class="text-muted">Harga Paket:</span>
+            <span id="struk-harga">Rp 0</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">PPN (11%):</span>
+            <span id="struk-ppn">Rp 0</span>
+          </div>
+          <div class="receipt-item-row">
+            <span class="text-muted">Potongan Diskon:</span>
+            <span class="text-success" id="struk-diskon">Rp 0</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-item-row fs-6 fw-bold">
+            <span class="text-dark">TOTAL DIBAYAR:</span>
+            <span class="text-success" id="struk-total">Rp 0</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Footer Struk -->
+          <div class="text-center small text-muted mt-2" style="font-size: 0.72rem;">
+            <div>Bukti pembayaran ini sah dan diterbitkan oleh sistem komputerisasi MRYES NET.</div>
+            <div class="fw-semibold mt-1">Terima kasih atas kepercayaan Anda!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light p-2 d-flex align-items-center justify-content-between border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+          Tutup
+        </button>
+        <div class="d-flex align-items-center gap-1">
+          <button type="button" class="btn btn-sm btn-success d-flex align-items-center gap-1 fw-semibold shadow-xs" id="btn-wa-struk-action">
+            <i class="mdi mdi-whatsapp"></i>
+            <span>Kirim WA</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-primary d-flex align-items-center gap-1 fw-semibold shadow-xs" id="btn-cetak-struk-action">
+            <i class="mdi mdi-printer"></i>
+            <span>Cetak Slip</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 @endsection

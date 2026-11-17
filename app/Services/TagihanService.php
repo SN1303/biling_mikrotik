@@ -405,6 +405,11 @@ class TagihanService
       if ($request->status_bayar == 1) { // Jika request untuk tagihan lunas
         $unpaidWhere = [];
 
+        // Filter tahun yang sama jika ada
+        if (!empty($request->tahun)) {
+          $unpaidWhere['tahun'] = $request->tahun;
+        }
+
         // Filter bulan yang sama jika ada
         if (!empty($request->bulan)) {
           $unpaidWhere['bulan'] = $request->bulan;

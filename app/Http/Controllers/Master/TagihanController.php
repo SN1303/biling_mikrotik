@@ -106,7 +106,32 @@ class TagihanController extends Controller
   }
   public function lunas()
   {
-    return view('content.tagihan.tagihan_lunas');
+    // Ambil data filter dari database dengan cache 1 bulan
+    $filterData = Cache::remember('tagihan_filter_data', now()->addMonth(), function () {
+      $tahun = DB::table('lamtim_tagihans')
+        ->select('tahun')
+        ->distinct()
+        ->orderBy('tahun', 'desc')
+        ->pluck('tahun')
+        ->toArray();
+
+      $bulan = DB::table('lamtim_tagihans')
+        ->select('bulan')
+        ->distinct()
+        ->orderBy('bulan', 'asc')
+        ->pluck('bulan')
+        ->toArray();
+
+      return [
+        'tahun' => $tahun,
+        'bulan' => $bulan
+      ];
+    });
+
+    $currentMonth = (int) date('n');
+    $currentYear  = (int) date('Y');
+
+    return view('content.tagihan.tagihan_lunas', compact('filterData', 'currentMonth', 'currentYear'));
   }
 
   public function rekap()
