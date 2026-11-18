@@ -328,24 +328,17 @@ body {
    ========================================================================== */
 /* Light Mode Hero Banner (Clean, Modern & Cohesive Card) */
 .mryes-hero-banner {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+  background: radial-gradient(circle at 92% 25%, rgba(14, 165, 233, 0.08) 0%, transparent 50%), linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
   border: 1px solid #bfdbfe !important;
-  border-radius: 16px !important;
+  border-radius: 14px !important;
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
   color: #0f172a !important;
-  box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.08) !important;
+  box-shadow: 0 4px 16px -4px rgba(37, 99, 235, 0.08) !important;
 }
 
 .mryes-hero-banner::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, rgba(37, 99, 235, 0.03) 50%, transparent 70%);
-  pointer-events: none;
+  display: none !important;
 }
 
 .mryes-hero-banner .hero-title {
@@ -360,7 +353,7 @@ body {
   background: #eff6ff !important;
   color: #0284c7 !important;
   border: 1px solid #bae6fd !important;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
 }
 
@@ -370,14 +363,15 @@ body {
 
 /* Dark Mode Hero Banner Override */
 html.dark-style .mryes-hero-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%) !important;
+  background: radial-gradient(circle at 92% 25%, rgba(14, 165, 233, 0.12) 0%, transparent 50%), linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3) !important;
+  overflow: visible !important;
 }
 
 html.dark-style .mryes-hero-banner::after {
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(37, 99, 235, 0.05) 50%, transparent 70%);
+  display: none !important;
 }
 
 html.dark-style .mryes-hero-banner .hero-title {
@@ -396,6 +390,25 @@ html.dark-style .mryes-hero-banner .hero-noc-badge {
 
 html.dark-style .mryes-hero-banner .hero-date {
   color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Ensure Dropdown inside Hero Banner floats over all sibling elements */
+.mryes-hero-banner .dropdown-menu {
+  z-index: 1080 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Sidebar user footer dropup overflow protection */
+.sidebar-user-footer {
+  position: relative;
+  overflow: visible !important;
+}
+.sidebar-user-footer .dropup,
+.sidebar-user-footer .dropdown {
+  position: relative;
+}
+.sidebar-user-footer .dropdown-menu {
+  z-index: 1090 !important;
 }
 
 .metric-icon-box {

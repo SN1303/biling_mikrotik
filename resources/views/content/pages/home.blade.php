@@ -183,64 +183,68 @@ if ($hour >= 5 && $hour < 11) {
 
 @section('content')
 
-<!-- Modern Hero Banner: Telecom & ISP Command Center -->
-<div class="row mb-4">
+<!-- Compact Modern Hero Banner: Telecom & ISP Command Center -->
+<div class="row mb-2.5 mb-md-3">
   <div class="col-12">
-    <div class="card mryes-hero-banner p-3 p-md-4">
-      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-        <div>
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="badge hero-noc-badge">
+    <div class="card mryes-hero-banner py-2.5 px-3 px-md-3.5">
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+        <div class="min-w-0">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="badge hero-noc-badge py-0.5 px-2" style="font-size: 0.68rem; letter-spacing: 0.03em;">
               <i class="mdi mdi-access-point-network me-1"></i> MRYES NOC CONTROL
             </span>
-            <span class="hero-date small">&bull;</span>
-            <span class="hero-date small">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+            <span class="hero-date small" style="font-size: 0.75rem;">&bull;</span>
+            <span class="hero-date small" style="font-size: 0.75rem;">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
           </div>
-          <h3 class="hero-title fw-bold mb-1" style="letter-spacing: -0.02em;">
+          <h5 class="hero-title fw-bold mb-0.5" style="letter-spacing: -0.01em; font-size: 1.15rem;">
             {{ $greeting }}, {{ $currentUser->name ?? 'Administrator' }}! 👋
-          </h3>
-          <p class="hero-subtitle mb-0" style="font-size: 0.9rem; max-width: 620px;">
-            Sistem operasional terintegrasi: Monitoring MikroTik RouterOS, Manajemen PPPoE/Isolir, Penagihan Otomatis, dan Pemetaan ODP.
+          </h5>
+          <p class="hero-subtitle mb-0 text-truncate" style="font-size: 0.78rem; max-width: 650px;">
+            Sistem operasional terintegrasi: Monitoring MikroTik, Manajemen PPPoE/Isolir, Penagihan, dan Pemetaan ODP.
           </p>
         </div>
 
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
           @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
-          <a href="{{ route('user.create') }}" class="btn btn-primary fw-bold d-flex align-items-center gap-1 shadow-sm px-3">
-            <i class="mdi mdi-account-plus"></i>
+          <a href="{{ route('user.create') }}" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1 shadow-sm px-2.5 py-1.5" style="font-size: 0.8125rem;">
+            <i class="mdi mdi-account-plus fs-6"></i>
             <span>Pelanggan Baru</span>
           </a>
           @endif
 
           @if($currentUser && $currentUser->hasRole(1, 2))
-          <a href="{{ route('mikrotik.index') }}" class="btn btn-outline-primary fw-semibold d-flex align-items-center gap-1 shadow-xs px-3" id="hero-btn-mikrotik">
-            <i class="mdi mdi-router-wireless"></i>
+          <a href="{{ route('mikrotik.index') }}" class="btn btn-sm btn-outline-primary fw-semibold d-flex align-items-center gap-1 shadow-xs px-2.5 py-1.5" id="hero-btn-mikrotik" style="font-size: 0.8125rem;">
+            <i class="mdi mdi-router-wireless fs-6"></i>
             <span>Router MikroTik</span>
           </a>
           @endif
 
-          <!-- Theme Mode Switcher Dropdown on Dashboard Banner -->
+          <!-- Theme Mode Switcher Dropdown on Dashboard Banner (Anti Overflow Clipping) -->
+          @php
+            $currentTheme = $configData['style'] ?? 'light';
+            $nextTheme = ($currentTheme === 'dark') ? 'light' : 'dark';
+          @endphp
           <div class="dropdown">
-            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1 shadow-xs px-2.5 py-1.5" data-bs-toggle="dropdown" aria-expanded="false" title="Pilih Mode Tema (Light/Dark)">
-              <i class="mdi {{ (($configData['style'] ?? 'light') === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
-              <span class="d-none d-sm-inline fw-semibold small">{{ (($configData['style'] ?? 'light') === 'dark') ? 'Dark' : 'Light' }}</span>
-              <i class="mdi mdi-chevron-down small text-muted"></i>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 shadow-xs px-2.5 py-1.5" data-bs-toggle="dropdown" aria-expanded="false" title="Pilih Mode Tema (Light/Dark/System)" style="font-size: 0.8125rem;">
+              <i class="mdi {{ ($currentTheme === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
+              <span class="d-none d-sm-inline fw-semibold">{{ ($currentTheme === 'dark') ? 'Dark' : 'Light' }}</span>
+              <i class="mdi mdi-chevron-down text-muted" style="font-size: 0.75rem;"></i>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="border-radius: 10px; min-width: 140px; z-index: 1070;">
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border py-1" style="border-radius: 10px; min-width: 140px; z-index: 1080;">
               <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'light') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('light')">
+                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'light') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('light')">
                   <i class="mdi mdi-weather-sunny text-warning me-2 fs-5"></i>
                   <span class="align-middle fw-medium">Light</span>
                 </a>
               </li>
               <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'dark') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('dark')">
+                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'dark') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('dark')">
                   <i class="mdi mdi-weather-night text-info me-2 fs-5"></i>
                   <span class="align-middle fw-medium">Dark</span>
                 </a>
               </li>
               <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center" href="javascript:void(0);" onclick="setAppTheme('system')">
+                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'system') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('system')">
                   <i class="mdi mdi-monitor text-secondary me-2 fs-5"></i>
                   <span class="align-middle fw-medium">System</span>
                 </a>
@@ -254,7 +258,7 @@ if ($hour >= 5 && $hour < 11) {
 </div>
 
 <!-- 4 Key Metric Cards -->
-<div class="row g-2 g-sm-3 mb-4">
+<div class="row g-2 g-sm-3 mb-3">
   <!-- Total Pelanggan Aktif -->
   <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
