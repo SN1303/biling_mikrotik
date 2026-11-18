@@ -218,6 +218,35 @@ if ($hour >= 5 && $hour < 11) {
             <span>Router MikroTik</span>
           </a>
           @endif
+
+          <!-- Theme Mode Switcher Dropdown on Dashboard Banner -->
+          <div class="dropdown">
+            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1 shadow-xs px-2.5 py-1.5" data-bs-toggle="dropdown" aria-expanded="false" title="Pilih Mode Tema (Light/Dark)">
+              <i class="mdi {{ (($configData['style'] ?? 'light') === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
+              <span class="d-none d-sm-inline fw-semibold small">{{ (($configData['style'] ?? 'light') === 'dark') ? 'Dark' : 'Light' }}</span>
+              <i class="mdi mdi-chevron-down small text-muted"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="border-radius: 10px; min-width: 140px; z-index: 1070;">
+              <li>
+                <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'light') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('light')">
+                  <i class="mdi mdi-weather-sunny text-warning me-2 fs-5"></i>
+                  <span class="align-middle fw-medium">Light</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'dark') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('dark')">
+                  <i class="mdi mdi-weather-night text-info me-2 fs-5"></i>
+                  <span class="align-middle fw-medium">Dark</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item py-1.5 d-flex align-items-center" href="javascript:void(0);" onclick="setAppTheme('system')">
+                  <i class="mdi mdi-monitor text-secondary me-2 fs-5"></i>
+                  <span class="align-middle fw-medium">System</span>
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

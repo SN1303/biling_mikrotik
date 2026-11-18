@@ -43,3 +43,22 @@ $menuCollapsed = ($configData['menuCollapsed'] === 'layout-menu-collapsed') ? js
   });
 </script>
 @endif
+
+<script>
+  function setAppTheme(theme) {
+    if (theme === 'system') {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme = isDark ? 'dark' : 'light';
+    }
+    // Set cookie valid 1 tahun untuk PHP
+    document.cookie = "style=" + theme + ";path=/;max-age=31536000;SameSite=Lax";
+    try {
+      localStorage.setItem('templateCustomizer--Style', theme);
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('--Style')) localStorage.setItem(k, theme);
+      }
+    } catch (e) {}
+    window.location.reload();
+  }
+</script>

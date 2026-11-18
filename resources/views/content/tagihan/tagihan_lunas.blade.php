@@ -1242,6 +1242,9 @@
 @endsection
 
 @section('content')
+@php
+  $configData = Helper::appClasses();
+@endphp
 
 <!-- Header Card & Periode Filter (Compact & Rapi) -->
 <div class="card border-0 shadow-sm mb-2">
@@ -1286,6 +1289,9 @@
           </select>
           <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data" style="width: 30px; height: 30px;">
             <i class="mdi mdi-refresh"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-2 shadow-xs" onclick="setAppTheme('{{ (($configData['style'] ?? 'light') === 'dark') ? 'light' : 'dark' }}')" title="Ganti Mode Tema (Light/Dark)" style="width: 30px; height: 30px;">
+            <i class="mdi {{ (($configData['style'] ?? 'light') === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }}"></i>
           </button>
         </div>
 
