@@ -5,7 +5,8 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 
-:root {
+:root,
+html.light-style {
   /* Core Brand & Accents */
   --mryes-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mryes-primary: #2563eb;
@@ -20,22 +21,55 @@
   --mryes-indigo: #6366f1;
   --mryes-violet: #8b5cf6;
 
-  /* Neutrals & Surfaces */
+  /* Surfaces & Canvas in Light Mode */
   --mryes-canvas: #f8fafc;
   --mryes-surface: #ffffff;
   --mryes-border: #e2e8f0;
   --mryes-border-subtle: #f1f5f9;
   
-  /* Text */
+  /* Text in Light Mode */
   --mryes-text-primary: #0f172a;
   --mryes-text-secondary: #475569;
   --mryes-text-muted: #94a3b8;
 
-  /* Sidebar Dark Obsidian Palette */
+  /* Sidebar in Light Mode: Clean White SaaS */
+  --mryes-sidebar-bg: #ffffff;
+  --mryes-sidebar-border: #e2e8f0;
+  --mryes-sidebar-text: #475569;
+  --mryes-sidebar-text-active: #ffffff;
+  --mryes-sidebar-hover: #f1f5f9;
+  --mryes-sidebar-brand: #0f172a;
+  --mryes-sidebar-brand-sub: #64748b;
+  --mryes-sidebar-user-bg: #f8fafc;
+  --mryes-sidebar-toggle: #64748b;
+  --mryes-navbar-bg: rgba(255, 255, 255, 0.95);
+  --mryes-navbar-border: #e2e8f0;
+}
+
+html.dark-style {
+  /* Surfaces & Canvas in Dark Mode */
+  --mryes-canvas: #0f172a;
+  --mryes-surface: #1e293b;
+  --mryes-border: rgba(255, 255, 255, 0.1);
+  --mryes-border-subtle: rgba(255, 255, 255, 0.05);
+  
+  /* Text in Dark Mode */
+  --mryes-text-primary: #f8fafc;
+  --mryes-text-secondary: #94a3b8;
+  --mryes-text-muted: #64748b;
+
+  /* Sidebar in Dark Mode: Obsidian Slate */
   --mryes-sidebar-bg: #0b1120;
   --mryes-sidebar-border: rgba(255, 255, 255, 0.08);
   --mryes-sidebar-text: #94a3b8;
   --mryes-sidebar-text-active: #ffffff;
+  --mryes-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --mryes-sidebar-brand: #ffffff;
+  --mryes-sidebar-brand-sub: #94a3b8;
+  --mryes-sidebar-user-bg: #0f172a;
+  --mryes-sidebar-toggle: #94a3b8;
+  --mryes-navbar-bg: rgba(30, 41, 59, 0.95);
+  --mryes-navbar-border: rgba(255, 255, 255, 0.1);
 }
 
 /* ==========================================================================
@@ -65,13 +99,13 @@ body {
 }
 
 /* ==========================================================================
-   SIDEBAR (DARK OBSIDIAN THEME - PRESERVING SNEAT NATIVE GEOMETRY)
+   SIDEBAR (THEME RESPONSIVE - LIGHT / DARK ADAPTIVE)
    ========================================================================== */
 .bg-menu-theme {
   background-color: var(--mryes-sidebar-bg) !important;
   color: var(--mryes-sidebar-text) !important;
   border-right: 1px solid var(--mryes-sidebar-border) !important;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.03) !important;
 }
 
 /* Brand area */
@@ -80,20 +114,20 @@ body {
 }
 
 .bg-menu-theme .app-brand-text {
-  color: #ffffff !important;
+  color: var(--mryes-sidebar-brand) !important;
   font-weight: 800 !important;
   letter-spacing: -0.02em !important;
   font-size: 1.15rem !important;
 }
 
 .bg-menu-theme .layout-menu-toggle {
-  color: #64748b !important;
+  color: var(--mryes-sidebar-toggle) !important;
 }
 .bg-menu-theme .layout-menu-toggle svg {
-  fill: #64748b !important;
+  fill: var(--mryes-sidebar-toggle) !important;
 }
 .bg-menu-theme .layout-menu-toggle:hover svg {
-  fill: #ffffff !important;
+  fill: var(--mryes-sidebar-brand) !important;
 }
 
 /* Section Header Dividers */
@@ -102,7 +136,7 @@ body {
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.1em !important;
-  color: #64748b !important;
+  color: var(--mryes-text-muted) !important;
 }
 
 /* Menu links & icons */
@@ -112,18 +146,18 @@ body {
 }
 
 .bg-menu-theme .menu-icon {
-  color: #64748b !important;
+  color: var(--mryes-text-muted) !important;
   transition: all 0.18s ease !important;
 }
 
 /* Menu Hover */
 .bg-menu-theme .menu-item:not(.active) > .menu-link:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  color: #ffffff !important;
+  background-color: var(--mryes-sidebar-hover) !important;
+  color: var(--mryes-sidebar-brand) !important;
 }
 
 .bg-menu-theme .menu-item:not(.active) > .menu-link:hover .menu-icon {
-  color: #38bdf8 !important;
+  color: var(--mryes-primary) !important;
 }
 
 /* Active Main Menu Item */
@@ -131,7 +165,7 @@ body {
   background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%) !important;
   color: #ffffff !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28) !important;
 }
 
 .bg-menu-theme .menu-item.active > .menu-link:not(.menu-toggle) .menu-icon {
@@ -140,50 +174,51 @@ body {
 
 /* Open toggle menu item */
 .bg-menu-theme .menu-item.open > .menu-link.menu-toggle {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
+  background-color: var(--mryes-sidebar-hover) !important;
+  color: var(--mryes-sidebar-brand) !important;
 }
 .bg-menu-theme .menu-item.open > .menu-link.menu-toggle .menu-icon {
-  color: #38bdf8 !important;
+  color: var(--mryes-primary) !important;
 }
 
 /* Chevron arrow on toggle */
 .bg-menu-theme .menu-toggle::after {
-  color: #64748b !important;
+  color: var(--mryes-text-muted) !important;
 }
 .bg-menu-theme .menu-item.open > .menu-toggle::after,
 .bg-menu-theme .menu-item.active > .menu-toggle::after {
-  color: #ffffff !important;
+  color: var(--mryes-sidebar-brand) !important;
 }
 
 /* Submenu items */
 .bg-menu-theme .menu-sub > .menu-item > .menu-link {
-  color: #94a3b8 !important;
+  color: var(--mryes-sidebar-text) !important;
 }
 
 .bg-menu-theme .menu-sub > .menu-item > .menu-link:hover {
-  color: #ffffff !important;
-  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: var(--mryes-sidebar-brand) !important;
+  background-color: var(--mryes-sidebar-hover) !important;
 }
 
 .bg-menu-theme .menu-sub > .menu-item.active > .menu-link {
-  background-color: rgba(37, 99, 235, 0.18) !important;
-  color: #38bdf8 !important;
-  font-weight: 600 !important;
+  background-color: var(--mryes-sidebar-hover) !important;
+  color: var(--mryes-primary) !important;
+  font-weight: 700 !important;
 }
 
 /* Submenu bullet dot */
 .bg-menu-theme .menu-sub > .menu-item > .menu-link:before {
-  background-color: #475569 !important;
+  background-color: var(--mryes-text-muted) !important;
 }
 .bg-menu-theme .menu-sub > .menu-item.active > .menu-link:before {
-  background-color: #38bdf8 !important;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6) !important;
+  background-color: var(--mryes-primary) !important;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.5) !important;
 }
 
 /* Shadow fade at top of menu */
 .bg-menu-theme .menu-inner-shadow {
-  background: linear-gradient(var(--mryes-sidebar-bg) 5%, rgba(11, 17, 32, 0.75) 45%, rgba(11, 17, 32, 0.2) 80%, transparent) !important;
+  display: none !important;
+}
 }
 
 /* Custom Scrollbar for Sidebar */
@@ -201,10 +236,10 @@ body {
    TOP NAVBAR MODERN STYLING
    ========================================================================== */
 .layout-navbar {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: var(--mryes-navbar-bg) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
-  border: 1px solid var(--mryes-border) !important;
+  border: 1px solid var(--mryes-navbar-border) !important;
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.02) !important;
   border-radius: 12px !important;
 }
@@ -215,7 +250,7 @@ body {
   gap: 0.5rem;
   padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  background: #f1f5f9;
+  background: var(--mryes-border-subtle);
   border: 1px solid var(--mryes-border);
   font-size: 0.75rem;
   font-weight: 600;
@@ -291,13 +326,15 @@ body {
 /* ==========================================================================
    STAT METRICS & HERO BANNER
    ========================================================================== */
+/* Light Mode Hero Banner (Clean, Modern & Cohesive Card) */
 .mryes-hero-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+  border: 1px solid #bfdbfe !important;
   border-radius: 16px !important;
   position: relative;
   overflow: hidden;
-  color: #ffffff;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.08) !important;
 }
 
 .mryes-hero-banner::after {
@@ -307,8 +344,58 @@ body {
   right: -20%;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(37, 99, 235, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, rgba(37, 99, 235, 0.03) 50%, transparent 70%);
   pointer-events: none;
+}
+
+.mryes-hero-banner .hero-title {
+  color: #0f172a !important;
+}
+
+.mryes-hero-banner .hero-subtitle {
+  color: #475569 !important;
+}
+
+.mryes-hero-banner .hero-noc-badge {
+  background: #eff6ff !important;
+  color: #0284c7 !important;
+  border: 1px solid #bae6fd !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.mryes-hero-banner .hero-date {
+  color: #64748b !important;
+}
+
+/* Dark Mode Hero Banner Override */
+html.dark-style .mryes-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-style .mryes-hero-banner::after {
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(37, 99, 235, 0.05) 50%, transparent 70%);
+}
+
+html.dark-style .mryes-hero-banner .hero-title {
+  color: #ffffff !important;
+}
+
+html.dark-style .mryes-hero-banner .hero-subtitle {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+html.dark-style .mryes-hero-banner .hero-noc-badge {
+  background: rgba(14, 165, 233, 0.2) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+html.dark-style .mryes-hero-banner .hero-date {
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 
 .metric-icon-box {

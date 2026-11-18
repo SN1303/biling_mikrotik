@@ -18,6 +18,15 @@ $currentUser = auth()->user();
     </div>
 
     <div class="d-flex align-items-center gap-2">
+      <!-- Theme Switcher (Mobile 1-Tap) -->
+      @php
+        $currentStyleVal = $configData['style'] ?? 'light';
+        $nextStyleVal = ($currentStyleVal === 'dark') ? 'light' : 'dark';
+      @endphp
+      <a href="javascript:void(0);" onclick="setAppTheme('{{ $nextStyleVal }}')" class="btn btn-sm btn-icon btn-text-secondary rounded-pill" title="Ganti Mode Tema" style="width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+        <i class="mdi {{ ($currentStyleVal === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
+      </a>
+
       @if($currentUser)
       <div class="dropdown">
         <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-decoration-none" data-bs-toggle="dropdown" aria-expanded="false">
@@ -69,4 +78,24 @@ $currentUser = auth()->user();
     </div>
   </div>
 </nav>
+
+<script>
+  if (typeof setAppTheme !== 'function') {
+    function setAppTheme(theme) {
+      if (theme === 'system') {
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        theme = isDark ? 'dark' : 'light';
+      }
+      document.cookie = "style=" + theme + ";path=/;max-age=31536000;SameSite=Lax";
+      try {
+        localStorage.setItem('templateCustomizer--Style', theme);
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.includes('--Style')) localStorage.setItem(k, theme);
+        }
+      } catch (e) {}
+      window.location.reload();
+    }
+  }
+</script>
 

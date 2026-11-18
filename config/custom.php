@@ -12,7 +12,7 @@ return [
     'myStyle' => 'light', // Options[String]: light(default), dark & system mode
     'myRTLSupport' => false, // options[Boolean]: true(default), false
     'myRTLMode' => false, // options[Boolean]: false(default), true
-    'hasCustomizer' => false, // Display customizer or not
+    'hasCustomizer' => true, // Display customizer or not
     'displayCustomizer' => false, // Display customizer UI or not
     'contentLayout' => 'wide', // options[String]: 'compact', 'wide' (compact=container-xxl, wide=container-fluid)
     'navbarType' => 'fixed', // options[String]: 'fixed', 'static', 'hidden' (Only for vertical Layout)

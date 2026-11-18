@@ -190,30 +190,30 @@ if ($hour >= 5 && $hour < 11) {
       <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem;">
+            <span class="badge hero-noc-badge">
               <i class="mdi mdi-access-point-network me-1"></i> MRYES NOC CONTROL
             </span>
-            <span class="text-white-50 small">&bull;</span>
-            <span class="text-white-50 small">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+            <span class="hero-date small">&bull;</span>
+            <span class="hero-date small">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
           </div>
-          <h3 class="text-white fw-bold mb-1" style="letter-spacing: -0.02em;">
+          <h3 class="hero-title fw-bold mb-1" style="letter-spacing: -0.02em;">
             {{ $greeting }}, {{ $currentUser->name ?? 'Administrator' }}! 👋
           </h3>
-          <p class="text-white-50 mb-0" style="font-size: 0.9rem; max-width: 620px;">
+          <p class="hero-subtitle mb-0" style="font-size: 0.9rem; max-width: 620px;">
             Sistem operasional terintegrasi: Monitoring MikroTik RouterOS, Manajemen PPPoE/Isolir, Penagihan Otomatis, dan Pemetaan ODP.
           </p>
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
           @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
-          <a href="{{ route('user.create') }}" class="btn btn-light text-dark fw-bold d-flex align-items-center gap-1 shadow-sm">
-            <i class="mdi mdi-account-plus text-primary"></i>
+          <a href="{{ route('user.create') }}" class="btn btn-primary fw-bold d-flex align-items-center gap-1 shadow-sm px-3">
+            <i class="mdi mdi-account-plus"></i>
             <span>Pelanggan Baru</span>
           </a>
           @endif
 
           @if($currentUser && $currentUser->hasRole(1, 2))
-          <a href="{{ route('mikrotik.index') }}" class="btn btn-primary d-flex align-items-center gap-1 shadow-sm" style="background: rgba(255, 255, 255, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important;">
+          <a href="{{ route('mikrotik.index') }}" class="btn btn-outline-primary fw-semibold d-flex align-items-center gap-1 shadow-xs px-3" id="hero-btn-mikrotik">
             <i class="mdi mdi-router-wireless"></i>
             <span>Router MikroTik</span>
           </a>

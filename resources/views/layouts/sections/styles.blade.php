@@ -9,10 +9,13 @@
 <link rel="stylesheet" href="{{ asset(mix('assets/vendor/fonts/flag-icons.css')) }}" />
 
 <!-- Core CSS -->
-<link rel="stylesheet" href="{{ asset(mix('assets/vendor/css' .$configData['rtlSupport'] .'/core.css')) }}"
+@php
+  $styleSuffix = ($configData['style'] === 'dark') ? '-dark' : '';
+@endphp
+<link rel="stylesheet" href="{{ asset(mix('assets/vendor/css' .$configData['rtlSupport'] .'/core' . $styleSuffix . '.css')) }}"
   class="{{ $configData['hasCustomizer'] ? 'template-customizer-core-css' : '' }}" />
 <link rel="stylesheet"
-  href="{{ asset(mix('assets/vendor/css' .$configData['rtlSupport'] .'/' .$configData['theme'].'.css')) }}"
+  href="{{ asset(mix('assets/vendor/css' .$configData['rtlSupport'] .'/' .$configData['theme'] . $styleSuffix . '.css')) }}"
   class="{{ $configData['hasCustomizer'] ? 'template-customizer-theme-css' : '' }}" />
 <link rel="stylesheet" href="{{ asset(mix('assets/css/demo.css')) }}" />
 
@@ -31,7 +34,7 @@
 <link rel="stylesheet" href="{{asset('assets/vendor/libs/select2/select2.css')}}" />
 
 <!-- MRYES Modern Design System -->
-<link rel="stylesheet" href="{{ asset('assets/css/mryes-modern.css') }}?v=2.3" />
+<link rel="stylesheet" href="{{ asset('assets/css/mryes-modern.css') }}?v=2.4" />
 
 @yield('vendor-style')
 

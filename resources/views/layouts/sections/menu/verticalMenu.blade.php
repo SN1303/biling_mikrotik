@@ -259,16 +259,16 @@ $currentUser = auth()->user();
   </ul>
 
   @if($currentUser)
-  <div class="p-3 border-top mt-auto bg-menu-theme">
+  <div class="p-3 border-top mt-auto sidebar-user-footer" style="background: var(--mryes-sidebar-user-bg); border-color: var(--mryes-sidebar-border) !important;">
     <div class="d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-2 overflow-hidden">
         <div class="avatar avatar-sm flex-shrink-0">
-          <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px; background: linear-gradient(135deg, #2563eb, #0ea5e9); font-size: 0.8rem;">
+          <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" style="width: 32px; height: 32px; background: linear-gradient(135deg, #2563eb, #0ea5e9); font-size: 0.8rem;">
             {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
           </div>
         </div>
         <div class="text-truncate" style="line-height: 1.2;">
-          <div class="fw-semibold text-dark text-truncate" style="font-size: 0.8125rem;">{{ $currentUser->name ?? '-' }}</div>
+          <div class="fw-semibold text-truncate sidebar-user-name" style="font-size: 0.8125rem; color: var(--mryes-sidebar-brand);">{{ $currentUser->name ?? '-' }}</div>
           <small class="text-muted" style="font-size: 0.7rem;">{{ $currentUser->role_name ?? 'User' }}</small>
         </div>
       </div>

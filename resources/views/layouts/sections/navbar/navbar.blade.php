@@ -44,6 +44,34 @@ $currentUser = Auth::user();
         </li>
         @endif
 
+        <!-- Style Switcher (Light / Dark Mode) -->
+        <li class="nav-item dropdown-style-switcher dropdown me-1">
+          <a class="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow d-flex align-items-center justify-content-center" href="javascript:void(0);" data-bs-toggle="dropdown" title="Ganti Mode Tema (Light/Dark)" style="width: 36px; height: 36px;">
+            <i class="mdi {{ ($configData['style'] === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-4"></i>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end dropdown-styles shadow-sm border py-1" style="border-radius: 12px; min-width: 140px;">
+            <li>
+              <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($configData['style'] === 'light') ? 'active' : '' }}" href="javascript:void(0);" data-theme="light" onclick="setAppTheme('light')">
+                <i class="mdi mdi-weather-sunny text-warning me-2 fs-5"></i>
+                <span class="align-middle fw-semibold">Light</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($configData['style'] === 'dark') ? 'active' : '' }}" href="javascript:void(0);" data-theme="dark" onclick="setAppTheme('dark')">
+                <i class="mdi mdi-weather-night text-info me-2 fs-5"></i>
+                <span class="align-middle fw-semibold">Dark</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-1.5 d-flex align-items-center" href="javascript:void(0);" data-theme="system" onclick="setAppTheme('system')">
+                <i class="mdi mdi-monitor text-secondary me-2 fs-5"></i>
+                <span class="align-middle fw-semibold">System</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        <!-- / Style Switcher -->
+
         <!-- User Dropdown -->
         <li class="nav-item navbar-dropdown dropdown-user dropdown ms-1">
           <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center gap-2 p-1 rounded-pill" href="javascript:void(0);" data-bs-toggle="dropdown" style="background: #f8fafc; border: 1px solid #e2e8f0;">
@@ -138,3 +166,22 @@ $currentUser = Auth::user();
 @endif
 </nav>
 <!-- / Navbar -->
+
+<script>
+  function setAppTheme(theme) {
+    if (theme === 'system') {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme = isDark ? 'dark' : 'light';
+    }
+    // Simpan preference ke cookie (1 tahun) & localStorage
+    document.cookie = "style=" + theme + ";path=/;max-age=31536000;SameSite=Lax";
+    try {
+      localStorage.setItem('templateCustomizer--Style', theme);
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('--Style')) localStorage.setItem(k, theme);
+      }
+    } catch (e) {}
+    window.location.reload();
+  }
+</script>
