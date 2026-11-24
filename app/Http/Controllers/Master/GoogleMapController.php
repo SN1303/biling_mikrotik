@@ -619,6 +619,7 @@ class GoogleMapController extends Controller
                 'idArea' => $validated['idArea'] ?? null,
                 'tglDafatar' => $validated['tglDaftar'] ?? now()->toDateString(),
                 'tglJatuhTempo' => $validated['tglJatuhTempo'] ?? now()->addMonth()->toDateString(),
+                'mulaiTagih' => Lamtim_user_details::mulaiTagihDefault($validated['tglDaftar'] ?? now()),
                 'statusPpn' => $validated['status_ppn'] ?? 0,
                 'statusTagihan' => 1,
                 'jenisBayar' => 1,

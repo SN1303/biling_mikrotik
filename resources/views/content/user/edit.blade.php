@@ -165,6 +165,15 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
+          <input type="month" name="mulai_tagih" id="mulai_tagih" class="form-control"
+            value="{{ $query->user_detail?->mulaiTagih ? substr($query->user_detail->mulaiTagih, 0, 7) : '' }}" />
+          <label for="mulai_tagih">Mulai Ditagih</label>
+        </div>
+        <div class="form-text">Kosong = sudah ditagih sejak awal (pelanggan lama).</div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-floating form-floating-outline">
           <select name="status_ppn" class="form-select">
             <option @selected($query->user_detail?->statusPpn == 1) value="1">Aktif</option>
             <option @selected($query->user_detail?->statusPpn == 0) value="0">Tidak</option>

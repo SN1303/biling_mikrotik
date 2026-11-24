@@ -192,7 +192,9 @@ class TagihanRepository
         $q->where('statusIsolir', 0);
       })
       ->whereHas('user_detail', function ($q) {
-        $q->where('statusTagihan', 1);
+        $q->where('statusTagihan', 1)
+          // pelanggan baru dilewati sampai bulan "mulai ditagih" (masa PSB)
+          ->where(fn ($m) => $m->whereNull('mulaiTagih')->orWhere('mulaiTagih', '<=', Carbon::now()->startOfMonth()->toDateString()));
       })
       ->with(['user_mikrotik:id,idUser,idPaket,diskon'])
       ->with(['user_mikrotik.paket:id,idKategori,nama,price'])

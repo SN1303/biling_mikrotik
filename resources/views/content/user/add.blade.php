@@ -859,10 +859,28 @@
 
               <div class="col-md-6">
                 <div class="form-floating form-floating-outline">
-                  <input type="date" name="jatuh_tempo" id="jatuh_tempo" class="form-control" value="{{ now()->addDays(10)->format('Y-m-d') }}" required />
-                  <label for="jatuh_tempo">Jatuh Tempo</label>
+                  <input type="date" name="jatuh_tempo" id="jatuh_tempo" class="form-control" value="{{ now()->day(10)->format('Y-m-d') }}" required />
+                  <label for="jatuh_tempo">Jatuh Tempo (yang dipakai hanya tanggalnya)</label>
                 </div>
               </div>
+
+              <div class="col-md-6">
+                <div class="form-floating form-floating-outline">
+                  <input type="month" name="mulai_tagih" id="mulai_tagih" class="form-control"
+                    value="{{ substr(\App\Models\Lamtim_user_details::mulaiTagihDefault(now()), 0, 7) }}" />
+                  <label for="mulai_tagih">Mulai Ditagih</label>
+                </div>
+                <div class="form-text">Pasang tgl 1–19: bulan depan, tgl 20+: 2 bulan lagi. Boleh diubah.</div>
+              </div>
+              <script>
+                // Isi otomatis "Mulai Ditagih" saat tanggal pasang diubah (aturan sama dengan server)
+                document.getElementById('tgl_daftar').addEventListener('change', function () {
+                  if (!this.value) return;
+                  const [y, m, d] = this.value.split('-').map(Number);
+                  const t = new Date(y, m - 1 + (d <= {{ \App\Models\Lamtim_user_details::BATAS_PASANG_BULAN_DEPAN }} ? 1 : 2), 1);
+                  document.getElementById('mulai_tagih').value = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0');
+                });
+              </script>
 
               <!-- Jenis Bayar & PPN -->
               <div class="col-md-6">

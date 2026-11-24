@@ -92,6 +92,7 @@ class UserController extends Controller
       'status_isolir'   => ['required', 'in:0,1'],
       'tgl_daftar'      => ['required', 'date'],
       'jatuh_tempo'     => ['required', 'date'],
+      'mulai_tagih'     => ['nullable', 'date_format:Y-m'],
       'status_ppn'      => ['required', 'in:0,1'],
       'status_tagihan'  => ['required', 'in:0,1'],
       'jenis_bayar'     => ['required', 'in:1,2'],
@@ -154,6 +155,9 @@ class UserController extends Controller
       'idArea'        => $idArea,
       'tglDafatar'    => $validated['tgl_daftar'],
       'tglJatuhTempo' => $validated['jatuh_tempo'],
+      'mulaiTagih'    => !empty($validated['mulai_tagih'])
+        ? $validated['mulai_tagih'] . '-01'
+        : \App\Models\Lamtim_user_details::mulaiTagihDefault($validated['tgl_daftar']),
       'statusPpn'     => $validated['status_ppn'],
       'statusTagihan' => $validated['status_tagihan'],
       'jenisBayar'    => $validated['jenis_bayar'],
@@ -273,6 +277,7 @@ class UserController extends Controller
       'tgl_daftar' => ['required', 'date'],
       //'jatuh_tempo' => ['required', 'date', 'after_or_equal:tgl_daftar'],
       'jatuh_tempo' => ['required', 'date'],
+      'mulai_tagih' => ['nullable', 'date_format:Y-m'],
       'status_ppn' => ['required', 'in:0,1'],
       'status_tagihan' => ['required', 'in:0,1'],
       'jenis_bayar' => ['required', 'in:1,2'],
@@ -319,6 +324,10 @@ class UserController extends Controller
       'alamat'        => $validated['alamat'],
       'keterangan'    => $validated['keterangan'],
     ];
+    // kosong = biarkan nilai lama (pelanggan lama tetap NULL = sudah ditagih)
+    if (!empty($validated['mulai_tagih'])) {
+      $arataArrayDetail['mulaiTagih'] = $validated['mulai_tagih'] . '-01';
+    }
     $decryptedId = decrypt($id);
     $response = $this->service->updateUserMikrotik($arataArray, $arataArrayDetail, $decryptedId);
 
