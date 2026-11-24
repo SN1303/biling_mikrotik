@@ -12,6 +12,8 @@ return [
     |
     */
   'ppn' => env('PPN', 11),
+  // Tanggal jatuh tempo bila pelanggan belum punya tanggal jatuh tempo sendiri
+  'jatuh_tempo_default' => (int) env('JATUH_TEMPO_DEFAULT', 10),
   // Konfigurasi Aplikasi
   // 'app_name' => env('APP_NAME', 'Lamtim Billing Mikrotik'),
   // 'app_version' => env('APP_VERSION', '1.0.0'),

@@ -163,6 +163,19 @@ class TagihanRepository
     return $query->select($columns)->orderBy('tglBayar', 'desc')->get();
   }
 
+  /**
+   * Prabayar: tagihan periode X jatuh tempo di bulan X juga, pada tanggal milik pelanggan
+   * (hanya tanggalnya yang dipakai). Tanggal 29–31 dibatasi ke hari terakhir bulan pendek.
+   */
+  public static function jatuhTempo($tglPelanggan, Carbon $periode): Carbon
+  {
+    $hari = $tglPelanggan
+      ? Carbon::parse($tglPelanggan)->day
+      : config('billing.jatuh_tempo_default', 10);
+
+    return $periode->copy()->startOfMonth()->day(min($hari, $periode->daysInMonth));
+  }
+
   public function generateTagihanBulananRepo()
   {
     $result = [
@@ -184,7 +197,7 @@ class TagihanRepository
       ->with(['user_mikrotik:id,idUser,idPaket,diskon'])
       ->with(['user_mikrotik.paket:id,idKategori,nama,price'])
       ->with(['user_mikrotik.paket.kategori:id,nama'])
-      ->with(['user_detail:id,idUser,statusPpn,statusTagihan'])
+      ->with(['user_detail:id,idUser,statusPpn,statusTagihan,tglJatuhTempo'])
       ->get(['id', 'name', 'isActive']);
 
     foreach ($users as $user) {
@@ -256,7 +269,7 @@ class TagihanRepository
           'noTagihan' => strtoupper($user->id . '-' . $now->month . $now->year . '-' . uniqid()),
           'bulan' => $now->month,
           'tahun' => $now->year,
-          'tglJatuhTempo' => $now->addDays(30),
+          'tglJatuhTempo' => self::jatuhTempo(optional($user->user_detail)->tglJatuhTempo, $now),
           'create_by' => Auth::id() ?? 1,
           'statusBayar' => $isGratis ? 1 : 0,
           'terbayar' => 0,

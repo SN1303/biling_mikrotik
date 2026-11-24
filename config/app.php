@@ -70,7 +70,9 @@ return [
     |
     */
 
-  'timezone' => 'UTC',
+  // WIB. Penting untuk billing: pergantian bulan, "hari ini" jatuh tempo & jadwal generate
+  // mengikuti jam lokal. WITA = Asia/Makassar, WIT = Asia/Jayapura.
+  'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
   /*
     |--------------------------------------------------------------------------

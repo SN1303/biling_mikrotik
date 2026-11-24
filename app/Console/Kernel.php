@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Prabayar: tagihan bulan berjalan dibuat otomatis tiap tanggal 1 (jam lokal, lihat config/app.php timezone)
+        $schedule->command('tagihan:generate')->monthlyOn(1, '00:10')->withoutOverlapping();
     }
 
     /**
