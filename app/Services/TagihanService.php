@@ -369,7 +369,7 @@ class TagihanService
 
   /**
    * Batal pembayaran tagihan
-   * Mengembalikan status tagihan menjadi belum lunas dan menghapus data transaksi
+   * Mengembalikan status tagihan menjadi belum lunas dan menandai transaksinya dibatalkan (soft delete)
    *
    * @param string $encryptedId
    * @return \Illuminate\Http\JsonResponse
@@ -427,8 +427,11 @@ class TagihanService
       }
 
       $rawId = $tagihan->getRawOriginal('id');
-      // Hapus data transaksi yang terkait dengan tagihan ini
-      Lamtim_transaksi::where('idTagihan', $rawId)->delete();
+      // Tandai transaksi sebagai dibatalkan (soft delete) agar jejaknya tetap tersimpan
+      Lamtim_transaksi::where('idTagihan', $rawId)->update([
+        'batalOleh' => Auth::user()->name,
+        'deleted_at' => Carbon::now(),
+      ]);
 
       // Update status tagihan kembali ke belum lunas dan reset terbayar = 0
       $updateResult = $tagihan->update([

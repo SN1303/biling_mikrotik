@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lamtim_transaksi extends Model
 {
+  // Transaksi yang dibatalkan disimpan (deleted_at + batalOleh), tidak dihapus permanen
+  use SoftDeletes;
+
   protected $fillable = [
     'idUser',
     'idTagihan',
