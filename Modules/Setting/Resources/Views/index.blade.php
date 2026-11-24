@@ -38,12 +38,12 @@ $(function () {
 
         Swal.fire({
             title: '<span class="text-danger">Apakah Anda Yakin?</span>',
-            html: `Data yang dihapus <b>tidak dapat dikembalikan</b>!<br><br>Ketik <b>HAPUS</b> di bawah untuk mengonfirmasi:`,
+            html: `Data yang dihapus <b>tidak dapat dikembalikan</b>!<br><br>Masukkan <b>password akun Anda</b> untuk mengonfirmasi:`,
             icon: 'warning',
-            input: 'text',
+            input: 'password',
             inputAttributes: {
-                autocapitalize: 'on',
-                placeholder: 'Ketik HAPUS di sini'
+                autocomplete: 'current-password',
+                placeholder: 'Password akun Anda'
             },
             showCancelButton: true,
             showDenyButton: false,
@@ -58,8 +58,8 @@ $(function () {
             buttonsStyling: false,
             allowOutsideClick: () => !Swal.isLoading(),
             preConfirm: (inputValue) => {
-                if (inputValue !== 'HAPUS') {
-                    Swal.showValidationMessage('Anda harus mengetik "HAPUS" dengan benar!');
+                if (!inputValue) {
+                    Swal.showValidationMessage('Password wajib diisi.');
                     return false;
                 }
                 return inputValue;
@@ -88,7 +88,7 @@ $(function () {
                 $.ajax({
                     url: "{{ route('setting.hapus-bersih') }}",
                     method: 'POST',
-                    data: formHapus.serialize() + '&konfirmasi=' + result.value,
+                    data: formHapus.serialize() + '&password=' + encodeURIComponent(result.value),
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },

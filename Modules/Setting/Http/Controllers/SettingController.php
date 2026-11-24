@@ -17,10 +17,11 @@ class SettingController extends Controller
     public function hapusBersih(Request $request)
     {
         $request->validate([
-            'konfirmasi' => 'required|in:HAPUS',
+            'password' => 'required|current_password',
             'groups' => 'required|array',
         ], [
-            'konfirmasi.in' => 'Anda harus mengetik "HAPUS" untuk melanjutkan.',
+            'password.required' => 'Masukkan password akun Anda untuk melanjutkan.',
+            'password.current_password' => 'Password salah. Data tidak dihapus.',
             'groups.required' => 'Pilih minimal satu kelompok data yang akan dihapus.'
         ]);
 
