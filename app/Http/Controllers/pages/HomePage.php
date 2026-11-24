@@ -45,10 +45,10 @@ class HomePage extends Controller
         ->where('statusBayar', 0)
         ->count(),
 
-      // Revenue Statistics (memperhitungkan cicilan: pakai kolom terbayar)
-      'monthly_revenue' => (float) Lamtim_tagihans::where('bulan', $currentMonth)
-        ->where('tahun', $currentYear)
-        ->sum('terbayar'),
+      // Pendapatan = uang masuk bulan ini (tanggal bayar transaksi, termasuk cicilan &
+      // tunggakan lama). Transaksi yang dibatalkan otomatis tidak terhitung (soft delete).
+      'monthly_revenue' => self::uangMasuk(Carbon::now())->sum('total'),
+      'monthly_transactions' => self::uangMasuk(Carbon::now())->count(),
 
       'pending_revenue' => (float) Lamtim_tagihans::where('bulan', $currentMonth)
         ->where('tahun', $currentYear)
@@ -71,16 +71,20 @@ class HomePage extends Controller
     // Monthly revenue chart data (last 6 months)
     $monthlyRevenue = [];
     for ($i = 5; $i >= 0; $i--) {
-      $date = Carbon::now()->subMonths($i);
-      $revenue = (float) Lamtim_tagihans::where('bulan', $date->month)
-        ->where('tahun', $date->year)
-        ->sum('terbayar');
+      $date = Carbon::now()->startOfMonth()->subMonths($i);
       $monthlyRevenue[] = [
         'month' => $date->format('M Y'),
-        'revenue' => $revenue
+        'revenue' => (float) self::uangMasuk($date)->sum('total'),
       ];
     }
 
     return view('content.pages.home', compact('stats', 'recent_transactions', 'monthlyRevenue'));
+  }
+
+  /** Transaksi berbayar yang tanggal bayarnya jatuh di bulan $bulan. */
+  private static function uangMasuk(Carbon $bulan)
+  {
+    return Lamtim_transaksi::where('total', '>', 0)
+      ->whereBetween('tglBayar', [$bulan->copy()->startOfMonth(), $bulan->copy()->endOfMonth()]);
   }
 }

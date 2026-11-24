@@ -307,7 +307,7 @@ if ($hour >= 5 && $hour < 11) {
           <span class="metric-label d-block mb-1">Pendapatan Bulan Ini</span>
           <div class="metric-value mb-1" style="font-size: 1.25rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
           <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
-            <span>{{ $stats['paid_bills'] }} transaksi terbayar</span>
+            <span>{{ $stats['monthly_transactions'] }} transaksi masuk</span>
           </div>
         </div>
         <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
