@@ -16,4 +16,11 @@ class Lamtim_mikrotik extends Model
     'isActive',
   ];
   //protected $guarded = [];
+
+  // Password admin router disimpan terenkripsi dan tidak ikut terkirim saat model diubah ke JSON
+  protected $casts = [
+    'password' => 'encrypted',
+  ];
+
+  protected $hidden = ['password'];
 }

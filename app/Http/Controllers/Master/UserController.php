@@ -25,17 +25,7 @@ class UserController extends Controller
     $this->service = $service;
   }
 
-  // Bendahara (role 3) hanya boleh read, tidak boleh write
-  private function denyBendahara()
-  {
-    if (auth()->user()->isBendahara()) abort(403, 'Akses ditolak');
-  }
 
-  // Teknisi (role 4) dan Teknisi & Kolektor (role 7) tidak boleh hapus
-  private function denyTeknisi()
-  {
-    if (auth()->user()->isTeknisi() || auth()->user()->isTeknisiKolektor()) abort(403, 'Akses ditolak');
-  }
 
   /**
    * Display a listing of the resource.
@@ -46,7 +36,6 @@ class UserController extends Controller
   }
   public function mapping()
   {
-    $this->denyBendahara();
     return view('content.user.mapping');
   }
 
@@ -55,7 +44,6 @@ class UserController extends Controller
    */
   public function create()
   {
-    $this->denyBendahara();
     return view('content.user.add');
   }
 
@@ -92,7 +80,6 @@ class UserController extends Controller
    */
   public function store(Request $request)
   {
-    $this->denyBendahara();
 
     // Deteksi apakah form menggunakan mode unified (dilengkapi kredensial PPPoE dan Mikrotik)
     $isUnified = $request->filled('pppoe_username') || $request->filled('id_mikrotik');
@@ -266,7 +253,6 @@ class UserController extends Controller
    */
   public function edit(string $id)
   {
-    $this->denyBendahara();
     $query = User::with(['user_detail', 'user_mikrotik'])->find(decrypt($id));
     return view('content.user.edit', compact('id', 'query'));
   }
@@ -276,7 +262,6 @@ class UserController extends Controller
    */
   public function update(Request $request, string $id)
   {
-    $this->denyBendahara();
     $validated = $request->validate([
       'nama' => ['required', 'string', 'max:100'],
       'julukan' => ['nullable', 'string', 'max:100'],
@@ -349,8 +334,6 @@ class UserController extends Controller
    */
   public function destroy(string $id)
   {
-    $this->denyBendahara();
-    $this->denyTeknisi();
 
     // FK tagihan & transaksi = ON DELETE CASCADE: menghapus pelanggan akan ikut
     // menghapus riwayat pembayarannya. Blokir jika sudah pernah ada uang masuk.
@@ -469,7 +452,6 @@ class UserController extends Controller
    */
   public function editMapping($id)
   {
-    $this->denyBendahara();
     $query = User::with(['user_mikrotik', 'user_detail'])->find(decrypt($id));
     
     // Prepare data untuk JavaScript (hindari PHP di blade)
@@ -493,7 +475,6 @@ class UserController extends Controller
    */
   public function storeMapping(Request $request): JsonResponse
   {
-    $this->denyBendahara();
     try {
       $aksi = $request->input('aksi');
 

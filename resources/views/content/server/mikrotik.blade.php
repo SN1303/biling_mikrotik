@@ -31,7 +31,6 @@
         { data: 'kode'},
         { data: 'nama'},
         { data: 'username' },
-        { data: 'password' },
         { data: 'ip'},
         { data: 'port'},
         {
@@ -60,7 +59,7 @@
                 <div class="dropdown-menu">
                   <a class="dropdown-item fw-bold btn-edit" href="javascript:void(0);"
                     data-id="${data}" data-nama="${row.nama}" data-kode="${row.kode}"
-                    data-username="${row.username}" data-password="${row.password}"
+                    data-username="${row.username}"
                     data-ip="${row.ip}" data-port="${row.port}" data-isactive="${row.isActive}">
                     <i class="mdi mdi-pencil-outline me-1"></i> Edit
                   </a>
@@ -242,7 +241,6 @@
       const nama = $(this).data("nama");
       const kode = $(this).data("kode");
       const username = $(this).data("username");
-      const password = $(this).data("password");
       const ip = $(this).data("ip");
       const port = $(this).data("port");
       const isActive = $(this).data("isactive");
@@ -252,7 +250,7 @@
       form.querySelector('[name="nama"]').value = nama;
       form.querySelector('[name="kode"]').value = kode;
       form.querySelector('[name="username"]').value = username;
-      form.querySelector('[name="password"]').value = password;
+      form.querySelector('[name="password"]').value = ''; // kosong = password lama dipakai
       form.querySelector('[name="ip"]').value = ip;
       form.querySelector('[name="port"]').value = port;
       form.querySelector('[name="isActive"]').value = isActive;
@@ -305,7 +303,6 @@
           <th>KODE</th>
           <th>NAMA</th>
           <th>USER</th>
-          <th>PASSWORD</th>
           <th>IP</th>
           <th>PORT</th>
           <th>STATUS</th>
@@ -363,9 +360,9 @@
         <div class="input-group input-group-merge">
           <span class="input-group-text"><i class="mdi mdi-lock-question"></i></span>
           <div class="form-floating form-floating-outline">
-            <input type="text" id="password" name="password" class="form-control dt-email"
-              aria-label="john.doe@example.com" />
-            <label for="basicEmail">PASSWORD</label>
+            <input type="password" id="password" name="password" class="form-control" autocomplete="new-password"
+              placeholder="Kosongkan jika tidak diubah" aria-label="Password router" />
+            <label for="password">PASSWORD</label>
           </div>
         </div>
       </div>

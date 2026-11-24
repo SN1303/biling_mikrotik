@@ -51,7 +51,7 @@ class MikrotikService
       DB::rollBack();
 
       Log::error('Gagal menambahkan Mikrotik: ' . $e->getMessage(), [
-        'data' => $data,
+        'data' => \Illuminate\Support\Arr::except($data, ['password']),
         'trace' => $e->getTraceAsString()
       ]);
       return LamtimResponse::internalServerError('Gagal Tambahkan data.');
@@ -68,7 +68,7 @@ class MikrotikService
     } catch (Exception $e) {
       DB::rollBack();
       Log::error("Gagal mengupdate Mikrotik ID {$id}: " . $e->getMessage(), [
-        'data' => $data,
+        'data' => \Illuminate\Support\Arr::except($data, ['password']),
         'trace' => $e->getTraceAsString()
       ]);
       return LamtimResponse::internalServerError('Gagal Update data.');

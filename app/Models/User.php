@@ -52,6 +52,7 @@ class User extends Authenticatable
   public function isAdmin()      { return (int) $this->idRole === 2; }
   public function isBendahara()  { return (int) $this->idRole === 3; }
   public function isTeknisi()    { return (int) $this->idRole === 4; }
+  public function isPelanggan()  { return (int) $this->idRole === 5; }
   public function isKolektor()   { return (int) $this->idRole === 6; }
   public function isTeknisiKolektor() { return (int) $this->idRole === 7; }
   public function hasRole(...$roles) { return in_array((int) $this->idRole, $roles); }

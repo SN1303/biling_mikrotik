@@ -42,7 +42,17 @@ class LoginBasic extends Controller
       // Apakah checkbox 'remember me' dicentang?
       $remember = $request->has('remember');
 
-      if (Auth::attempt($credentials, $remember)) {
+      // Akun nonaktif tidak boleh login
+      if (Auth::attempt([...$credentials, 'isActive' => 1], $remember)) {
+        // Pelanggan (role 5) belum punya portal; jangan beri akses ke dashboard staf
+        if (Auth::user()->isPelanggan()) {
+          Auth::logout();
+          RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
+          return back()->withErrors([
+            'email' => 'Portal pelanggan belum tersedia.',
+          ])->withInput($request->only('email', 'remember'));
+        }
+
         RateLimiter::clear($throttleKey);
         $request->session()->regenerate(); // Hindari session fixation
         return redirect()->intended('/');  // Ke halaman yang diminta sebelum login

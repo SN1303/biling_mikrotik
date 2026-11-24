@@ -30,8 +30,10 @@ class FotoController extends Controller
             DB::beginTransaction();
             try {
                 foreach ($request->file('fotos') as $file) {
-                    // Generate unique filename
-                    $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                    // Ekstensi diambil dari isi file (jpg/png/gif), bukan dari nama kiriman pengguna,
+                    // supaya file "gambar.php" tidak tersimpan sebagai skrip yang bisa dijalankan
+                    $extension = $file->extension();
+                    $filename = time() . '_' . uniqid() . '.' . $extension;
                     
                     // Store file in public storage
                     $path = $file->storeAs('fotos/user/' . $idUser, $filename, 'public');
@@ -45,7 +47,7 @@ class FotoController extends Controller
                         'idPelanggan' => $idUser,
                         'idJenis' => 1, // Default jenis foto
                         'foto' => $path,
-                        'extensi' => $file->getClientOriginalExtension(),
+                        'extensi' => $extension,
                         'ukuran' => $fileSizeFormatted,
                         'ukuran2' => $fileSize
                     ]);

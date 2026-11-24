@@ -41,6 +41,6 @@ class MikrotikRepository
 
   public function datatableQuery()
   {
-    return Lamtim_mikrotik::select(['id', 'kode', 'nama', 'username', 'password', 'ip', 'port', 'isActive', 'created_at'])->get();
+    return Lamtim_mikrotik::select(['id', 'kode', 'nama', 'username', 'ip', 'port', 'isActive', 'created_at'])->get();
   }
 }

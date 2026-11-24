@@ -63,11 +63,14 @@ class MikrotikController extends Controller
       'nama' => 'required|string|max:255',
       'kode' => 'required|string|max:255',
       'username' => 'required|string',
-      'password' => 'required|string',
+      'password' => 'nullable|string', // kosong = password lama tetap dipakai
       'ip' => 'required|ip',
       'port' => 'required|numeric',
       'isActive' => 'required|boolean',
     ]);
+    if (empty($validated['password'])) {
+      unset($validated['password']);
+    }
     return $this->mikrotikService->update($validated, $id);
   }
 

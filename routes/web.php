@@ -14,8 +14,8 @@ Route::post('/auth/proses-login', [LoginBasic::class, 'login'])->name('auth.logi
 // Logout
 Route::post('/auth/logout', [LoginBasic::class, 'logout'])->name('logout');
 
-// Hanya bisa diakses kalau SUDAH login
-Route::middleware(['auth'])->group(function () {
+// Hanya staf yang sudah login (pelanggan role 5 tidak termasuk)
+Route::middleware(['auth', 'role:1,2,3,4,6,7'])->group(function () {
   Route::get('/', [HomePage::class, 'index'])->name('pages-home');
 
   // Super Admin only (role 1) — manajemen akun staf & pengguna internal
