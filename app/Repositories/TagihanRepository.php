@@ -14,7 +14,9 @@ use App\Models\Lamtim_tagihans;
 use App\Models\Lamtim_transaksi;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\DataTables;
 
@@ -180,7 +182,8 @@ class TagihanRepository
         $q->where('statusTagihan', 1);
       })
       ->with(['user_mikrotik:id,idUser,idPaket,diskon'])
-      ->with(['user_mikrotik.paket:id,nama,price'])
+      ->with(['user_mikrotik.paket:id,idKategori,nama,price'])
+      ->with(['user_mikrotik.paket.kategori:id,nama'])
       ->with(['user_detail:id,idUser,statusPpn,statusTagihan'])
       ->get(['id', 'name', 'isActive']);
 
@@ -191,8 +194,11 @@ class TagihanRepository
           ->where('bulan', Carbon::now()->month)
           ->where('tahun', Carbon::now()->year)
           ->first();
+        // Diskon khusus bulan ini — harus cocok bulan DAN tahun, dan belum dihapus
         $getDiskonBulanIni = Lamtim_diskon::where('idUser', $user->id)
           ->where('bulan', Carbon::now()->month)
+          ->where('tahun', Carbon::now()->year)
+          ->whereNull('deleted_at')
           ->first();
 
         // Tentukan nilai diskon yang akan digunakan
@@ -216,6 +222,21 @@ class TagihanRepository
 
         $hargaPaket = (float) ($user->user_mikrotik->paket->price ?? 0);
 
+        // Pengaman: paket berbayar yang harganya 0 (mis. ter-reset oleh sinkron MikroTik
+        // atau belum diatur) jangan sampai jadi tagihan "gratis/lunas" otomatis.
+        $paketUser = $user->user_mikrotik->paket ?? null;
+        $isKategoriGratis = $paketUser && (
+          stripos((string) optional($paketUser->kategori)->nama, 'gratis') !== false
+          || stripos((string) $paketUser->nama, 'gratis') !== false
+        );
+        if ($hargaPaket <= 0 && !$isKategoriGratis) {
+          $result['errors'][] = [
+            'user_id' => $user->id,
+            'message' => 'Dilewati: harga paket "' . ($paketUser->nama ?? '-') . '" masih Rp 0. Atur harganya di menu Paket Internet.',
+          ];
+          continue;
+        }
+
         // Opsi B: PPN Fleksibel per Pelanggan
         // PPN hanya dikenakan jika statusPpn pada profil pelanggan bernilai 1 (Aktif)
         $isPpnActive = (int) optional($user->user_detail)->statusPpn === 1;
@@ -226,6 +247,8 @@ class TagihanRepository
         // Opsi B User Gratisan: Jika total <= 0, otomatis langsung berstatus LUNAS (Gratis)
         $isGratis = ($total <= 0);
         $finalTotal = max(0, $total);
+
+        DB::beginTransaction();
 
         $tagihan = $this->model::create([
           'idUser' => $user->id,
@@ -267,9 +290,24 @@ class TagihanRepository
           $result['gratis'] = ($result['gratis'] ?? 0) + 1;
         }
 
+        DB::commit();
         $result['inserted']++;
         //$result['processed_users'][] = $user->id;
+      } catch (QueryException $e) {
+        DB::rollBack();
+        // 23000 = pelanggaran unique (idUser, bulan, tahun): tagihan sudah dibuat
+        // oleh proses generate lain yang berjalan bersamaan → anggap dilewati.
+        if ($e->getCode() === '23000') {
+          $result['skipped']++;
+          continue;
+        }
+        $result['errors'][] = [
+          'user_id' => $user->id,
+          'message' => 'Gagal menyimpan tagihan',
+        ];
+        Log::error("Generate tagihan user {$user->id} gagal: " . $e->getMessage());
       } catch (\Exception $e) {
+        if (DB::transactionLevel() > 0) DB::rollBack();
         $result['errors'][] = [
           'user_id' => $user->id,
           'message' => $e->getMessage(),

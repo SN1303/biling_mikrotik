@@ -15,6 +15,9 @@ class NetworkMapService
 {
     public function getMapData(): array
     {
+        // Pastikan angka port terpakai/sisa sesuai koneksi sebenarnya
+        PortUsageService::recalculateAll();
+
         return [
             'server' => $this->getServerMarker(),
             'olts'   => $this->getOlts(),

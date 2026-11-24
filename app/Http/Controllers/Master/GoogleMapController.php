@@ -588,6 +588,20 @@ class GoogleMapController extends Controller
             'tglJatuhTempo' => 'nullable|date',
         ]);
 
+        // Isi IP dari sesi PPPoE aktif bila form tidak membawa IP (pelanggan IP dinamis)
+        if (empty($validated['ip']) && !empty($validated['secretName']) && !empty($validated['idMikrotik'])) {
+            $validated['ip'] = $this->cariIpAktif((int) $validated['idMikrotik'], $validated['secretName']);
+        }
+
+        // Username PPPoE sudah ada (mis. hasil sinkron MikroTik)? Lengkapi data pelanggan
+        // yang sudah ada, JANGAN buat pelanggan baru (dulu ini membuat pelanggan dobel).
+        if (!empty($validated['secretName'])) {
+            $existing = $this->cariPelangganByUsername($validated['secretName'], $validated['idMikrotik'] ?? null);
+            if ($existing) {
+                return $this->lengkapiPelangganDariPeta($existing, $validated);
+            }
+        }
+
         try {
             DB::beginTransaction();
 
@@ -684,6 +698,24 @@ class GoogleMapController extends Controller
             'tglJatuhTempo' => 'nullable|date',
         ]);
 
+        // Cegah 2 pelanggan memakai username PPPoE yang sama
+        if (!empty($validated['secretName']) && $validated['secretName'] !== $client->namaMikrotikUser) {
+            $lain = $this->cariPelangganByUsername($validated['secretName'], $validated['idMikrotik'] ?? $client->idMikrotik);
+            if ($lain && $lain->id !== $client->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Username PPPoE \"{$validated['secretName']}\" sudah dipakai pelanggan " . (optional($lain->user)->name ?? '#' . $lain->id) . '.',
+                ], 422);
+            }
+        }
+
+        if (empty($validated['ip']) && empty($client->localAdress) && !empty($validated['secretName'] ?? $client->namaMikrotikUser)) {
+            $idMk = (int) ($validated['idMikrotik'] ?? $client->idMikrotik);
+            if ($idMk) {
+                $validated['ip'] = $this->cariIpAktif($idMk, $validated['secretName'] ?? $client->namaMikrotikUser);
+            }
+        }
+
         if (isset($validated['nama']) && $client->user) {
             $userUpdate = ['name' => $validated['nama']];
             if (isset($validated['wa'])) $userUpdate['wa'] = $validated['wa'];
@@ -734,6 +766,100 @@ class GoogleMapController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Client berhasil diupdate', 'data' => $client]);
+    }
+
+    /**
+     * Cari pelanggan berdasarkan username PPPoE (dan server MikroTik bila diketahui).
+     */
+    private function cariPelangganByUsername(string $username, $idMikrotik = null): ?Lamtim_user_mikrotik_details
+    {
+        return Lamtim_user_mikrotik_details::with('user.user_detail')
+            ->where('namaMikrotikUser', $username)
+            ->when($idMikrotik, fn ($q) => $q->where(function ($w) use ($idMikrotik) {
+                $w->where('idMikrotik', $idMikrotik)->orWhereNull('idMikrotik');
+            }))
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Ambil IP dari sesi PPPoE yang sedang aktif. Null bila offline / router tak terjangkau.
+     */
+    private function cariIpAktif(int $idMikrotik, string $username): ?string
+    {
+        try {
+            $actives = \App\Services\MikrotikMulti::commandApi2($idMikrotik, '/ppp/active/print');
+            foreach ((array) $actives as $a) {
+                if (($a['name'] ?? null) === $username && !empty($a['address'])) {
+                    return $a['address'];
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Gagal ambil IP aktif {$username}: " . $e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Pelanggan dengan username PPPoE ini sudah ada → lengkapi datanya dari form peta
+     * (nama, lokasi, ODP, paket, dll) tanpa menimpa data teknis yang sudah terisi (IP, secret).
+     */
+    private function lengkapiPelangganDariPeta(Lamtim_user_mikrotik_details $client, array $v)
+    {
+        try {
+            DB::beginTransaction();
+
+            if ($client->user) {
+                $client->user->update(array_filter([
+                    'name' => $v['nama'] ?? null,
+                    'wa' => $v['wa'] ?? null,
+                ], fn ($x) => $x !== null && $x !== ''));
+            }
+
+            $idOlt = $client->idOlt;
+            $idOdc = $client->idOdc;
+            if (!empty($v['idOdp'])) {
+                $odp = Lamtim_odp::find($v['idOdp']);
+                if ($odp) { $idOlt = $odp->idOlt; $idOdc = $odp->idOdc; }
+            }
+
+            $client->update([
+                'latitude' => $v['latitude'],
+                'longitude' => $v['longitude'],
+                'idOlt' => $idOlt,
+                'idOdc' => $idOdc,
+                'idOdp' => $v['idOdp'] ?? $client->idOdp,
+                'portOdp' => $v['portOdp'] ?? $client->portOdp,
+                'idKategori' => $v['idKategori'] ?? $client->idKategori,
+                'idPaket' => $v['idPaket'] ?? $client->idPaket,
+                'idMikrotik' => $client->idMikrotik ?? ($v['idMikrotik'] ?? null),
+                'idMikrotikUser' => $client->idMikrotikUser ?: ($v['secretId'] ?? null),
+                'serviceMikrotikUser' => $client->serviceMikrotikUser ?: ($v['secretService'] ?? null),
+                'profileMikrotikUser' => $v['secretProfile'] ?? $client->profileMikrotikUser,
+                'password' => $client->password ?: ($v['secretPassword'] ?? null),
+                'localAdress' => $client->localAdress ?: ($v['ip'] ?? null),
+                'keterangan' => $v['keterangan'] ?? $client->keterangan,
+            ]);
+
+            $userDetail = optional($client->user)->user_detail;
+            if ($userDetail) {
+                $userDetail->update(array_filter([
+                    'idArea' => $v['idArea'] ?? null,
+                    'tglDafatar' => $v['tglDaftar'] ?? null,
+                    'tglJatuhTempo' => $v['tglJatuhTempo'] ?? null,
+                ], fn ($x) => $x !== null));
+            }
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => "Pelanggan dengan username \"{$client->namaMikrotikUser}\" sudah ada (hasil sinkron) — datanya dilengkapi & ditempatkan di peta, tidak dibuat dobel.",
+                'data' => $client->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Gagal: ' . $e->getMessage()], 500);
+        }
     }
 
     public function deleteClient($id)

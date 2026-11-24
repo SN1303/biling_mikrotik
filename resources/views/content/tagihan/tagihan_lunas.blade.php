@@ -312,6 +312,20 @@
   let activeBillData = null;
   let activeFilterLunas = ''; // '' = semua, 'lunas', 'cicilan'
 
+  // Batal pembayaran hanya untuk Super Admin, Admin, Bendahara (sesuai route)
+  const CAN_CANCEL_PAYMENT = @json(auth()->user()->hasRole(1, 2, 3));
+
+  // Escape teks dari database sebelum disisipkan ke HTML (cegah XSS)
+  function esc(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const namaBulan = [
     '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
@@ -363,7 +377,11 @@
           name: 'user_nama',
           className: 'align-middle p-2 p-md-3 col-mobile-card',
           render: function(data, type, row) {
-            const wa = row.user_wa;
+            const wa = row.user_wa ? esc(row.user_wa) : row.user_wa;
+            data = esc(data);
+            const noTagihanSafe = esc(row.noTagihan);
+            const paketSafe = esc(row.paket_nama);
+            const kasirSafe = esc(row.prosesNama);
             const waBadge = wa && wa !== '-'
               ? `<a href="https://wa.me/${String(wa).replace(/[^0-9]/g, '').replace(/^0/, '62')}" target="_blank" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none" title="Chat WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
               : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
@@ -475,7 +493,7 @@
               <div class="d-none d-md-block">
                 <div class="fw-bold text-dark fs-6 mb-1">${data || 'Tanpa Nama'}</div>
                 <div class="d-flex align-items-center flex-wrap gap-1">
-                  <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${row.noTagihan}</span>
+                  <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${noTagihanSafe}</span>
                   ${waBadge}
                   ${statusBadgeDesktop}
                 </div>
@@ -490,7 +508,7 @@
                       ${data || 'Tanpa Nama'}
                     </div>
                     <small class="text-muted d-block" style="font-size: 0.7rem;">
-                      <i class="mdi mdi-receipt-text-outline me-1"></i>${row.noTagihan || '-'}
+                      <i class="mdi mdi-receipt-text-outline me-1"></i>${noTagihanSafe || '-'}
                     </small>
                   </div>
                   <div class="text-end flex-shrink-0">
@@ -502,7 +520,7 @@
                 <div class="d-flex align-items-center justify-content-between gap-1 py-1 px-2 my-2 bg-light rounded-2 border" style="font-size: 0.72rem;">
                   <div class="text-truncate">
                     <i class="mdi mdi-speedometer me-1 text-primary"></i>
-                    <span class="fw-semibold text-dark">${row.paket_nama || 'Paket Internet'}</span>
+                    <span class="fw-semibold text-dark">${paketSafe || 'Paket Internet'}</span>
                     <span class="text-muted">(${periodeText})</span>
                   </div>
                   <div>
@@ -518,7 +536,7 @@
                   </div>
                   <div class="text-truncate">
                     <i class="mdi mdi-account-check-outline me-1 text-primary"></i>
-                    <span>Kasir: ${row.prosesNama || '-'}</span>
+                    <span>Kasir: ${kasirSafe || '-'}</span>
                   </div>
                 </div>
 
@@ -537,12 +555,14 @@
                     <i class="mdi mdi-printer fs-5"></i>
                   </button>
 
+                  ${(CAN_CANCEL_PAYMENT && !isGratis) ? `
                   <!-- Tombol Batal Pembayaran -->
                   <button type="button" class="btn btn-outline-warning btn-cancel-payment d-flex align-items-center justify-content-center p-2 shadow-xs" data-id="${row.id}" title="Batal Pembayaran" style="border-radius: 8px; width: 42px; height: 38px;">
                     <i class="mdi mdi-undo fs-5"></i>
                   </button>
+                  ` : ''}
 
-                  ${deleteBtnMobile}
+                  ${isGratis ? deleteBtnMobile : ''}
                 </div>
               </div>
             `;
@@ -557,7 +577,7 @@
             return `
               <div>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold mb-1">
-                  <i class="mdi mdi-speedometer me-1"></i>${data || 'Paket Internet'}
+                  <i class="mdi mdi-speedometer me-1"></i>${esc(data) || 'Paket Internet'}
                 </span>
                 <div class="small text-muted d-flex align-items-center gap-1">
                   <i class="mdi mdi-calendar-month-outline text-secondary"></i>
@@ -657,7 +677,7 @@
                   ${badgeTambahan}
                 </div>
                 <div class="small text-muted mt-1" style="font-size: 0.72rem;">
-                  <i class="mdi mdi-account-check-outline me-1 text-primary"></i>${row.prosesNama || '-'}
+                  <i class="mdi mdi-account-check-outline me-1 text-primary"></i>${esc(row.prosesNama) || '-'}
                 </div>
               </div>
             `;
@@ -670,6 +690,9 @@
           searchable: false,
           className: 'text-center align-middle d-none d-md-table-cell',
           render: function(data, type, row) {
+            // Tagihan gratis tidak punya pembayaran untuk dibatalkan; tagihan berbayar
+            // tidak boleh dihapus (riwayat keuangan) — batalkan pembayarannya dulu.
+            const isGratisRow = (row.metode && String(row.metode).toLowerCase().includes('gratis')) || (parseFloat(row.total || 0) <= 0);
             let deleteBtn = '';
             @if(auth()->user()->hasRole(1, 2))
             deleteBtn = `
@@ -725,12 +748,14 @@
                     </li>
                     <li><hr class="dropdown-divider my-1"></li>
                     ${cicilanDropdownOption}
+                    ${(CAN_CANCEL_PAYMENT && !isGratisRow) ? `
                     <li>
                       <a class="dropdown-item btn-cancel-payment text-warning fw-semibold py-1" href="javascript:void(0);" data-id="${data}">
-                        <i class="mdi mdi-undo me-2"></i> Batal Pembayaran
+                        <i class="mdi mdi-undo me-2"></i> ${row.is_cicilan ? 'Batalkan Cicilan' : 'Batal Pembayaran'}
                       </a>
                     </li>
-                    ${deleteBtn}
+                    ` : ''}
+                    ${isGratisRow ? deleteBtn : ''}
                   </ul>
                 </div>
               </div>
@@ -1042,7 +1067,7 @@
                 <span class="badge bg-secondary-subtle text-dark me-1 fw-bold" style="font-size: 0.65rem;">#${idx + 1}</span>
                 <span class="text-muted">${tglStr}</span>
                 <span class="badge bg-white text-secondary border ms-1" style="font-size: 0.65rem;">${(t.metode || 'Tunai').toUpperCase()}</span>
-                ${t.prosesNama ? `<span class="text-muted ms-1" style="font-size: 0.68rem;">(${t.prosesNama})</span>` : ''}
+                ${t.prosesNama ? `<span class="text-muted ms-1" style="font-size: 0.68rem;">(${esc(t.prosesNama)})</span>` : ''}
               </div>
               <div class="fw-bold ${isCicilan ? 'text-warning' : 'text-success'}">${nomFmt}</div>
             </div>
@@ -1264,7 +1289,7 @@
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
           <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
-          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 120px; font-size: 0.78rem;">
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 140px; font-size: 0.78rem;">
             <option value="" selected>Semua Bulan</option>
             @php
               $namaBulanList = [
@@ -1277,7 +1302,7 @@
               <option value="{{ $key }}">{{ $nama }}</option>
             @endforeach
           </select>
-          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 90px; font-size: 0.78rem;">
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 115px; font-size: 0.78rem;">
             <option value="" selected>Semua Thn</option>
             @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
               @foreach($filterData['tahun'] as $tahun)

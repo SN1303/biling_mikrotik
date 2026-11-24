@@ -102,6 +102,7 @@ class OdpController extends Controller
   }
   public function json(Request $request)
   {
+    \App\Services\PortUsageService::recalculateAll();
     $columns = [
       'id',
       'idOlt',

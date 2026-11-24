@@ -270,7 +270,7 @@ if ($hour >= 5 && $hour < 11) {
             <span class="text-success fw-semibold"><i class="mdi mdi-check-circle-outline"></i> Siap Layanan</span>
           </div>
         </div>
-        <div class="metric-icon-box" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
+        <div class="metric-icon-box bg-primary-subtle text-primary border border-primary-subtle">
           <i class="mdi mdi-account-group-outline"></i>
         </div>
       </div>
@@ -292,7 +292,7 @@ if ($hour >= 5 && $hour < 11) {
             @endif
           </div>
         </div>
-        <div class="metric-icon-box" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+        <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
           <i class="mdi mdi-router-wireless"></i>
         </div>
       </div>
@@ -310,7 +310,7 @@ if ($hour >= 5 && $hour < 11) {
             <span>{{ $stats['paid_bills'] }} transaksi terbayar</span>
           </div>
         </div>
-        <div class="metric-icon-box" style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+        <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
           <i class="mdi mdi-cash-check"></i>
         </div>
       </div>
@@ -328,7 +328,7 @@ if ($hour >= 5 && $hour < 11) {
             <span class="text-danger fw-semibold">{{ $stats['unpaid_bills'] }} invoice</span> belum lunas
           </div>
         </div>
-        <div class="metric-icon-box" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+        <div class="metric-icon-box bg-danger-subtle text-danger border border-danger-subtle">
           <i class="mdi mdi-alert-circle-outline"></i>
         </div>
       </div>
@@ -385,7 +385,7 @@ if ($hour >= 5 && $hour < 11) {
         <h5 class="card-title mb-0">Rangkuman Operasional</h5>
       </div>
       <div class="card-body pt-2 d-flex flex-column justify-content-around gap-2">
-        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mryes-soft-box">
           <div class="d-flex align-items-center gap-2">
             <div class="rounded-2 p-1 text-primary bg-primary-subtle"><i class="mdi mdi-speedometer"></i></div>
             <span class="small fw-semibold text-secondary">Total Paket Internet</span>
@@ -393,7 +393,7 @@ if ($hour >= 5 && $hour < 11) {
           <span class="badge bg-light text-dark border">{{ $stats['total_packages'] }} Paket</span>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mryes-soft-box">
           <div class="d-flex align-items-center gap-2">
             <div class="rounded-2 p-1 text-success bg-success-subtle"><i class="mdi mdi-percent"></i></div>
             <span class="small fw-semibold text-secondary">Rasio Pembayaran</span>
@@ -403,7 +403,7 @@ if ($hour >= 5 && $hour < 11) {
           </span>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+        <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mryes-soft-box">
           <div class="d-flex align-items-center gap-2">
             <div class="rounded-2 p-1 text-info bg-info-subtle"><i class="mdi mdi-receipt-outline"></i></div>
             <span class="small fw-semibold text-secondary">Tagihan Diterbitkan</span>
@@ -452,7 +452,7 @@ if ($hour >= 5 && $hour < 11) {
               <tr>
                 <td>
                   <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.8rem;">
-                    #{{ $transaction->noTagihan }}
+                    #{{ $transaction->noTagihan ?? '-' }}
                   </span>
                 </td>
                 <td>
@@ -468,8 +468,11 @@ if ($hour >= 5 && $hour < 11) {
                 </td>
                 <td>
                   <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                    {{ $transaction->paket->nama ?? 'Paket N/A' }}
+                    {{ $transaction->namaPaket ?? 'Paket N/A' }}
                   </span>
+                  @if(!$transaction->tagihanLunas)
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1">Cicilan</span>
+                  @endif
                 </td>
                 <td>
                   <span class="fw-bold text-success" style="font-size: 0.95rem;">

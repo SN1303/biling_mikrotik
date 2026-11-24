@@ -169,7 +169,6 @@ return [
     App\Providers\EventServiceProvider::class,
     App\Providers\RouteServiceProvider::class,
     App\Providers\MenuServiceProvider::class,
-    // Modules\FreeRadius\Providers\FreeRadiusServiceProvider::class,
     Modules\Setting\Providers\SettingServiceProvider::class,
   ])->toArray(),
 

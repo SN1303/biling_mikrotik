@@ -880,6 +880,39 @@
   body.dark-mode .leaflet-popup-content .text-muted { color: #8888a0 !important; }
   body.dark-mode .popup-btn-edit { background: #3b3c56; color: #8be9fd; border-color: #555577; }
   body.dark-mode .popup-btn-delete { background: #3b3c56; color: #ff6b81; border-color: #555577; }
+
+  /* ========== PERBAIKAN TATA LETAK ========== */
+  /* Kontrol layer Leaflet dipindah ke bawah tombol Filter agar tidak menimpa tombol "Normal" */
+  .leaflet-top.leaflet-right { top: 54px; }
+
+  /* Tombol kontrol berupa link (Dashboard) tampil sama dengan button */
+  a.control-btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+
+  /* Tombol Mode Geser aktif → warna peringatan agar jelas sedang bisa memindah marker */
+  .control-btn.control-btn-warning,
+  body.dark-mode .control-btn.control-btn-warning {
+    background: #f59e0b !important;
+    border-color: #d97706 !important;
+    color: #fff !important;
+  }
+
+  /* ========== HP / LAYAR KECIL ========== */
+  @media (max-width: 768px) {
+    /* Tombol jadi ikon saja supaya muat satu baris */
+    .btn-text { display: none !important; }
+    .control-btn { padding: 7px 10px; font-size: 16px; }
+    .top-controls { left: 52px; gap: 6px; }
+    .filter-panel { top: 12px; right: 10px; gap: 4px; }
+    .filter-btn, .line-mode-btn { padding: 7px 10px; font-size: 14px; }
+    .filter-dropdown { right: 10px; top: 54px; max-height: calc(100vh - 140px); overflow-y: auto; }
+    .leaflet-top.leaflet-right { top: 50px; }
+    .leaflet-touch .leaflet-control-layers-toggle { width: 36px; height: 36px; }
+    .fab-container { right: 16px; bottom: 24px; }
+    .brand-label { bottom: 24px; }
+    .brand-label .brand-name { font-size: 13px; }
+    .brand-label .brand-team { display: none; }
+    .info-panel { right: 12px; }
+  }
 </style>
 @endsection
 
@@ -903,10 +936,10 @@
 <div id="map-container">
   <!-- Filter Panel -->
   <div class="filter-panel">
-    <button class="filter-btn" id="filterToggleBtn">
-      <i class="mdi mdi-filter-outline"></i> Filter <span class="filter-count" id="filterCount">10</span>
+    <button class="filter-btn" id="filterToggleBtn" title="Filter tampilan">
+      <i class="mdi mdi-filter-outline"></i><span class="btn-text"> Filter</span> <span class="filter-count" id="filterCount"></span>
     </button>
-    <button class="line-mode-btn" id="btnLineMode"><i class="mdi mdi-chart-timeline-variant"></i> <span id="lineModeLabel">Normal</span></button>
+    <button class="line-mode-btn" id="btnLineMode" title="Gaya garis rute"><i class="mdi mdi-chart-timeline-variant"></i> <span id="lineModeLabel" class="btn-text">Normal</span></button>
   </div>
 
   <div class="filter-dropdown" id="filterDropdown">
@@ -1031,14 +1064,16 @@
 
   <!-- Branding -->
   <div class="brand-label">
-    <span class="brand-name">LAMTIM-APP</span>
+    <span class="brand-name">MRYES NET</span>
     <span class="brand-team">codeteam.id</span>
   </div>
 
   <!-- Top Controls -->
   <div class="top-controls">
-    <button class="control-btn" id="toggleMapType"><i class="mdi mdi-satellite-variant"></i> G-SAT</button>
-    <button class="control-btn" id="toggleDarkMode"><i class="mdi mdi-weather-night"></i> Malam</button>
+    <a class="control-btn" href="{{ url('/') }}" title="Kembali ke Dashboard"><i class="mdi mdi-arrow-left"></i><span class="btn-text"> Dashboard</span></a>
+    <button class="control-btn" id="toggleMapType" title="Ganti jenis peta"><i class="mdi mdi-satellite-variant"></i><span class="btn-text"> HYBRID</span></button>
+    <button class="control-btn" id="toggleDarkMode" title="Mode malam"><i class="mdi mdi-weather-night"></i><span class="btn-text"> Malam</span></button>
+    <button class="control-btn" id="toggleDragMode" title="Posisi marker terkunci. Klik untuk mengaktifkan mode geser."><i class="mdi mdi-lock-outline"></i><span class="btn-text"> Terkunci</span></button>
   </div>
 
   <!-- FAB -->
@@ -1105,6 +1140,55 @@ let distanceVisible = false;
 let allMarkers = []; // flat list of all markers for label toggle
 let lineMode = localStorage.getItem('lineMode') || 'normal'; // 'normal', 'dash', 'glow'
 
+// Mode geser marker: default TERKUNCI agar posisi perangkat/pelanggan tidak
+// berpindah tanpa sengaja saat peta digeser (terutama di HP).
+let dragMode = false;
+
+// Label nama hanya tampil permanen mulai zoom tertentu supaya tidak bertumpuk.
+// Di bawah zoom ini nama tetap muncul saat marker disentuh/di-hover.
+const LABEL_MIN_ZOOM = { server: 0, olt: 0, odc: 15, odp: 16, client: 17 };
+
+function escHtml(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Pasang ulang tooltip label sesuai zoom & toggle filter label
+function refreshMarkerLabels() {
+  if (!map) return;
+  const zoom = map.getZoom();
+  allMarkers.forEach(m => {
+    if (!m._labelText) return;
+    const type = m._dtype || 'server';
+    const wantPermanent = (type === 'server' || labelVisibility[type] !== false) && zoom >= (LABEL_MIN_ZOOM[type] ?? 0);
+    const tt = m.getTooltip();
+    if (tt && tt.options.permanent === wantPermanent) return;
+    m.unbindTooltip();
+    m.bindTooltip(escHtml(m._labelText), {
+      permanent: wantPermanent, direction: 'top', className: 'marker-label', offset: m._labelOffset || [0, -18]
+    });
+    if (wantPermanent && map.hasLayer(m)) m.openTooltip();
+  });
+}
+
+function applyDragMode() {
+  allMarkers.forEach(m => {
+    if (!m._dtype) return; // server marker tidak bisa digeser
+    m.options.draggable = dragMode; // untuk marker yang belum tampil (layer difilter)
+    if (m.dragging) { if (dragMode) m.dragging.enable(); else m.dragging.disable(); }
+  });
+  const btn = document.getElementById('toggleDragMode');
+  if (btn) {
+    btn.classList.toggle('control-btn-warning', dragMode);
+    btn.innerHTML = dragMode
+      ? '<i class="mdi mdi-cursor-move"></i><span class="btn-text"> Mode Geser</span>'
+      : '<i class="mdi mdi-lock-outline"></i><span class="btn-text"> Terkunci</span>';
+    btn.title = dragMode
+      ? 'Mode geser aktif: marker bisa dipindah & langsung tersimpan. Klik untuk mengunci.'
+      : 'Posisi marker terkunci. Klik untuk mengaktifkan mode geser.';
+  }
+}
+
 let addingMarkerMode = null; // null or 'olt','odc','odp','client'
 let placingImport = null; // null or { type, id }
 let selectOptions = { olts: [], odcs: [], odps: [], kategoris: [], pakets: [], mikrotiks: [] };
@@ -1120,6 +1204,7 @@ function initMap() {
     const c = map.getCenter();
     localStorage.setItem('mapState', JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
   });
+  map.on('zoomend', refreshMarkerLabels);
 
   tileLayers.googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 21, maxNativeZoom: 20, subdomains: ['0','1','2','3'] });
   tileLayers.googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 21, maxNativeZoom: 20, subdomains: ['0','1','2','3'] });
@@ -1187,7 +1272,7 @@ function updateLayerButton() {
     openstreetmap: 'map-outline',
     satellite: 'satellite-uplink'
   };
-  btn.innerHTML = `<i class="mdi mdi-${icons[currentLayer] || 'map'}"></i> ${labels[currentLayer] || 'MAP'}`;
+  btn.innerHTML = `<i class="mdi mdi-${icons[currentLayer] || 'map'}"></i><span class="btn-text"> ${labels[currentLayer] || 'MAP'}</span>`;
 }
 
 // =============== DATA LOADING ===============
@@ -1221,6 +1306,8 @@ function loadMapData() {
 
       // Apply saved toggle states after data loads
       applyToggleStates();
+      refreshMarkerLabels();
+      applyDragMode();
 
       // Update info panel stats
       updateInfoStats(d);
@@ -1254,11 +1341,13 @@ function addServerMarker(d) {
     html: '<div class="marker-icon marker-server"><i class="mdi mdi-office-building"></i></div>',
     iconSize: [44, 44], iconAnchor: [22, 44]
   });
-  const m = L.marker([d.lat, d.lng], { icon, draggable: false });
-  m.bindTooltip(d.nama, { permanent: true, direction: 'top', className: 'marker-label', offset: [0, -18] });
-  m.bindPopup(`<div><h6 class="mb-1"><i class="mdi mdi-office-building me-1" style="color:#696cff"></i>${d.nama}</h6><small class="text-muted">Lokasi Server Utama</small></div>`);
+  const m = L.marker([d.lat, d.lng], { icon, draggable: false, zIndexOffset: 1000 });
+  m.bindTooltip(escHtml(d.nama), { permanent: true, direction: 'top', className: 'marker-label', offset: [0, -18] });
+  m.bindPopup(`<div><h6 class="mb-1"><i class="mdi mdi-office-building me-1" style="color:#696cff"></i>${escHtml(d.nama)}</h6><small class="text-muted">Lokasi Server Utama</small></div>`);
   m.addTo(map);
   m._isLabel = true;
+  m._labelText = d.nama;
+  m._labelOffset = [0, -18];
   allMarkers.push(m);
   window._serverMarker = m;
 }
@@ -1280,10 +1369,13 @@ function addDeviceMarker(type, d) {
     iconSize: cfg.size, iconAnchor: cfg.anchor
   });
 
-  const m = L.marker([d.lat, d.lng], { icon: leafIcon, draggable: true });
+  // Default terkunci; dibuka lewat tombol "Mode Geser" (applyDragMode)
+  const m = L.marker([d.lat, d.lng], { icon: leafIcon, draggable: dragMode });
 
-  // Tooltip (label)
-  m.bindTooltip(d.nama, { permanent: true, direction: 'top', className: 'marker-label', offset: cfg.tOffset });
+  // Tooltip (label) — dipasang ulang oleh refreshMarkerLabels() sesuai zoom
+  m._labelText = d.nama;
+  m._labelOffset = cfg.tOffset;
+  m.bindTooltip(escHtml(d.nama), { permanent: true, direction: 'top', className: 'marker-label', offset: cfg.tOffset });
 
   // Popup
   m.bindPopup(buildPopupContent(type, d), { maxWidth: 280 });
@@ -1308,7 +1400,7 @@ function addDeviceMarker(type, d) {
 function buildPopupContent(type, d) {
   let html = '<div style="min-width:200px;">';
   if (type === 'olt') {
-    html += `<h6 class="mb-2"><i class="mdi mdi-access-point-network me-1" style="color:#e91e63"></i>${d.nama}</h6>`;
+    html += `<h6 class="mb-2"><i class="mdi mdi-access-point-network me-1" style="color:#e91e63"></i>${escHtml(d.nama)}</h6>`;
     html += `<table class="table table-sm mb-0" style="font-size:12px;">`;
     html += row('Kode', d.kode);
     html += row('IP', d.ip || '-');
@@ -1319,10 +1411,10 @@ function buildPopupContent(type, d) {
   } else if (type === 'odc') {
     const used = (d.port || 0) - (d.portSisa || 0);
     const isFull = d.port > 0 && (d.portSisa || 0) <= 0;
-    html += `<h6 class="mb-2"><i class="mdi ${isFull ? 'mdi-close-network' : 'mdi-router-network'} me-1" style="color:${isFull ? '#f44336' : '#ff9800'}"></i>${d.nama} ${isFull ? '<span class="badge bg-danger" style="font-size:10px;">PORT PENUH</span>' : ''}</h6>`;
+    html += `<h6 class="mb-2"><i class="mdi ${isFull ? 'mdi-close-network' : 'mdi-router-network'} me-1" style="color:${isFull ? '#f44336' : '#ff9800'}"></i>${escHtml(d.nama)} ${isFull ? '<span class="badge bg-danger" style="font-size:10px;">PORT PENUH</span>' : ''}</h6>`;
     html += `<table class="table table-sm mb-0" style="font-size:12px;">`;
     html += row('Kode', d.kode);
-    if (d.odc_parent_nama) html += row('Parent ODC', `<span class="badge bg-label-warning">${d.odc_parent_nama}</span>`);
+    if (d.odc_parent_nama) html += row('Parent ODC', `<span class="badge bg-label-warning">${escHtml(d.odc_parent_nama)}</span>`);
     html += row('Parent OLT', d.olt_nama || '-');
     html += row('Total Port', d.port || 0);
     html += row('Terpakai', used);
@@ -1331,11 +1423,11 @@ function buildPopupContent(type, d) {
   } else if (type === 'odp') {
     const used = (d.port || 0) - (d.portSisa || 0);
     const isFull = d.port > 0 && (d.portSisa || 0) <= 0;
-    html += `<h6 class="mb-2"><i class="mdi ${isFull ? 'mdi-close-network' : 'mdi-cube-outline'} me-1" style="color:${isFull ? '#f44336' : '#4caf50'}"></i>${d.nama} ${isFull ? '<span class="badge bg-danger" style="font-size:10px;">PORT PENUH</span>' : ''}</h6>`;
+    html += `<h6 class="mb-2"><i class="mdi ${isFull ? 'mdi-close-network' : 'mdi-cube-outline'} me-1" style="color:${isFull ? '#f44336' : '#4caf50'}"></i>${escHtml(d.nama)} ${isFull ? '<span class="badge bg-danger" style="font-size:10px;">PORT PENUH</span>' : ''}</h6>`;
     html += `<table class="table table-sm mb-0" style="font-size:12px;">`;
     html += row('Kode', d.kode);
     html += row('Tipe', d.tipe || 'HTB');
-    if (d.odp_parent_nama) html += row('Parent ODP', `<span class="badge bg-label-purple">${d.odp_parent_nama}</span>`);
+    if (d.odp_parent_nama) html += row('Parent ODP', `<span class="badge bg-label-primary">${escHtml(d.odp_parent_nama)}</span>`);
     html += row('Parent ODC', d.odc_nama || '-');
     html += row('Total Port', d.port || 0);
     html += row('Terpakai', used);
@@ -1346,7 +1438,7 @@ function buildPopupContent(type, d) {
     const st = d.status_client || 'offline';
     const stColor = st === 'online' ? 'success' : (st === 'isolir' ? 'warning' : 'secondary');
     const stLabel = st.toUpperCase();
-    html += `<h6 class="mb-2"><i class="mdi mdi-account me-1" style="color:#2196f3"></i>${d.nama}</h6>`;
+    html += `<h6 class="mb-2"><i class="mdi mdi-account me-1" style="color:#2196f3"></i>${escHtml(d.nama)}</h6>`;
     html += `<table class="table table-sm mb-0" style="font-size:12px;">`;
     html += row('IP', d.ip || '-');
     html += row('Parent ODP', d.odp_nama || '-');
@@ -1706,12 +1798,8 @@ function applyToggle(layer, active) {
   if (labelMatch) {
     const dtype = labelMatch[1];
     labelVisibility[dtype] = active;
-    allMarkers.forEach(m => {
-      if (m._dtype === dtype && m.getTooltip()) {
-        if (active) m.openTooltip();
-        else m.closeTooltip();
-      }
-    });
+    // Label dimatikan → nama tetap muncul saat hover/sentuh; dinyalakan → permanen (sesuai zoom)
+    refreshMarkerLabels();
   } else if (layer === 'routes') {
     routeLines.forEach(rl => {
       if (active) { if (!map.hasLayer(rl)) rl.addTo(map); }
@@ -1738,7 +1826,9 @@ function updateFilterCount() {
   const activeCount = document.querySelectorAll('.filter-item.active').length;
   const badge = document.getElementById('filterCount');
   if (badge) {
-    badge.textContent = activeCount;
+    // Tampilkan "aktif/total" agar jelas maksud angkanya (mis. 10/11 = 1 lapisan disembunyikan)
+    badge.textContent = `${activeCount}/${total}`;
+    badge.title = `${activeCount} dari ${total} lapisan ditampilkan`;
     badge.style.display = activeCount === total ? 'none' : 'inline-flex';
   }
 }
@@ -1861,8 +1951,8 @@ function updateDarkModeButton() {
   const btn = document.getElementById('toggleDarkMode');
   const isDark = document.body.classList.contains('dark-mode');
   btn.innerHTML = isDark
-    ? '<i class="mdi mdi-white-balance-sunny"></i> Terang'
-    : '<i class="mdi mdi-weather-night"></i> Malam';
+    ? '<i class="mdi mdi-white-balance-sunny"></i><span class="btn-text"> Terang</span>'
+    : '<i class="mdi mdi-weather-night"></i><span class="btn-text"> Malam</span>';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1877,6 +1967,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     updateDarkModeButton();
     showToast(document.body.classList.contains('dark-mode') ? 'Mode Malam' : 'Mode Terang', 'info');
+  });
+});
+
+// =============== DRAG MODE (KUNCI / GESER POSISI) ===============
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('toggleDragMode').addEventListener('click', function() {
+    dragMode = !dragMode;
+    applyDragMode();
+    showToast(dragMode
+      ? 'Mode geser aktif — marker bisa dipindah & langsung tersimpan'
+      : 'Posisi marker dikunci', dragMode ? 'warning' : 'info');
   });
 });
 

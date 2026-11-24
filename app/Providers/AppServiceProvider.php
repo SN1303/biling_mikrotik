@@ -19,6 +19,17 @@ class AppServiceProvider extends ServiceProvider
    */
   public function boot(): void
   {
-    \App\Models\Lamtim_user_mikrotik_details::observe(\App\Observers\UserMikrotikObserver::class);
+    // Sisa port ODP/ODC dihitung ulang dari data sebenarnya setiap kali ada
+    // perubahan pelanggan / ODP / ODC (lihat App\Services\PortUsageService).
+    $recalc = fn () => \App\Services\PortUsageService::scheduleRecalculate();
+    foreach ([
+      \App\Models\Lamtim_user_mikrotik_details::class,
+      \App\Models\Lamtim_odp::class,
+      \App\Models\Lamtim_odc::class,
+      \App\Models\User::class, // hapus pelanggan → detail ikut terhapus via FK cascade
+    ] as $model) {
+      $model::saved($recalc);
+      $model::deleted($recalc);
+    }
   }
 }

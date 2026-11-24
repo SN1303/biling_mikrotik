@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Lamtim_mikrotik;
 use App\Models\Lamtim_tagihans;
 use App\Models\Lamtim_paket;
+use App\Models\Lamtim_transaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -44,36 +45,36 @@ class HomePage extends Controller
         ->where('statusBayar', 0)
         ->count(),
 
-      // Revenue Statistics
-      'monthly_revenue' => Lamtim_tagihans::where('bulan', $currentMonth)
+      // Revenue Statistics (memperhitungkan cicilan: pakai kolom terbayar)
+      'monthly_revenue' => (float) Lamtim_tagihans::where('bulan', $currentMonth)
         ->where('tahun', $currentYear)
-        ->where('statusBayar', 1)
-        ->sum('total'),
+        ->sum('terbayar'),
 
-      'pending_revenue' => Lamtim_tagihans::where('bulan', $currentMonth)
+      'pending_revenue' => (float) Lamtim_tagihans::where('bulan', $currentMonth)
         ->where('tahun', $currentYear)
         ->where('statusBayar', 0)
-        ->sum('total'),
+        ->sum(DB::raw('GREATEST(total - COALESCE(terbayar, 0), 0)')),
 
       // Total Packages
       'total_packages' => Lamtim_paket::count(),
     ];
 
-    // Recent transactions (last 5)
-    $recent_transactions = Lamtim_tagihans::with(['user', 'paket'])
-      ->where('statusBayar', 1)
-      ->orderBy('tglBayar', 'desc')
+    // Recent transactions (last 5) — dari tabel transaksi agar cicilan ikut tampil
+    $recent_transactions = Lamtim_transaksi::with('user')
+      ->leftJoin('lamtim_tagihans', 'lamtim_tagihans.id', '=', 'lamtim_transaksis.idTagihan')
+      ->where('lamtim_transaksis.total', '>', 0)
+      ->orderBy('lamtim_transaksis.tglBayar', 'desc')
+      ->orderBy('lamtim_transaksis.id', 'desc')
       ->limit(5)
-      ->get();
+      ->get(['lamtim_transaksis.*', 'lamtim_tagihans.noTagihan', 'lamtim_tagihans.statusBayar as tagihanLunas']);
 
     // Monthly revenue chart data (last 6 months)
     $monthlyRevenue = [];
     for ($i = 5; $i >= 0; $i--) {
       $date = Carbon::now()->subMonths($i);
-      $revenue = Lamtim_tagihans::where('bulan', $date->month)
+      $revenue = (float) Lamtim_tagihans::where('bulan', $date->month)
         ->where('tahun', $date->year)
-        ->where('statusBayar', 1)
-        ->sum('total');
+        ->sum('terbayar');
       $monthlyRevenue[] = [
         'month' => $date->format('M Y'),
         'revenue' => $revenue

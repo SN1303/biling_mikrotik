@@ -98,6 +98,16 @@ class PaketController extends Controller
    */
   public function destroy(string $id)
   {
+    // FK lamtim_tagihans.idPaket = ON DELETE CASCADE: menghapus paket akan ikut
+    // menghapus seluruh tagihan & transaksinya. Blokir jika paket sudah dipakai.
+    try {
+      $rawId = decrypt($id);
+    } catch (\Exception $e) {
+      return \App\SendRespon\LamtimResponse::badRequest('ID tidak valid.');
+    }
+    if (\App\Models\Lamtim_tagihans::where('idPaket', $rawId)->exists()) {
+      return \App\SendRespon\LamtimResponse::badRequest('Paket ini sudah dipakai pada tagihan pelanggan sehingga tidak bisa dihapus. Nonaktifkan paket saja.');
+    }
     return $this->service->deleteByEncryptedId($id);
   }
   public function json(Request $request)

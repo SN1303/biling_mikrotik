@@ -1,6 +1,25 @@
 @php
 $configData = Helper::appClasses();
 $currentUser = auth()->user();
+$isDark = ($configData['style'] ?? 'light') === 'dark';
+
+// Jumlah tagihan belum lunas untuk badge menu (cache singkat agar ringan)
+$sidebarUnpaidCount = 0;
+if ($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7)) {
+  try {
+    $sidebarUnpaidCount = \Illuminate\Support\Facades\Cache::remember('sidebar_unpaid_count', 60, function () {
+      return \Illuminate\Support\Facades\DB::table('lamtim_tagihans')->where('statusBayar', 0)->count();
+    });
+  } catch (\Throwable $e) {
+    $sidebarUnpaidCount = 0;
+  }
+}
+
+// State aktif grup submenu
+$isPetaMapping = request()->is('user/list/mapping') || request()->is('user/show/map') || request()->is('area*');
+$isPerangkat   = request()->is('olt*') || request()->is('odc*') || request()->is('odp*');
+$isPelangganList = request()->is('user') || (request()->is('user/*') && !request()->is('user/create') && !$isPetaMapping);
+$isTagihanAktif  = request()->is('tagihan') || (request()->is('tagihan/*') && !request()->is('tagihan/lunas') && !request()->is('tagihan/rekap') && !request()->is('tagihan/generate'));
 @endphp
 
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
@@ -29,7 +48,7 @@ $currentUser = auth()->user();
   <ul class="menu-inner py-1">
 
     {{-- ================= UTAMA ================= --}}
-    <li class="menu-header fw-medium mt-3">
+    <li class="menu-header fw-medium mt-2">
       <span class="menu-header-text">Utama</span>
     </li>
     <li class="menu-item {{ request()->is('/') ? 'active' : '' }}">
@@ -39,13 +58,93 @@ $currentUser = auth()->user();
       </a>
     </li>
 
-    {{-- ================= JARINGAN & SERVER ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Jaringan & Server</span>
+    {{-- ================= TAGIHAN & KASIR (paling sering dipakai) ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7))
+    <li class="menu-header fw-medium">
+      <span class="menu-header-text">Tagihan & Kasir</span>
+    </li>
+    <li class="menu-item {{ $isTagihanAktif ? 'active' : '' }}">
+      <a href="{{ route('tagihan.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-receipt-text-outline"></i>
+        <div>Tagihan Aktif</div>
+        @if($sidebarUnpaidCount > 0)
+          <div class="badge rounded-pill bg-danger ms-auto sidebar-count-badge" title="{{ $sidebarUnpaidCount }} tagihan belum lunas">{{ $sidebarUnpaidCount > 99 ? '99+' : $sidebarUnpaidCount }}</div>
+        @endif
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('tagihan/lunas') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.lunas') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-check-decagram-outline"></i>
+        <div>Riwayat Lunas</div>
+      </a>
+    </li>
+    @if($currentUser->hasRole(1, 2, 3))
+    <li class="menu-item {{ request()->is('tagihan/rekap') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.rekap') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-file-chart-outline"></i>
+        <div>Rekap Bulanan</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('tagihan/generate') ? 'active' : '' }}">
+      <a href="{{ route('tagihan.generate') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-lightning-bolt-outline"></i>
+        <div>Generate Tagihan</div>
+      </a>
+    </li>
+    @endif
+    @endif
+
+    {{-- ================= PELANGGAN ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6, 7))
+    <li class="menu-header fw-medium">
+      <span class="menu-header-text">Pelanggan</span>
+    </li>
+    <li class="menu-item {{ $isPelangganList ? 'active' : '' }}">
+      <a href="{{ route('user.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-account-group-outline"></i>
+        <div>Daftar Pelanggan</div>
+      </a>
     </li>
 
-    {{-- Mikrotik Group --}}
+    @if($currentUser->hasRole(1, 2, 4, 7))
+    <li class="menu-item {{ request()->is('user/create') ? 'active' : '' }}">
+      <a href="{{ route('user.create') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-account-plus-outline"></i>
+        <div>Tambah Pelanggan</div>
+      </a>
+    </li>
+    <li class="menu-item {{ $isPetaMapping ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons mdi mdi-map-search-outline"></i>
+        <div>Peta & Mapping</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->is('user/list/mapping') ? 'active' : '' }}">
+          <a href="{{ route('user.mapping') }}" class="menu-link">
+            <div>Mapping Pelanggan</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->is('user/show/map') ? 'active' : '' }}">
+          <a href="{{ route('user.show.mapping') }}" class="menu-link">
+            <div>Lihat Map ODP</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->is('area*') ? 'active' : '' }}">
+          <a href="{{ route('area.index') }}" class="menu-link">
+            <div>Area Wilayah</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+    @endif
+    @endif
+
+    {{-- ================= JARINGAN ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
+    <li class="menu-header fw-medium">
+      <span class="menu-header-text">Jaringan</span>
+    </li>
+
     @if($currentUser->hasRole(1, 2))
     <li class="menu-item {{ request()->is('mikrotik*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
@@ -80,92 +179,58 @@ $currentUser = auth()->user();
         </li>
       </ul>
     </li>
-
-    {{-- OLT --}}
-    <li class="menu-item {{ request()->is('olt*') ? 'active' : '' }}">
-      <a href="{{ route('olt.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-server-network"></i>
-        <div>OLT</div>
-      </a>
-    </li>
     @endif
 
-    {{-- ODC, ODP & Maps (Role 1, 2, 4) --}}
-    <li class="menu-item {{ request()->is('odc*') ? 'active' : '' }}">
-      <a href="{{ route('odc.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-hub-outline"></i>
-        <div>ODC</div>
+    <li class="menu-item {{ $isPerangkat ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons mdi mdi-server-network"></i>
+        <div>Perangkat</div>
       </a>
+      <ul class="menu-sub">
+        @if($currentUser->hasRole(1, 2))
+        <li class="menu-item {{ request()->is('olt*') ? 'active' : '' }}">
+          <a href="{{ route('olt.index') }}" class="menu-link">
+            <div>OLT</div>
+          </a>
+        </li>
+        @endif
+        <li class="menu-item {{ request()->is('odc*') ? 'active' : '' }}">
+          <a href="{{ route('odc.index') }}" class="menu-link">
+            <div>ODC</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->is('odp*') ? 'active' : '' }}">
+          <a href="{{ route('odp.index') }}" class="menu-link">
+            <div>ODP</div>
+          </a>
+        </li>
+      </ul>
     </li>
-    <li class="menu-item {{ request()->is('odp*') ? 'active' : '' }}">
-      <a href="{{ route('odp.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-transit-connection-variant"></i>
-        <div>ODP</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('google-map*') ? 'active' : '' }}">
-      <a href="{{ route('google-map.standalone') }}" class="menu-link" target="_blank">
+
+    <li class="menu-item">
+      <a href="{{ route('google-map.standalone') }}" class="menu-link" target="_blank" rel="noopener">
         <i class="menu-icon tf-icons mdi mdi-map-marker-radius-outline"></i>
         <div>Peta Jaringan</div>
+        <i class="mdi mdi-open-in-new ms-auto sidebar-external-icon" title="Buka di tab baru"></i>
       </a>
     </li>
     @endif
 
-    {{-- ================= PELANGGAN ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 3, 4, 6, 7))
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Pelanggan</span>
-    </li>
-    <li class="menu-item {{ request()->is('user') || (request()->is('user/*') && !request()->is('user/create') && !request()->is('user/list/mapping') && !request()->is('user/show/map')) ? 'active' : '' }}">
-      <a href="{{ route('user.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-account-group-outline"></i>
-        <div>Daftar Pelanggan</div>
-      </a>
-    </li>
-
-    @if($currentUser->hasRole(1, 2, 4, 7))
-    <li class="menu-item {{ request()->is('user/create') ? 'active' : '' }}">
-      <a href="{{ route('user.create') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-account-plus-outline"></i>
-        <div>Tambah Pelanggan</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('user/list/mapping') ? 'active' : '' }}">
-      <a href="{{ route('user.mapping') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-map-search-outline"></i>
-        <div>Mapping Pelanggan</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('user/show/map') ? 'active' : '' }}">
-      <a href="{{ route('user.show.mapping') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-map-marker-distance"></i>
-        <div>Lihat Map ODP</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('area*') ? 'active' : '' }}">
-      <a href="{{ route('area.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-map-marker-multiple-outline"></i>
-        <div>Area Wilayah</div>
-      </a>
-    </li>
-    @endif
-    @endif
-
-    {{-- ================= LAYANAN & INTERNET ================= --}}
+    {{-- ================= PAKET & LAYANAN ================= --}}
     @if($currentUser && $currentUser->hasRole(1, 2))
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Layanan & Internet</span>
-    </li>
-    <li class="menu-item {{ request()->is('kategori*') ? 'active' : '' }}">
-      <a href="{{ route('kategori.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-shape-outline"></i>
-        <div>Kategori Paket</div>
-      </a>
+    <li class="menu-header fw-medium">
+      <span class="menu-header-text">Paket & Layanan</span>
     </li>
     <li class="menu-item {{ request()->is('paket*') ? 'active' : '' }}">
       <a href="{{ route('paket.index') }}" class="menu-link">
         <i class="menu-icon tf-icons mdi mdi-speedometer"></i>
         <div>Paket Internet</div>
+      </a>
+    </li>
+    <li class="menu-item {{ request()->is('kategori*') ? 'active' : '' }}">
+      <a href="{{ route('kategori.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons mdi mdi-shape-outline"></i>
+        <div>Kategori Paket</div>
       </a>
     </li>
     <li class="menu-item {{ request()->is('ip-pool*') ? 'active' : '' }}">
@@ -182,45 +247,12 @@ $currentUser = auth()->user();
     </li>
     @endif
 
-    {{-- ================= TAGIHAN & KASIR ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7))
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Tagihan & Kasir</span>
+    {{-- ================= SISTEM ================= --}}
+    @if($currentUser && $currentUser->hasRole(1, 2))
+    <li class="menu-header fw-medium">
+      <span class="menu-header-text">Sistem</span>
     </li>
-    <li class="menu-item {{ request()->is('tagihan') || (request()->is('tagihan/*') && !request()->is('tagihan/lunas') && !request()->is('tagihan/rekap') && !request()->is('tagihan/generate')) ? 'active' : '' }}">
-      <a href="{{ route('tagihan.index') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-receipt-text-outline"></i>
-        <div>Tagihan Aktif</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('tagihan/lunas') ? 'active' : '' }}">
-      <a href="{{ route('tagihan.lunas') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-check-decagram-outline"></i>
-        <div>Tagihan Lunas</div>
-      </a>
-    </li>
-
-    @if($currentUser->hasRole(1, 2, 3))
-    <li class="menu-item {{ request()->is('tagihan/rekap') ? 'active' : '' }}">
-      <a href="{{ route('tagihan.rekap') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-file-chart-outline"></i>
-        <div>Rekap Bulanan</div>
-      </a>
-    </li>
-    <li class="menu-item {{ request()->is('tagihan/generate') ? 'active' : '' }}">
-      <a href="{{ route('tagihan.generate') }}" class="menu-link">
-        <i class="menu-icon tf-icons mdi mdi-lightning-bolt-circle"></i>
-        <div>Generate Tagihan</div>
-      </a>
-    </li>
-    @endif
-    @endif
-
-    {{-- ================= MANAJEMEN STAF (SUPER ADMIN ONLY) ================= --}}
-    @if($currentUser && $currentUser->isSuperAdmin())
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Keamanan & Tim</span>
-    </li>
+    @if($currentUser->isSuperAdmin())
     <li class="menu-item {{ request()->is('staff*') ? 'active' : '' }}">
       <a href="{{ route('staff.index') }}" class="menu-link">
         <i class="menu-icon tf-icons mdi mdi-shield-account-outline"></i>
@@ -228,12 +260,6 @@ $currentUser = auth()->user();
       </a>
     </li>
     @endif
-
-    {{-- ================= SISTEM ================= --}}
-    @if($currentUser && $currentUser->hasRole(1, 2))
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Sistem</span>
-    </li>
     <li class="menu-item {{ request()->is('settings*') ? 'active' : '' }}">
       <a href="{{ route('settings.sync.index') }}" class="menu-link">
         <i class="menu-icon tf-icons mdi mdi-cog-sync-outline"></i>
@@ -242,69 +268,36 @@ $currentUser = auth()->user();
     </li>
     @endif
 
-    {{-- ================= AKUN & KELUAR ================= --}}
-    <li class="menu-header fw-medium mt-3">
-      <span class="menu-header-text">Akun</span>
-    </li>
-    <li class="menu-item">
-      <a href="{{ route('logout') }}" class="menu-link text-danger" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
-        <i class="menu-icon tf-icons mdi mdi-logout text-danger"></i>
-        <div>Keluar / Logout</div>
-      </a>
-      <form method="POST" id="sidebar-logout-form" action="{{ route('logout') }}" class="d-none">
-        @csrf
-      </form>
-    </li>
-
   </ul>
 
   @if($currentUser)
-  <div class="p-3 border-top mt-auto sidebar-user-footer" style="background: var(--mryes-sidebar-user-bg); border-color: var(--mryes-sidebar-border) !important;">
-    <div class="d-flex align-items-center justify-content-between">
+  {{-- ================= FOOTER: PROFIL, TEMA & LOGOUT ================= --}}
+  <div class="sidebar-user-footer border-top">
+    <div class="d-flex align-items-center justify-content-between gap-2">
       <div class="d-flex align-items-center gap-2 overflow-hidden">
-        <div class="avatar avatar-sm flex-shrink-0">
-          <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" style="width: 32px; height: 32px; background: linear-gradient(135deg, #2563eb, #0ea5e9); font-size: 0.8rem;">
-            {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
-          </div>
+        <div class="sidebar-user-avatar flex-shrink-0">
+          {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
         </div>
-        <div class="text-truncate" style="line-height: 1.2;">
-          <div class="fw-semibold text-truncate sidebar-user-name" style="font-size: 0.8125rem; color: var(--mryes-sidebar-brand);">{{ $currentUser->name ?? '-' }}</div>
-          <small class="text-muted" style="font-size: 0.7rem;">{{ $currentUser->role_name ?? 'User' }}</small>
+        <div class="sidebar-user-meta text-truncate">
+          <div class="fw-semibold text-truncate sidebar-user-name">{{ $currentUser->name ?? '-' }}</div>
+          <small class="sidebar-user-role">{{ $currentUser->role_name ?? 'User' }}</small>
         </div>
       </div>
-      <div class="d-flex align-items-center gap-1">
-        <!-- Theme Switcher Dropup (Light / Dark / System) -->
-        <div class="dropup">
-          <button type="button" class="btn btn-sm btn-icon btn-text-secondary rounded-pill" data-bs-toggle="dropdown" aria-expanded="false" title="Ganti Mode Tema (Light/Dark)">
-            <i class="mdi {{ (($configData['style'] ?? 'light') === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end shadow border py-1 mb-2" style="border-radius: 10px; min-width: 140px; z-index: 1070;">
-            <li>
-              <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'light') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('light')">
-                <i class="mdi mdi-weather-sunny text-warning me-2 fs-5"></i>
-                <span class="align-middle fw-medium">Light</span>
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item py-1.5 d-flex align-items-center {{ (($configData['style'] ?? 'light') === 'dark') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('dark')">
-                <i class="mdi mdi-weather-night text-info me-2 fs-5"></i>
-                <span class="align-middle fw-medium">Dark</span>
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item py-1.5 d-flex align-items-center" href="javascript:void(0);" onclick="setAppTheme('system')">
-                <i class="mdi mdi-monitor text-secondary me-2 fs-5"></i>
-                <span class="align-middle fw-medium">System</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <a href="{{ route('logout') }}" class="btn btn-sm btn-icon btn-text-danger rounded-pill" title="Logout" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
+      <div class="sidebar-footer-actions d-flex align-items-center gap-1 flex-shrink-0">
+        <button type="button" class="btn btn-sm btn-icon btn-text-secondary rounded-pill"
+          onclick="setAppTheme('{{ $isDark ? 'light' : 'dark' }}')"
+          title="{{ $isDark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap' }}">
+          <i class="mdi {{ $isDark ? 'mdi-weather-sunny text-warning' : 'mdi-weather-night text-info' }} fs-5"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-icon btn-text-danger rounded-pill" title="Keluar / Logout"
+          onclick="document.getElementById('sidebar-logout-form').submit();">
           <i class="mdi mdi-power fs-5"></i>
-        </a>
+        </button>
       </div>
     </div>
+    <form method="POST" id="sidebar-logout-form" action="{{ route('logout') }}" class="d-none">
+      @csrf
+    </form>
   </div>
   @endif
 

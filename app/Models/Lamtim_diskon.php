@@ -9,6 +9,7 @@ class Lamtim_diskon extends Model
   protected $fillable = [
     'idUser',
     'bulan',
+    'tahun',
     'nominal',
     'createBy',
   ];

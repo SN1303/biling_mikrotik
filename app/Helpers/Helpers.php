@@ -93,7 +93,7 @@ class Helpers
       }
     }
     $styleVal = $data['myStyle'] == "dark" ? "dark" : "light";
-    if (isset($_COOKIE['style'])) {
+    if (isset($_COOKIE['style']) && in_array($_COOKIE['style'], ['light', 'dark'], true)) {
       $styleVal = $_COOKIE['style'];
     }
     //layout classes

@@ -351,6 +351,18 @@ class UserController extends Controller
   {
     $this->denyBendahara();
     $this->denyTeknisi();
+
+    // FK tagihan & transaksi = ON DELETE CASCADE: menghapus pelanggan akan ikut
+    // menghapus riwayat pembayarannya. Blokir jika sudah pernah ada uang masuk.
+    try {
+      $rawId = decrypt($id);
+    } catch (\Exception $e) {
+      return \App\SendRespon\LamtimResponse::badRequest('ID tidak valid.');
+    }
+    if (\App\Models\Lamtim_transaksi::where('idUser', $rawId)->where('total', '>', 0)->exists()) {
+      return \App\SendRespon\LamtimResponse::badRequest('Pelanggan ini sudah memiliki riwayat pembayaran sehingga tidak bisa dihapus. Nonaktifkan pelanggan saja agar riwayat keuangan tetap tersimpan.');
+    }
+
     return $this->service->deleteByEncryptedId($id);
   }
 

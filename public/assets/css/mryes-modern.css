@@ -219,7 +219,6 @@ body {
 .bg-menu-theme .menu-inner-shadow {
   display: none !important;
 }
-}
 
 /* Custom Scrollbar for Sidebar */
 #layout-menu::-webkit-scrollbar,
@@ -398,17 +397,89 @@ html.dark-style .mryes-hero-banner .hero-date {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Sidebar user footer dropup overflow protection */
+/* ==========================================================================
+   SIDEBAR — RAPI: SPASI HEADER, BADGE, FOOTER PROFIL & MODE COLLAPSED
+   ========================================================================== */
+.bg-menu-theme .menu-inner > .menu-header {
+  margin-top: 0.85rem !important;
+  margin-bottom: 0.15rem !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+.bg-menu-theme .menu-inner > .menu-header:first-child {
+  margin-top: 0.35rem !important;
+}
+
+/* node-waves menambah .waves-effect { display:inline-block } ke link grup (menu-toggle)
+   sehingga ikon & teks terpisah baris. Paksa tetap flex seperti menu biasa. */
+.layout-menu .menu-link.waves-effect {
+  display: flex !important;
+}
+
+/* Badge jumlah tagihan belum lunas */
+.bg-menu-theme .sidebar-count-badge {
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  min-width: 22px;
+  padding: 0.2rem 0.45rem !important;
+  line-height: 1 !important;
+}
+.bg-menu-theme .menu-item.active > .menu-link .sidebar-count-badge {
+  background: #ffffff !important;
+  color: #dc2626 !important;
+}
+
+/* Penanda link yang terbuka di tab baru */
+.bg-menu-theme .sidebar-external-icon {
+  font-size: 0.85rem;
+  opacity: 0.55;
+}
+
+/* Footer profil: selalu menempel di bawah sidebar */
 .sidebar-user-footer {
   position: relative;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.65rem 0.85rem;
+  background: var(--mryes-sidebar-user-bg);
+  border-color: var(--mryes-sidebar-border) !important;
   overflow: visible !important;
 }
-.sidebar-user-footer .dropup,
-.sidebar-user-footer .dropdown {
-  position: relative;
+.sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
 }
-.sidebar-user-footer .dropdown-menu {
-  z-index: 1090 !important;
+.sidebar-user-meta {
+  line-height: 1.2;
+}
+.sidebar-user-name {
+  font-size: 0.8125rem;
+  color: var(--mryes-sidebar-brand);
+}
+.sidebar-user-role {
+  font-size: 0.7rem;
+  color: var(--mryes-text-muted);
+}
+
+/* Sidebar collapsed (desktop): sembunyikan teks footer & badge agar tidak meluber */
+@media (min-width: 1200px) {
+  .layout-menu-collapsed:not(.layout-menu-hover) .sidebar-user-meta,
+  .layout-menu-collapsed:not(.layout-menu-hover) .sidebar-footer-actions,
+  .layout-menu-collapsed:not(.layout-menu-hover) .bg-menu-theme .sidebar-count-badge,
+  .layout-menu-collapsed:not(.layout-menu-hover) .bg-menu-theme .sidebar-external-icon {
+    display: none !important;
+  }
+  .layout-menu-collapsed:not(.layout-menu-hover) .sidebar-user-footer > .d-flex {
+    justify-content: center !important;
+  }
 }
 
 .metric-icon-box {
@@ -682,4 +753,97 @@ html.dark-style .mryes-hero-banner .hero-date {
     font-size: 16px !important;
     border-radius: 6px !important;
   }
+}
+
+/* ==========================================================================
+   DARK MODE — OVERRIDE UTILITAS TERANG YANG MASIH DI-HARDCODE DI VIEW
+   (bg-white / bg-light / text-dark & komponen halaman tagihan/dashboard)
+   ========================================================================== */
+html.dark-style .bg-white {
+  background-color: var(--mryes-surface) !important;
+}
+html.dark-style .bg-light,
+html.dark-style .bg-light-subtle,
+html.dark-style .mryes-soft-box {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+html.dark-style .mryes-soft-box,
+html.dark-style .border-light {
+  border-color: var(--mryes-border) !important;
+}
+html.dark-style .mryes-soft-box {
+  border: 1px solid var(--mryes-border) !important;
+}
+html.dark-style .text-dark {
+  color: var(--mryes-text-primary) !important;
+}
+html.dark-style .badge.bg-light,
+html.dark-style .badge.bg-white {
+  color: var(--mryes-text-secondary) !important;
+}
+
+/* Halaman Tagihan Aktif & Riwayat Lunas */
+html.dark-style .filter-segmented-control {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark-style .btn-filter-pill {
+  color: var(--mryes-text-secondary) !important;
+}
+html.dark-style .btn-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--mryes-text-primary) !important;
+}
+html.dark-style .btn-filter-pill.active {
+  background: var(--mryes-surface) !important;
+  color: var(--mryes-text-primary) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+html.dark-style .search-input-group {
+  background: var(--mryes-surface) !important;
+  border-color: var(--mryes-border) !important;
+}
+html.dark-style #table thead th {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: var(--mryes-text-secondary) !important;
+}
+html.dark-style #table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark-style .metode-card {
+  background: var(--mryes-surface) !important;
+  border-color: var(--mryes-border) !important;
+}
+html.dark-style .metode-card:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+html.dark-style .btn-quick-cash {
+  background-color: var(--mryes-surface) !important;
+  border-color: var(--mryes-border) !important;
+  color: var(--mryes-text-primary) !important;
+}
+html.dark-style .btn-quick-cash:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark-style #cash-calculator-box {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--mryes-border) !important;
+}
+@media (max-width: 767.98px) {
+  html.dark-style #table tbody tr {
+    background: var(--mryes-surface) !important;
+    border-color: var(--mryes-border) !important;
+  }
+  html.dark-style .card-datatable {
+    background: var(--mryes-canvas) !important;
+  }
+}
+/* Struk/kuitansi sengaja tetap putih (meniru kertas & untuk cetak) */
+html.dark-style .bg-warning.text-dark,
+html.dark-style .bg-info.text-dark,
+html.dark-style .receipt-box .text-dark {
+  color: #1e293b !important;
+}
+html.dark-style .receipt-box .bg-light,
+html.dark-style .receipt-box .bg-white {
+  background-color: #f8fafc !important;
 }

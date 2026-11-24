@@ -28,7 +28,9 @@ yarn-error.log
 #/public/mix-manifest.json
 # But not these files...
 !/public/assets/*
-/public/assets/js
+/public/assets/js/*
+!/public/assets/js/global-loading.js
 /public/assets/css/*
 !/public/assets/css/mryes-modern.css
+!/public/assets/css/global-loading.css
 /public/assets/vendor

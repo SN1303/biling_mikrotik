@@ -21,10 +21,13 @@ class TagihanController extends Controller
   /**
    * Display a listing of the resource.
    */
-  public function index()
+  /**
+   * Data dropdown filter tahun/bulan (cache 1 hari, dihapus otomatis saat generate).
+   * Tahun berjalan selalu disertakan agar tidak hilang saat pergantian tahun.
+   */
+  private function getFilterData(): array
   {
-    // Ambil data filter dari database dengan cache 1 bulan
-    $filterData = Cache::remember('tagihan_filter_data', now()->addMonth(), function () {
+    $filterData = Cache::remember('tagihan_filter_data', now()->addDay(), function () {
       $tahun = DB::table('lamtim_tagihans')
         ->select('tahun')
         ->distinct()
@@ -44,6 +47,19 @@ class TagihanController extends Controller
         'bulan' => $bulan
       ];
     });
+
+    $currentYear = (int) date('Y');
+    if (!in_array($currentYear, array_map('intval', $filterData['tahun']), true)) {
+      $filterData['tahun'][] = $currentYear;
+      rsort($filterData['tahun']);
+    }
+
+    return $filterData;
+  }
+
+  public function index()
+  {
+    $filterData = $this->getFilterData();
 
     $currentMonth = (int) date('n');
     $currentYear  = (int) date('Y');
@@ -106,27 +122,7 @@ class TagihanController extends Controller
   }
   public function lunas()
   {
-    // Ambil data filter dari database dengan cache 1 bulan
-    $filterData = Cache::remember('tagihan_filter_data', now()->addMonth(), function () {
-      $tahun = DB::table('lamtim_tagihans')
-        ->select('tahun')
-        ->distinct()
-        ->orderBy('tahun', 'desc')
-        ->pluck('tahun')
-        ->toArray();
-
-      $bulan = DB::table('lamtim_tagihans')
-        ->select('bulan')
-        ->distinct()
-        ->orderBy('bulan', 'asc')
-        ->pluck('bulan')
-        ->toArray();
-
-      return [
-        'tahun' => $tahun,
-        'bulan' => $bulan
-      ];
-    });
+    $filterData = $this->getFilterData();
 
     $currentMonth = (int) date('n');
     $currentYear  = (int) date('Y');
@@ -157,9 +153,9 @@ class TagihanController extends Controller
         COUNT(*) as total_tagihan,
         SUM(total) as grand_total,
         SUM(CASE WHEN statusBayar = 0 THEN 1 ELSE 0 END) as belum_bayar_count,
-        SUM(CASE WHEN statusBayar = 0 THEN total ELSE 0 END) as belum_bayar_total,
+        SUM(CASE WHEN statusBayar = 0 THEN GREATEST(total - COALESCE(terbayar, 0), 0) ELSE 0 END) as belum_bayar_total,
         SUM(CASE WHEN statusBayar = 1 THEN 1 ELSE 0 END) as sudah_bayar_count,
-        SUM(CASE WHEN statusBayar = 1 THEN total ELSE 0 END) as sudah_bayar_total
+        SUM(COALESCE(terbayar, 0)) as sudah_bayar_total
       ')
       ->groupBy('bulan')
       ->get()
@@ -219,7 +215,15 @@ class TagihanController extends Controller
   public function show($id)
   {
     try {
-      $decryptedId = is_numeric($id) ? (int)$id : decrypt($id);
+      try {
+        $decryptedId = decrypt($id);
+      } catch (\Exception $e) {
+        return response()->json([
+          'success' => false,
+          'message' => 'ID tagihan tidak valid',
+          'data' => null
+        ], 404);
+      }
       $tagihan = \App\Models\Lamtim_tagihans::with([
         'paket:id,nama,price',
         'user:id,name,wa,julukan'
@@ -291,9 +295,10 @@ class TagihanController extends Controller
         ]
       ]);
     } catch (\Exception $e) {
+      \Illuminate\Support\Facades\Log::error('Gagal mengambil detail tagihan: ' . $e->getMessage());
       return response()->json([
         'success' => false,
-        'message' => 'Gagal mengambil detail tagihan: ' . $e->getMessage(),
+        'message' => 'Gagal mengambil detail tagihan',
         'data' => null
       ], 500);
     }

@@ -56,6 +56,7 @@ class MappingController extends Controller
 
   public function jsonServer()
   {
+    \App\Services\PortUsageService::recalculateAll();
     $odcs = Lamtim_odc::select('id', 'nama', 'latitude', 'longitude', 'port', 'portSisa', 'portOlt')->get()->map(function ($item) {
       $item->type = 'ODC';
       return $item;
@@ -76,6 +77,7 @@ class MappingController extends Controller
    */
   public function jsonGetMapDataByUser($idUser)
   {
+    \App\Services\PortUsageService::recalculateAll();
     // Ambil detail user beserta relasi OLT, ODC, ODP
     $details = Lamtim_user_mikrotik_details::with([
       'odc:id,latitude,longitude,nama,port,portSisa,portOlt',
@@ -146,6 +148,7 @@ class MappingController extends Controller
    */
   public function jsonGetShowMapUser()
   {
+    \App\Services\PortUsageService::recalculateAll();
     // Ambil detail user beserta relasi OLT, ODC, ODP
     $details = Lamtim_user_mikrotik_details::with([
       'odc:id,latitude,longitude,nama,port,portSisa,portOlt',

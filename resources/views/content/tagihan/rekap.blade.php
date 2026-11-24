@@ -59,7 +59,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Rekap Tagihan {{ $tahunDipilih }}</h4>
-    <p class="text-muted mb-0" style="font-size:.875rem;">Ringkasan tagihan per bulan — belum bayar, sudah bayar, dan total keseluruhan.</p>
+    <p class="text-muted mb-0" style="font-size:.875rem;">Ringkasan tagihan per bulan — belum bayar (sisa), sudah bayar (termasuk cicilan masuk), dan total keseluruhan.</p>
   </div>
   <div class="d-flex align-items-center gap-2">
     <label for="filter-tahun" class="form-label mb-0 text-muted small fw-medium">Tahun:</label>

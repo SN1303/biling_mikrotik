@@ -370,7 +370,7 @@
           <div class="col-md-6">
             <div class="form-floating form-floating-outline">
               <input type="text" id="kode" name="kode" class="form-control border-primary" autocomplete="off" placeholder="KODE" />
-              <label>KODE PAKET (Radius Group)</label>
+              <label>KODE PAKET (PPP Profile)</label>
             </div>
           </div>
           <div class="col-md-8">
@@ -422,7 +422,7 @@
                         @endforeach
                     </select>
                     <label>
-                        IP POOL (RADIUS)
+                        IP POOL (PPP Profile)
                         <a href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
                             <i class="mdi mdi-information-outline"></i>
                         </a>
@@ -438,7 +438,7 @@
                         @endforeach
                     </select>
                     <label>
-                        ADDRESS LIST (RADIUS)
+                        ADDRESS LIST (PPP Profile)
                         <a href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
                             <i class="mdi mdi-information-outline"></i>
                         </a>

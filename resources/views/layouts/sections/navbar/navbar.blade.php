@@ -74,7 +74,7 @@ $currentUser = Auth::user();
 
         <!-- User Dropdown -->
         <li class="nav-item navbar-dropdown dropdown-user dropdown ms-1">
-          <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center gap-2 p-1 rounded-pill" href="javascript:void(0);" data-bs-toggle="dropdown" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+          <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center gap-2 p-1 rounded-pill" href="javascript:void(0);" data-bs-toggle="dropdown" style="background: var(--mryes-sidebar-user-bg); border: 1px solid var(--mryes-navbar-border);">
             <div class="avatar avatar-online" style="width: 34px; height: 34px;">
               <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 100%; height: 100%; background: linear-gradient(135deg, #2563eb, #0ea5e9); font-size: 0.85rem;">
                 {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
@@ -167,21 +167,4 @@ $currentUser = Auth::user();
 </nav>
 <!-- / Navbar -->
 
-<script>
-  function setAppTheme(theme) {
-    if (theme === 'system') {
-      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      theme = isDark ? 'dark' : 'light';
-    }
-    // Simpan preference ke cookie (1 tahun) & localStorage
-    document.cookie = "style=" + theme + ";path=/;max-age=31536000;SameSite=Lax";
-    try {
-      localStorage.setItem('templateCustomizer--Style', theme);
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.includes('--Style')) localStorage.setItem(k, theme);
-      }
-    } catch (e) {}
-    window.location.reload();
-  }
-</script>
+{{-- setAppTheme() didefinisikan sekali di layouts/sections/scriptsIncludes.blade.php --}}

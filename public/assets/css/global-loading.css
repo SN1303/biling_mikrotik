@@ -1,0 +1,75 @@
+/* Overlay GlobalLoading (lihat public/assets/js/global-loading.js) */
+.gl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.gl-overlay.gl-show {
+  opacity: 1;
+  visibility: visible;
+}
+.gl-box {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+.gl-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 0.75rem;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: gl-spin 0.8s linear infinite;
+}
+.gl-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.gl-bar-wrap {
+  height: 6px;
+  margin-top: 0.85rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.gl-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  transition: width 0.25s ease;
+}
+@keyframes gl-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gl-spinner { animation-duration: 2s; }
+  .gl-bar, .gl-overlay { transition: none; }
+}
+
+/* Mode gelap aplikasi */
+html.dark-style .gl-box {
+  background: #1e293b;
+  color: #f8fafc;
+}
+html.dark-style .gl-spinner {
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: #38bdf8;
+}
+html.dark-style .gl-bar-wrap {
+  background: rgba(255, 255, 255, 0.1);
+}

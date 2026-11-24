@@ -13,8 +13,7 @@
         "mikrotik",
         "olt",
         "odc",
-        "odp",
-        "radius"
+        "odp"
       ],
       "submenu": [
         {
@@ -51,27 +50,6 @@
           "url": "/mikrotik/sync-customers",
           "name": "Sinkron Pelanggan",
           "slug": "mikrotik.sync-customers"
-        },
-        {
-          "name": "FreeRADIUS",
-          "slug": "radius",
-          "submenu": [
-            {
-              "url": "/radius/config",
-              "name": "Pengaturan",
-              "slug": "radius.config.index"
-            },
-            {
-              "url": "/radius/sync",
-              "name": "Sinkronisasi",
-              "slug": "radius.sync.index"
-            },
-            {
-              "url": "/radius/users",
-              "name": "Pelanggan",
-              "slug": "radius.user.index"
-            }
-          ]
         }
       ]
     }

@@ -12,6 +12,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\DataTables;
 use App\Utils\Logger;
 
@@ -40,15 +41,31 @@ class TagihanService
   {
     try {
       $id = decrypt($encryptedId);
+
+      $tagihan = $this->repository->find($id);
+      if (!$tagihan) {
+        return $this->errorResponse('Tagihan tidak ditemukan atau sudah dihapus');
+      }
+
+      // Lindungi riwayat keuangan: tagihan yang sudah ada uang masuk tidak boleh dihapus
+      // (transaksi ikut terhapus karena FK cascade). Batalkan pembayarannya dulu.
+      $adaUangMasuk = (float)($tagihan->terbayar ?? 0) > 0
+        || ($tagihan->statusBayar == 1 && (float)$tagihan->total > 0)
+        || Lamtim_transaksi::where('idTagihan', $id)->where('total', '>', 0)->exists();
+      if ($adaUangMasuk) {
+        return $this->errorResponse('Tagihan ini sudah memiliki pembayaran. Batalkan pembayarannya terlebih dahulu sebelum menghapus.');
+      }
+
       $deleted = $this->repository->deleteById($id);
 
       if ($deleted) {
         return $this->successResponse(null, 'Tagihan berhasil dihapus');
       } else {
-        return $this->errorResponse('Tagihan tidak ditemukan atau sudah dihapus', [], 404);
+        return $this->errorResponse('Tagihan tidak ditemukan atau sudah dihapus');
       }
     } catch (\Exception $e) {
-      return $this->errorResponse('Gagal menghapus tagihan', [$e->getMessage()]);
+      Log::error('Gagal menghapus tagihan: ' . $e->getMessage());
+      return $this->errorResponse('Gagal menghapus tagihan');
     }
   }
 
@@ -63,7 +80,33 @@ class TagihanService
    */
   public function bayarTagihan($id, $request)
   {
-    $id = decrypt($id);
+    // Idempotency: setiap pembukaan kasir membawa token unik. Jika request yang
+    // sama terkirim dua kali (double-klik / retry jaringan), request kedua ditolak
+    // sehingga uang tidak teralokasi dua kali.
+    $token = (string) $request->input('request_token', '');
+    $tokenKey = $token !== '' ? 'pay_token_' . sha1($token) : null;
+
+    if ($tokenKey && !Cache::add($tokenKey, true, now()->addMinutes(30))) {
+      return $this->errorResponse('Pembayaran ini sudah diproses sebelumnya (permintaan ganda dicegah). Silakan muat ulang data.');
+    }
+
+    $result = $this->prosesBayarTagihan($id, $request);
+
+    // Jika gagal, lepaskan token agar kasir bisa mencoba lagi
+    if ($tokenKey && empty($result['success'])) {
+      Cache::forget($tokenKey);
+    }
+
+    return $result;
+  }
+
+  protected function prosesBayarTagihan($id, $request)
+  {
+    try {
+      $id = decrypt($id);
+    } catch (\Exception $e) {
+      return $this->errorResponse('ID tagihan tidak valid');
+    }
     // Validasi input
     if (empty($request->metode_bayar)) {
       return $this->errorResponse('Metode bayar harus diisi', [], 400);
@@ -318,11 +361,8 @@ class TagihanService
       DB::rollBack();
       Cache::forget($lockKey);
 
-      return $this->errorResponse('Gagal membayar tagihan', [
-        'error' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-      ], 500);
+      Log::error('Gagal membayar tagihan: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+      return $this->errorResponse('Gagal membayar tagihan. Silakan coba lagi atau hubungi admin.');
     }
   }
 
@@ -336,7 +376,11 @@ class TagihanService
    */
   public function batalPembayaran($encryptedId)
   {
-    $id = decrypt($encryptedId);
+    try {
+      $id = decrypt($encryptedId);
+    } catch (\Exception $e) {
+      return $this->errorResponse('ID tagihan tidak valid');
+    }
     // Cek apakah ada proses pembatalan yang sedang berlangsung
     $lockKey = "cancel_payment_process_{$id}";
     if (Cache::has($lockKey)) {
@@ -359,11 +403,20 @@ class TagihanService
         return $this->errorResponse('Tagihan tidak ditemukan', [], 404);
       }
 
-      // Cek apakah tagihan sudah dibayar
-      if ($tagihan->statusBayar != 1) {
+      // Tagihan gratis (total 0) tidak punya pembayaran untuk dibatalkan
+      $isGratis = strtolower((string)$tagihan->metode) === 'gratis' || (float)$tagihan->total <= 0;
+      if ($isGratis) {
         DB::rollBack();
         Cache::forget($lockKey);
-        return $this->errorResponse('Tagihan ini belum dibayar', [], 400);
+        return $this->errorResponse('Tagihan gratis tidak memiliki pembayaran yang bisa dibatalkan');
+      }
+
+      // Boleh dibatalkan jika sudah lunas ATAU sudah ada cicilan masuk
+      $adaPembayaran = $tagihan->statusBayar == 1 || (float)($tagihan->terbayar ?? 0) > 0;
+      if (!$adaPembayaran) {
+        DB::rollBack();
+        Cache::forget($lockKey);
+        return $this->errorResponse('Tagihan ini belum memiliki pembayaran');
       }
 
       // Validasi user yang login
@@ -422,11 +475,8 @@ class TagihanService
       DB::rollBack();
       Cache::forget($lockKey);
 
-      return $this->errorResponse('Gagal membatalkan pembayaran', [
-        'error' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-      ], 500);
+      Log::error('Gagal membatalkan pembayaran: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+      return $this->errorResponse('Gagal membatalkan pembayaran. Silakan coba lagi atau hubungi admin.');
     }
   }
 
@@ -441,12 +491,15 @@ class TagihanService
   {
     try {
       $result = $this->repository->generateTagihanBulananRepo();
+      // Bulan/tahun baru harus langsung muncul di dropdown filter
+      Cache::forget('tagihan_filter_data');
       return $this->successResponse(
         $result,
         'Generate tagihan bulanan selesai'
       );
     } catch (\Exception $e) {
-      return $this->errorResponse('Terjadi error saat generate tagihan bulanan', [$e->getMessage()]);
+      Log::error('Generate tagihan bulanan gagal: ' . $e->getMessage());
+      return $this->errorResponse('Terjadi error saat generate tagihan bulanan');
     }
   }
 
@@ -481,13 +534,22 @@ class TagihanService
 
       $today = date('Y-m-d');
 
+      // tglJatuhTempo di-cast ke Carbon, jadi harus dinormalisasi ke string Y-m-d
+      // sebelum dibandingkan (Carbon vs string menghasilkan "Y-m-d H:i:s" sehingga
+      // perbandingan === dan < / > menjadi salah).
+      $dueStr = function ($item) {
+        if (empty($item->tglJatuhTempo)) return null;
+        return Carbon::parse($item->tglJatuhTempo)->format('Y-m-d');
+      };
+
       // ✅ Hitung summary data SEBELUM filtering quick filter
       $summaryQuery = clone $query;
-      $overdueItems = $summaryQuery->filter(function ($item) use ($today) {
-        return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo < $today;
+      $overdueItems = $summaryQuery->filter(function ($item) use ($today, $dueStr) {
+        $due = $dueStr($item);
+        return $due !== null && $due < $today;
       });
-      $todayDueItems = $summaryQuery->filter(function ($item) use ($today) {
-        return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo === $today;
+      $todayDueItems = $summaryQuery->filter(function ($item) use ($today, $dueStr) {
+        return $dueStr($item) === $today;
       });
 
       $summaryData = [
@@ -505,22 +567,28 @@ class TagihanService
         'cicilan_count' => $summaryQuery->where('statusBayar', 0)->count(),
       ];
       $summaryData['potential_income'] = $summaryData['total_unpaid'];
+      // Total uang cicilan yang sudah masuk dari tagihan yang belum lunas
+      $summaryData['cicilan_masuk'] = $summaryQuery
+        ->where('statusBayar', 0)
+        ->sum(fn($item) => (float)($item->terbayar ?? 0));
       $summaryData['average_amount'] = $summaryData['total_count'] > 0 ?
         $summaryData['total_unpaid'] / $summaryData['total_count'] : 0;
 
       // Filter cepat status jatuh tempo (opsional dari tab)
       if (!empty($request->quick_filter)) {
         if ($request->quick_filter === 'overdue') {
-          $query = $query->filter(function ($item) use ($today) {
-            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo < $today;
+          $query = $query->filter(function ($item) use ($today, $dueStr) {
+            $due = $dueStr($item);
+            return $due !== null && $due < $today;
           });
         } elseif ($request->quick_filter === 'today') {
-          $query = $query->filter(function ($item) use ($today) {
-            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo === $today;
+          $query = $query->filter(function ($item) use ($today, $dueStr) {
+            return $dueStr($item) === $today;
           });
         } elseif ($request->quick_filter === 'upcoming') {
-          $query = $query->filter(function ($item) use ($today) {
-            return !empty($item->tglJatuhTempo) && $item->tglJatuhTempo > $today;
+          $query = $query->filter(function ($item) use ($today, $dueStr) {
+            $due = $dueStr($item);
+            return $due !== null && $due > $today;
           });
         }
       }
@@ -654,7 +722,7 @@ class TagihanService
           'unpaid_summary' => $unpaidSummary, // Data tagihan belum bayar
           'filter_info' => [
             'bulan' => $request->bulan,
-            'tahun' => date('Y'),
+            'tahun' => $request->tahun,
             'status_bayar' => $request->status_bayar ?? 0,
             'has_unpaid_data' => !empty($unpaidSummary) // Flag untuk frontend
           ]
@@ -663,6 +731,7 @@ class TagihanService
 
       return $dataTable;
     } catch (\Exception $e) {
+      Log::error('Gagal mengambil data datatables tagihan: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
       return response()->json([
         'draw' => intval($request->input('draw', 0)),
         'recordsTotal' => 0,
@@ -693,7 +762,6 @@ class TagihanService
         ],
         'success' => false,
         'message' => 'Gagal mengambil data datatables',
-        'error'   => $e->getMessage(),
       ], 500);
     }
   }

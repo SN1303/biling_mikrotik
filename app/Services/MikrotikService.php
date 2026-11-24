@@ -423,13 +423,12 @@ class MikrotikService
         $name = $secret['name'] ?? '';
         $apiId = $secret['.id'] ?? '';
 
-        // Prioritas IP: remote-address (static) -> active session (dynamic) -> local-address
+        // Prioritas IP: remote-address (statis) -> sesi aktif (dinamis).
+        // JANGAN pakai local-address: itu IP sisi router/gateway, bukan IP pelanggan
+        // (dulu membuat banyak pelanggan offline tercatat ber-IP sama).
         $ip = $secret['remote-address'] ?? '';
         if (empty($ip) && isset($activeMap[$name])) {
           $ip = $activeMap[$name];
-        }
-        if (empty($ip)) {
-          $ip = $secret['local-address'] ?? '';
         }
 
         // Match by namaMikrotikUser saja (id API bisa tabrakan antar server)
@@ -490,7 +489,8 @@ class MikrotikService
               'idPaket'              => $idPaket,
               'idKategori'           => $idKategori,
               'password'             => $secret['password'],
-              'localAdress'          => $secret['remote_address'] ?? $mikrotikDetail->localAdress,
+              // Pelanggan offline (IP kosong) → pertahankan IP terakhir yang diketahui
+              'localAdress'          => !empty($secret['remote_address']) ? $secret['remote_address'] : $mikrotikDetail->localAdress,
             ]);
             $updated++;
           } else {

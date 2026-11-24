@@ -5,44 +5,59 @@ namespace App\Http\Controllers\authentications;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class LoginBasic extends Controller
 {
+  /** Maksimal percobaan login gagal per (email + IP) sebelum dikunci sementara */
+  private const MAX_ATTEMPTS = 5;
+  private const DECAY_SECONDS = 60;
+
   public function index()
   {
     $pageConfigs = ['myLayout' => 'blank'];
     return view('content.authentications.auth-login-basic', ['pageConfigs' => $pageConfigs]);
   }
+
   public function login(Request $request)
   {
+    // Validasi input form (ValidationException ditangani otomatis oleh Laravel)
+    $credentials = $request->validate([
+      'email' => ['required', 'email'],
+      'password' => ['required'],
+    ]);
+
+    $throttleKey = Str::lower($request->input('email')) . '|' . $request->ip();
+
+    if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_ATTEMPTS)) {
+      $seconds = RateLimiter::availableIn($throttleKey);
+      throw ValidationException::withMessages([
+        'email' => "Terlalu banyak percobaan login. Coba lagi dalam {$seconds} detik.",
+      ]);
+    }
 
     try {
-      // Validasi input form
-      $credentials = $request->validate([
-        'email' => ['required', 'email'],
-        'password' => ['required'],
-      ]);
-
       // Apakah checkbox 'remember me' dicentang?
       $remember = $request->has('remember');
 
-      // Coba autentikasi
       if (Auth::attempt($credentials, $remember)) {
+        RateLimiter::clear($throttleKey);
         $request->session()->regenerate(); // Hindari session fixation
         return redirect()->intended('/');  // Ke halaman yang diminta sebelum login
       }
 
-      // Jika gagal login
+      RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
+
       return back()->withErrors([
         'email' => 'Email atau password salah.',
-      ])->withInput();
+      ])->withInput($request->only('email', 'remember'));
     } catch (\Throwable $e) {
-      dd($e->getMessage());
-      // Tangani error tak terduga
       report($e);
       return back()->withErrors([
-        'email' => 'Terjadi kesalahan saat login. Silakan coba lagi nanti.' . $e->getMessage(),
-      ]);
+        'email' => 'Terjadi kesalahan saat login. Silakan coba lagi nanti.',
+      ])->withInput($request->only('email', 'remember'));
     }
   }
 

@@ -9,7 +9,6 @@ use App\Models\Lamtim_mikrotik;
 use App\Models\Lamtim_user_mikrotik_details;
 use App\Services\MikrotikMulti;
 use App\Services\MikrotikService;
-use Modules\FreeRadius\Services\RadiusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,12 +16,35 @@ use Illuminate\Support\Facades\Log;
 class SyncController extends Controller
 {
     protected $mikrotikService;
-    protected $radiusService;
 
-    public function __construct(MikrotikService $mikrotikService, RadiusService $radiusService)
+    public function __construct(MikrotikService $mikrotikService)
     {
         $this->mikrotikService = $mikrotikService;
-        $this->radiusService = $radiusService;
+    }
+
+    /**
+     * Uji login ke MikroTik dulu agar error asli (password salah, router mati, dll)
+     * bisa ditampilkan ke user, bukan sekadar "gagal" / "berhasil 0 data".
+     * Return null jika sukses, atau pesan error jika gagal.
+     */
+    private function cekKoneksiMikrotik($idMikrotik): ?string
+    {
+        $mikrotik = Lamtim_mikrotik::find($idMikrotik);
+        if (!$mikrotik) {
+            return 'Server MikroTik tidak ditemukan.';
+        }
+
+        try {
+            MikrotikMulti::connectionMikrotik($idMikrotik);
+            return null;
+        } catch (\Throwable $e) {
+            $pesan = $e->getMessage();
+            if (stripos($pesan, 'user name or password') !== false) {
+                return "Login ke MikroTik \"{$mikrotik->nama}\" ({$mikrotik->ip}) ditolak: username/password salah. " .
+                    'Perbarui di menu Jaringan → MikroTik → Server MikroTik.';
+            }
+            return "Tidak bisa terhubung ke MikroTik \"{$mikrotik->nama}\" ({$mikrotik->ip}:{$mikrotik->port}): {$pesan}";
+        }
     }
 
     public function index()
@@ -69,33 +91,70 @@ class SyncController extends Controller
         set_time_limit(300); // 5 menit
         
         try {
-            $profiles = MikrotikMulti::commandApi2($request->id_mikrotik, '/ppp/profile/print');
-            
-            if (!$profiles) return response()->json(['status' => false, 'message' => 'Gagal mengambil data profile.']);
+            if ($err = $this->cekKoneksiMikrotik($request->id_mikrotik)) {
+                return response()->json(['status' => false, 'message' => $err]);
+            }
 
-            $count = 0;
-            $idKategori = $request->id_kategori;
+            $profiles = MikrotikMulti::commandApi2($request->id_mikrotik, '/ppp/profile/print');
+
+            if ($profiles === null) {
+                return response()->json(['status' => false, 'message' => 'Gagal mengambil data PPP Profile dari MikroTik. Cek storage/logs/laravel.log.']);
+            }
+            if (count($profiles) === 0) {
+                return response()->json(['status' => false, 'message' => 'Tidak ada PPP Profile di MikroTik ini.']);
+            }
+
+            $idKategoriDefault = (int) $request->id_kategori;
+            $kategoriGratis = Lamtim_kategori::where('isActive', 1)
+                ->where('nama', 'like', '%gratis%')
+                ->first();
+
+            $baru = [];
+            $diperbarui = 0;
 
             foreach ($profiles as $p) {
                 $name = $p['name'] ?? null;
                 if (!$name || $name == 'default' || $name == 'default-encryption') continue;
 
-                Lamtim_paket::updateOrCreate(
-                    ['nama' => $name],
-                    [
-                        'idKategori' => $idKategori,
-                        'kode' => strtoupper(str_replace(' ', '_', $name)),
-                        'price' => 0, // Default price
-                        'description' => "Profil MikroTik: $name",
-                        'speed_limit' => $p['rate-limit'] ?? null,
-                        'ip_pool' => $p['remote-address'] ?? null,
-                        'isActive' => 1
-                    ]
-                );
-                $count++;
+                $paket = Lamtim_paket::where('nama', $name)->first();
+
+                if ($paket) {
+                    // Paket sudah ada: HANYA perbarui data teknis dari MikroTik.
+                    // Harga, kategori, kode & status aktif yang diatur admin TIDAK ditimpa
+                    // (dulu harga di-reset ke 0 → tagihan pelanggan jadi Rp 0 / "gratis").
+                    $paket->update([
+                        'speed_limit' => $p['rate-limit'] ?? $paket->speed_limit,
+                        'ip_pool' => $p['remote-address'] ?? $paket->ip_pool,
+                    ]);
+                    $diperbarui++;
+                    continue;
+                }
+
+                // Paket baru: profil bernama "gratis" otomatis ke kategori Gratis,
+                // selain itu ke kategori yang dipilih.
+                $idKategori = ($kategoriGratis && stripos($name, 'gratis') !== false)
+                    ? $kategoriGratis->id
+                    : $idKategoriDefault;
+
+                Lamtim_paket::create([
+                    'idKategori' => $idKategori,
+                    'kode' => strtoupper(str_replace(' ', '_', $name)),
+                    'nama' => $name,
+                    'price' => 0,
+                    'description' => "Profil MikroTik: $name",
+                    'speed_limit' => $p['rate-limit'] ?? null,
+                    'ip_pool' => $p['remote-address'] ?? null,
+                    'isActive' => 1,
+                ]);
+                $baru[] = $name;
             }
 
-            return response()->json(['status' => true, 'message' => "Berhasil sinkron $count paket profile."]);
+            $pesan = "Sinkron selesai: " . count($baru) . " paket baru, {$diperbarui} paket lama diperbarui (harga & kategori tidak diubah).";
+            if (count($baru) > 0) {
+                $pesan .= " PERHATIAN: paket baru (" . implode(', ', $baru) . ") masih Rp 0 — atur harganya di menu Paket Internet sebelum generate tagihan.";
+            }
+
+            return response()->json(['status' => true, 'message' => $pesan]);
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()]);
         }
@@ -112,6 +171,11 @@ class SyncController extends Controller
             $idMikrotik = $request->id_mikrotik;
             $countPool = 0;
             $countAddr = 0;
+
+            // Jangan laporkan "berhasil 0 data" kalau sebenarnya login ke router gagal
+            if ($err = $this->cekKoneksiMikrotik($idMikrotik)) {
+                return response()->json(['status' => false, 'message' => $err]);
+            }
 
             // 1. Sync IP Pool
             $pools = MikrotikMulti::commandApi2($idMikrotik, '/ip/pool/print');
@@ -196,9 +260,6 @@ class SyncController extends Controller
 
             // 1. Eksekusi Sync ke Billing
             $syncBilling = $this->mikrotikService->executeSyncCustomers($idMikrotik, $secrets);
-            
-            // Sinkronisasi ke RADIUS sudah otomatis ditangani oleh UserMikrotikObserver 
-            // setiap kali Lamtim_user_mikrotik_details di-create atau di-update oleh executeSyncCustomers.
 
             return response()->json([
                 'status' => true,

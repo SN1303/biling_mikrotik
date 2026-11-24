@@ -352,6 +352,24 @@
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
+  // Escape teks dari database sebelum disisipkan ke HTML (cegah XSS dari nama/WA/paket)
+  function esc(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Token unik per sesi kasir untuk mencegah pembayaran ganda
+  let currentPaymentToken = null;
+  function generatePaymentToken() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'pt-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  }
+
   $(document).ready(function() {
     // Enable GlobalLoading
     if (window.GlobalLoading) {
@@ -394,7 +412,10 @@
           name: 'user_nama',
           className: 'align-middle p-2 p-md-3 col-mobile-card',
           render: function(data, type, row) {
-            const wa = row.user_wa;
+            const wa = row.user_wa ? esc(row.user_wa) : row.user_wa;
+            data = esc(data);
+            const noTagihanSafe = esc(row.noTagihan);
+            const paketSafe = esc(row.paket_nama);
             const waButton = wa && wa !== '-'
               ? `<a href="javascript:void(0)" class="btn-wa-direct badge bg-success-subtle text-success border border-success-subtle text-decoration-none" data-id="${row.id}" title="Kirim Pesan WhatsApp"><i class="mdi mdi-whatsapp me-1"></i>${wa}</a>`
               : `<span class="badge bg-light text-muted border">No WA (-)</span>`;
@@ -440,7 +461,7 @@
               <div class="d-none d-md-block">
                 <div class="fw-bold text-dark fs-6 mb-1">${data || 'Tanpa Nama'}</div>
                 <div class="d-flex align-items-center flex-wrap gap-1">
-                  <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${row.noTagihan}</span>
+                  <span class="badge bg-label-secondary font-monospace" style="font-size: 0.7rem;">${noTagihanSafe}</span>
                   ${waButton}
                 </div>
               </div>
@@ -454,7 +475,7 @@
                       ${data || 'Tanpa Nama'}
                     </div>
                     <small class="text-muted d-block" style="font-size: 0.7rem;">
-                      <i class="mdi mdi-receipt-text-outline me-1"></i>${row.noTagihan || '-'}
+                      <i class="mdi mdi-receipt-text-outline me-1"></i>${noTagihanSafe || '-'}
                     </small>
                   </div>
                   <div class="text-end flex-shrink-0">
@@ -468,7 +489,7 @@
                 <div class="d-flex align-items-center justify-content-between gap-1 py-1 px-2 my-2 bg-light rounded-2 border" style="font-size: 0.72rem;">
                   <div class="text-truncate">
                     <i class="mdi mdi-speedometer me-1 text-primary"></i>
-                    <span class="fw-semibold text-dark">${row.paket_nama || 'Paket Internet'}</span>
+                    <span class="fw-semibold text-dark">${paketSafe || 'Paket Internet'}</span>
                     <span class="text-muted">(${periodeText})</span>
                   </div>
                   <div>
@@ -494,7 +515,7 @@
                     <i class="mdi mdi-whatsapp fs-5"></i>
                   </button>
 
-                  ${deleteBtnMobile}
+                  ${parseFloat(row.terbayar || 0) > 0 ? '' : deleteBtnMobile}
                 </div>
               </div>
             `;
@@ -509,7 +530,7 @@
             return `
               <div>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold mb-1">
-                  <i class="mdi mdi-speedometer me-1"></i>${data || 'Paket Internet'}
+                  <i class="mdi mdi-speedometer me-1"></i>${esc(data) || 'Paket Internet'}
                 </span>
                 <div class="small text-muted d-flex align-items-center gap-1">
                   <i class="mdi mdi-calendar-month-outline text-secondary"></i>
@@ -637,7 +658,7 @@
                         <i class="mdi mdi-whatsapp me-2 text-success"></i> Ingatkan Pelanggan
                       </a>
                     </li>
-                    ${deleteBtn}
+                    ${hasCicilan ? '' : deleteBtn}
                   </ul>
                 </div>
               </div>
@@ -699,7 +720,7 @@
       $('#total-unpaid').text('Rp ' + new Intl.NumberFormat('id-ID').format(totalUnpaid));
       $('#overdue-count').text(new Intl.NumberFormat('id-ID').format(overdueCount));
       $('#overdue-total').text('Rp ' + new Intl.NumberFormat('id-ID').format(overdueTotal));
-      $('#potential-income').text('Rp ' + new Intl.NumberFormat('id-ID').format(potentialIncome));
+      $('#potential-income').text('Rp ' + new Intl.NumberFormat('id-ID').format(summary.cicilan_masuk || 0));
 
       // Pills badge
       $('#pill-all').text(totalCount);
@@ -769,6 +790,7 @@
     function bukaModalKasir(id, billData) {
       currentBillData = billData;
       currentPaymentMode = 'single';
+      currentPaymentToken = generatePaymentToken(); // token baru setiap kasir dibuka
 
       const sisaTagihan = parseFloat(billData.sisa !== undefined ? billData.sisa : billData.total) || 0;
       const totalAwal = parseFloat(billData.total) || 0;
@@ -962,8 +984,12 @@
     });
 
     // Form Submit Pembayaran
+    let isSubmittingPayment = false;
     $('#form-bayar').on('submit', function(e) {
       e.preventDefault();
+
+      // Cegah klik/enter ganda saat request masih berjalan
+      if (isSubmittingPayment) return;
 
       const tagihanId = $('#tagihan_id').val() || $(this).data('tagihan-id') || $(this).attr('data-tagihan-id');
       const metodeBayar = $('#metode_bayar').val();
@@ -987,6 +1013,9 @@
         });
         return;
       }
+
+      isSubmittingPayment = true;
+      $('#btn-proses-bayar').prop('disabled', true);
 
       const modalEl = document.getElementById('modalBayar');
       if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -1016,7 +1045,12 @@
             keterangan: keterangan,
             nominal_bayar: received,
             uang_diterima: received,
-            bayar_semua: (currentPaymentMode === 'all' ? 1 : 0)
+            bayar_semua: (currentPaymentMode === 'all' ? 1 : 0),
+            request_token: currentPaymentToken
+          },
+          complete: function() {
+            isSubmittingPayment = false;
+            $('#btn-proses-bayar').prop('disabled', false);
           },
           success: function(response) {
             if (window.GlobalLoading) {
@@ -1052,6 +1086,11 @@
                 `;
               }
 
+              const kembalianVal = parseFloat(resData.kembalian || 0);
+              const kembalianHtml = kembalianVal > 0
+                ? `<div class="alert alert-primary py-2 px-3 mt-3 mb-0 small fw-semibold"><i class="mdi mdi-hand-coin me-1"></i>Kembalian ke pelanggan: Rp ${new Intl.NumberFormat('id-ID').format(kembalianVal)}</div>`
+                : '';
+
               Swal.fire({
                 title: titleHtml,
                 html: `
@@ -1059,10 +1098,11 @@
                     <div class="avatar avatar-lg ${isCicilan ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'} mx-auto mb-3" style="width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                       <i class="mdi ${isCicilan ? 'mdi-clock-check-outline' : 'mdi-check-decagram'} fs-2"></i>
                     </div>
-                    <h5 class="fw-bold mb-1">${$('#modal-namaPelanggan').text()}</h5>
-                    <p class="text-muted small mb-2">Invoice: ${$('#modal-noTagihan').text()}</p>
+                    <h5 class="fw-bold mb-1">${esc($('#modal-namaPelanggan').text())}</h5>
+                    <p class="text-muted small mb-2">Invoice: ${esc($('#modal-noTagihan').text())}</p>
                     <div class="fs-4 fw-bold mb-2">${amountHtml}</div>
                     ${badgeHtml}
+                    ${kembalianHtml}
                   </div>
                 `,
                 icon: null,
@@ -1257,7 +1297,9 @@
         `📦 *Paket:* ${bill.paket_nama || 'Internet'}\n` +
         `📅 *Periode:* ${periodeStr}\n` +
         `💵 *Total Tagihan:* ${totalFmt}\n` +
-        `💰 *Nominal Cicilan Masuk:* *${alokasiFmt}*\n` +
+        (paymentRes.kumulatif
+          ? `💰 *Total Sudah Dibayar:* *${alokasiFmt}*\n`
+          : `💰 *Nominal Cicilan Masuk:* *${alokasiFmt}*\n`) +
         `⏳ *Sisa Tagihan:* *${sisaFmt}*\n` +
         `💳 *Metode Pembayaran:* ${metodeStr}\n` +
         `🗓️ *Waktu Bayar:* ${waktuStr}\n` +
@@ -1401,7 +1443,7 @@
               <span class="badge bg-secondary-subtle text-dark me-1 fw-bold" style="font-size: 0.65rem;">#${idx + 1}</span>
               <span class="text-muted">${tglStr}</span>
               <span class="badge bg-white text-secondary border ms-1" style="font-size: 0.65rem;">${(t.metode || 'Tunai').toUpperCase()}</span>
-              ${t.prosesNama ? `<span class="text-muted ms-1" style="font-size: 0.68rem;">(${t.prosesNama})</span>` : ''}
+              ${t.prosesNama ? `<span class="text-muted ms-1" style="font-size: 0.68rem;">(${esc(t.prosesNama)})</span>` : ''}
             </div>
             <div class="fw-bold text-warning">${nomFmt}</div>
           </div>
@@ -1429,6 +1471,7 @@
     if (currentBillData) {
       kirimKuitansiSmartWA(currentBillData, {
         mode: 'cicilan',
+        kumulatif: true, // nominal = total semua cicilan yang sudah masuk, bukan 1 transaksi
         alokasi_bayar: currentBillData.terbayar,
         sisa: currentBillData.sisa
       }, currentBillData.metode);
@@ -1460,7 +1503,7 @@
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
           <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
-          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 120px; font-size: 0.78rem;">
+          <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 140px; font-size: 0.78rem;">
             <option value="">Semua Bulan</option>
             @php
               $namaBulanList = [
@@ -1470,17 +1513,18 @@
               ];
             @endphp
             @foreach($namaBulanList as $key => $nama)
-              <option value="{{ $key }}" {{ $key == $currentMonth ? 'selected' : '' }}>{{ $nama }}</option>
+              {{-- Default "Semua Bulan": tunggakan bulan-bulan sebelumnya harus tetap terlihat oleh kolektor --}}
+              <option value="{{ $key }}">{{ $nama }}</option>
             @endforeach
           </select>
-          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 90px; font-size: 0.78rem;">
+          <select id="filter-tahun" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 115px; font-size: 0.78rem;">
             <option value="">Semua Thn</option>
             @if(isset($filterData['tahun']) && !empty($filterData['tahun']))
               @foreach($filterData['tahun'] as $tahun)
-                <option value="{{ $tahun }}" {{ $tahun == $currentYear ? 'selected' : '' }}>{{ $tahun }}</option>
+                <option value="{{ $tahun }}">{{ $tahun }}</option>
               @endforeach
             @else
-              <option value="{{ $currentYear }}" selected>{{ $currentYear }}</option>
+              <option value="{{ $currentYear }}">{{ $currentYear }}</option>
             @endif
           </select>
           <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data" style="width: 30px; height: 30px;">
@@ -1555,9 +1599,9 @@
     <div class="card metric-card border-0 shadow-sm h-100" style="border-left: 3px solid #10b981 !important;">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <span class="metric-title d-block">Potensi Kas</span>
+          <span class="metric-title d-block">Cicilan Masuk</span>
           <div class="metric-value text-success mb-0" id="potential-income">Rp 0</div>
-          <small class="metric-sub text-muted">Estimasi masuk</small>
+          <small class="metric-sub text-muted">Dari tagihan belum lunas</small>
         </div>
         <div class="metric-icon-box bg-success-subtle text-success border border-success-subtle">
           <i class="mdi mdi-trending-up"></i>
@@ -1739,7 +1783,7 @@
           </div>
 
           <!-- Step 2: Kalkulator Pembayaran & Kembalian (Default Langsung Uang Pas) -->
-          <div id="cash-calculator-box" class="card border rounded-3 p-2.5 p-sm-3 mb-2" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+          <div id="cash-calculator-box" class="card border rounded-3 p-2.5 p-sm-3 mb-2">
             <div class="row align-items-center g-2">
               <div class="col-sm-6">
                 <label for="cash-received" class="form-label fw-bold text-dark small mb-1">Uang Diterima (Rp)</label>

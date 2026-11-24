@@ -11,19 +11,20 @@ Route::prefix('tagihan')->as('tagihan.')->controller(TagihanController::class)->
     Route::get('/rekap', 'rekap')->name('rekap');
     Route::get('/generate', 'generate')->name('generate');
     Route::post('/generate-tagihan-bulanan', 'generateTagihanBulanan')->name('generate-tagihan-bulanan');
+
+    // Pembatalan pembayaran hanya oleh Super Admin, Admin, Bendahara
+    Route::post('/batal-pembayaran/{id}', 'batalPembayaran')->name('batal-pembayaran');
+  });
+
+  // Hapus tagihan hanya Super Admin & Admin (role 1, 2)
+  Route::middleware('role:1,2')->group(function () {
+    Route::delete('/destroy/{id}', 'destroy')->name('destroy');
   });
 
   Route::get('/data/json', 'json')->name('json');
 
+  // Kasir: semua role penagihan (1, 2, 3, 6, 7)
   Route::post('/bayar/{id}', 'bayar')->name('bayar');
-  // Route untuk batal pembayaran
-  Route::post('/batal-pembayaran/{id}', 'batalPembayaran')->name('batal-pembayaran');
 
-  // Route untuk CRUD standar
-  // Route::get('/create', 'create')->name('create');
-  // Route::post('/', 'store')->name('store');
   Route::get('/{id}', 'show')->name('show');
-  Route::get('/{id}/edit', 'edit')->name('edit');
-  // Route::put('/{id}', 'update')->name('update');
-  Route::delete('/destroy/{id}', 'destroy')->name('destroy');
 });

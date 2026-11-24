@@ -83,7 +83,8 @@
                                     <span class="avatar-initial rounded-circle"><i class="mdi mdi-package-variant mdi-24px"></i></span>
                                 </div>
                                 <h5 class="mb-2">3. Sinkron Paket</h5>
-                                <p class="text-muted small">Simpan Profil MikroTik ke kategori yang dipilih:</p>
+                                <p class="text-muted small mb-1">Semua PPP Profile MikroTik akan disinkron.</p>
+                                <p class="text-muted small">Kategori untuk <b>paket baru</b> (paket lama tetap di kategorinya, profil bernama "gratis" otomatis ke kategori Gratis):</p>
                                 
                                 <select id="category-select" class="form-select form-select-sm mb-3 border-warning" disabled>
                                     @foreach($kategoris as $k)
@@ -110,7 +111,7 @@
                                     <span class="avatar-initial rounded-circle"><i class="mdi mdi-account-group mdi-24px"></i></span>
                                 </div>
                                 <h5 class="mb-2">4. Sinkron Pelanggan</h5>
-                                <p class="text-muted small">Sinkronisasi data Secret ke Billing dan RADIUS dengan progress.</p>
+                                <p class="text-muted small">Sinkronisasi data Secret MikroTik ke Billing dengan progress.</p>
                                 
                                 <div id="progress-container" class="mb-3 d-none">
                                     <div class="progress" style="height: 20px;">
