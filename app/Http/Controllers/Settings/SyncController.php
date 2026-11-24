@@ -114,7 +114,8 @@ class SyncController extends Controller
 
             foreach ($profiles as $p) {
                 $name = $p['name'] ?? null;
-                if (!$name || $name == 'default' || $name == 'default-encryption') continue;
+                // Profile ISOLIR adalah profile pemblokiran, bukan paket yang dijual
+                if (!$name || $name == 'default' || $name == 'default-encryption' || $name === MikrotikService::ISOLIR_PROFILE) continue;
 
                 $paket = Lamtim_paket::where('nama', $name)->first();
 

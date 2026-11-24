@@ -16,7 +16,7 @@ class MikrotikController extends Controller
   protected $mikrotikService;
 
   // Profile PPPoE untuk isolir (bisa disesuaikan)
-  const ISOLIR_PROFILE = 'ISOLIR';
+  const ISOLIR_PROFILE = MikrotikService::ISOLIR_PROFILE;
 
   public function __construct(MikrotikService $mikrotikService)
   {
@@ -388,11 +388,16 @@ class MikrotikController extends Controller
 
       $mikrotik = $user->user_mikrotik;
 
-      // Ambil profile asli dari profileMikrotikUser di lamtim_user_mikrotik_details
-      $originalProfile = $mikrotik->profileMikrotikUser ?? 'default';
+      // Profile asli (bukan ISOLIR) yang dipasang kembali di router
+      $originalProfile = $this->mikrotikService->profileAktif($mikrotik);
 
       // Kembalikan profile PPPoE ke profile asli di Mikrotik
       if ($mikrotik && $mikrotik->idMikrotik && $mikrotik->namaMikrotikUser) {
+        if (!$originalProfile) {
+          DB::rollBack();
+          return response()->json(['error' => true, 'message' => "Profile asli {$user->name} tidak diketahui. Atur paket pelanggan ini dulu."], 422);
+        }
+
         $result = $this->mikrotikService->aktifkanPppoeUser(
           $mikrotik->idMikrotik,
           $mikrotik->namaMikrotikUser,
@@ -407,10 +412,11 @@ class MikrotikController extends Controller
 
       // Update status isolir in database (lamtim_user_mikrotik_details)
       if ($mikrotik) {
-        $mikrotik->update([
+        $mikrotik->update(array_filter([
           'statusIsolir' => 0,
           'tglDiBuka' => now(),
-        ]);
+          'profileMikrotikUser' => $originalProfile,
+        ], fn($v) => $v !== null));
       }
 
       DB::commit();
@@ -505,11 +511,17 @@ class MikrotikController extends Controller
 
         $mikrotik = $user->user_mikrotik;
 
-        // Ambil profile asli dari profileMikrotikUser di lamtim_user_mikrotik_details
-        $originalProfile = $mikrotik->profileMikrotikUser ?? 'default';
+        // Profile asli (bukan ISOLIR) yang dipasang kembali di router
+        $originalProfile = $this->mikrotikService->profileAktif($mikrotik);
 
         // Kembalikan profile PPPoE ke profile asli di Mikrotik
         if ($mikrotik && $mikrotik->idMikrotik && $mikrotik->namaMikrotikUser) {
+          if (!$originalProfile) {
+            $errors[] = "{$user->name}: profile asli tidak diketahui. Atur paket pelanggan ini dulu.";
+            $failed++;
+            continue;
+          }
+
           $result = $this->mikrotikService->aktifkanPppoeUser(
             $mikrotik->idMikrotik,
             $mikrotik->namaMikrotikUser,
@@ -525,10 +537,11 @@ class MikrotikController extends Controller
 
         // Update status isolir in database (lamtim_user_mikrotik_details)
         if ($mikrotik) {
-          $mikrotik->update([
+          $mikrotik->update(array_filter([
             'statusIsolir' => 0,
             'tglDiBuka' => now(),
-          ]);
+            'profileMikrotikUser' => $originalProfile,
+          ], fn($v) => $v !== null));
         }
 
         $success++;

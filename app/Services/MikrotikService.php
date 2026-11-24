@@ -28,11 +28,31 @@ use \RouterOS\Query;
 
 class MikrotikService
 {
+  /** Nama profile PPPoE di router untuk pelanggan yang diisolir */
+  public const ISOLIR_PROFILE = 'ISOLIR';
+
   protected $mikrotikRepo;
 
   public function __construct(MikrotikRepository $mikrotikRepo)
   {
     $this->mikrotikRepo = $mikrotikRepo;
+  }
+
+  /**
+   * Profile PPPoE yang dipasang saat pelanggan diaktifkan kembali.
+   * Profile tersimpan bisa saja "ISOLIR" (data lama hasil sinkron saat pelanggan terisolir),
+   * jadi pakai kode paketnya sebagai cadangan. null = tidak bisa ditentukan.
+   */
+  public function profileAktif(?Lamtim_user_mikrotik_details $detail): ?string
+  {
+    if (!$detail) {
+      return null;
+    }
+    $profile = $detail->profileMikrotikUser;
+    if (!empty($profile) && $profile !== self::ISOLIR_PROFILE) {
+      return $profile;
+    }
+    return optional($detail->paket)->kode ?: null;
   }
 
   public function getAll()
@@ -467,31 +487,48 @@ class MikrotikService
     $failed = 0;
     $errors = [];
 
-    // Pre-load semua paket untuk mapping (menghindari N+1 query)
-    $pakets = \App\Models\Lamtim_paket::all()->keyBy('nama');
+    // Pre-load semua paket untuk mapping (menghindari N+1 query).
+    // Profile di router dibuat dari kode paket, jadi cocokkan by kode dulu, baru by nama.
+    $allPakets = \App\Models\Lamtim_paket::all();
+    $paketByKode = $allPakets->keyBy('kode');
+    $paketByNama = $allPakets->keyBy('nama');
 
     foreach ($secrets as $secret) {
       try {
-        // Cari idPaket berdasarkan nama profile dari Mikrotik
         $profileName = $secret['profile'] ?? 'default';
-        $idPaket = isset($pakets[$profileName]) ? $pakets[$profileName]->id : null;
-        $idKategori = isset($pakets[$profileName]) ? $pakets[$profileName]->idKategori : null;
+        $isIsolirProfile = $profileName === self::ISOLIR_PROFILE;
+        $paket = $isIsolirProfile ? null : ($paketByKode[$profileName] ?? $paketByNama[$profileName] ?? null);
+        $idPaket = $paket->id ?? null;
+        $idKategori = $paket->idKategori ?? null;
 
         if ($secret['status'] === 'existing' && !empty($secret['db_id'])) {
           // Update existing user mikrotik details
           $mikrotikDetail = Lamtim_user_mikrotik_details::find($secret['db_id']);
           if ($mikrotikDetail) {
-            $mikrotikDetail->update([
+            $data = [
               'idMikrotikUser'       => $secret['mikrotik_id'],
               'namaMikrotikUser'     => $secret['name'],
               'serviceMikrotikUser'  => $secret['service'],
-              'profileMikrotikUser'  => $profileName,
-              'idPaket'              => $idPaket,
-              'idKategori'           => $idKategori,
               'password'             => $secret['password'],
               // Pelanggan offline (IP kosong) → pertahankan IP terakhir yang diketahui
               'localAdress'          => !empty($secret['remote_address']) ? $secret['remote_address'] : $mikrotikDetail->localAdress,
-            ]);
+            ];
+
+            // Saat terisolir, profile router "ISOLIR" bukan paket pelanggan: profile & paket asli
+            // dipertahankan supaya "Aktifkan" mengembalikan profile yang benar.
+            $sedangIsolir = $isIsolirProfile || (int) $mikrotikDetail->statusIsolir === 1;
+            if (!$sedangIsolir) {
+              $data['profileMikrotikUser'] = $profileName;
+              if ($paket) {
+                $data['idPaket'] = $idPaket;
+                $data['idKategori'] = $idKategori;
+              } elseif ($mikrotikDetail->idPaket) {
+                // Jangan kosongkan paket: tanpa paket, pelanggan dilewati saat generate tagihan
+                $errors[] = "{$secret['name']}: profile \"{$profileName}\" tidak cocok dengan kode/nama paket mana pun, paket lama dipertahankan.";
+              }
+            }
+
+            $mikrotikDetail->update($data);
             $updated++;
           } else {
             $failed++;
@@ -499,12 +536,14 @@ class MikrotikService
           }
         } elseif ($secret['status'] === 'new') {
           // Buat user baru dalam transaksi
-          DB::transaction(function () use ($secret, $idMikrotik, $profileName, $idPaket, $idKategori, &$created) {
+          DB::transaction(function () use ($secret, $idMikrotik, $profileName, $isIsolirProfile, $idPaket, $idKategori, &$created) {
             // 1. Create User
+            // Password login acak: password PPPoE diketahui pelanggan & tertulis di router,
+            // jadi tidak boleh dipakai sebagai password login (portal pelanggan nanti diatur terpisah)
             $user = User::create([
               'name'     => $secret['name'],
               'email'    => $secret['name'] . '@sync.local',
-              'password' => Hash::make($secret['password'] ?: 'password123'),
+              'password' => Hash::make(\Illuminate\Support\Str::random(40)),
               'idRole'   => 5,
               'isActive' => 1,
               'wa'       => '-',
@@ -531,6 +570,8 @@ class MikrotikService
               'idKategori'          => $idKategori,
               'password'            => $secret['password'],
               'localAdress'         => $secret['remote_address'] ?? null,
+              // Secret yang di router sedang ber-profile ISOLIR langsung tercatat terisolir
+              'statusIsolir'        => $isIsolirProfile ? 1 : 0,
             ]);
 
             $created++;
