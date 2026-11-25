@@ -240,7 +240,7 @@ $(document).on('click', '#btn-refresh', function() {
               @endforeach
             </select>
           </div>
-          <button class="btn btn-outline-primary d-none" id="btn-refresh">
+          <button aria-label="Muat ulang" class="btn btn-outline-primary d-none" id="btn-refresh">
             <i class="mdi mdi-refresh"></i>
           </button>
         </div>

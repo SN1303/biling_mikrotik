@@ -54,7 +54,7 @@
           render: function (data, type, row) {
             return `
               <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button aria-label="Menu aksi" type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                   <i class="mdi mdi-dots-vertical"></i>
                 </button>
                 <div class="dropdown-menu">
@@ -423,7 +423,7 @@
                     </select>
                     <label>
                         IP POOL (PPP Profile)
-                        <a href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
+                        <a aria-label="Lihat keterangan" href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
                             <i class="mdi mdi-information-outline"></i>
                         </a>
                     </label>
@@ -439,7 +439,7 @@
                     </select>
                     <label>
                         ADDRESS LIST (PPP Profile)
-                        <a href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
+                        <a aria-label="Lihat keterangan" href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
                             <i class="mdi mdi-information-outline"></i>
                         </a>
                     </label>

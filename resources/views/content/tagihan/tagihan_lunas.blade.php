@@ -435,7 +435,7 @@
 
                 <!-- Dropdown Opsi -->
                 <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-icon btn-light rounded-circle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
+                  <button aria-label="Menu aksi" type="button" class="btn btn-sm btn-icon btn-light rounded-circle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="mdi mdi-dots-vertical"></i>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="min-width: 185px; border-radius: 8px;">

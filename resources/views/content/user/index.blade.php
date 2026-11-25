@@ -49,7 +49,7 @@
               if (!actions) return '-';
               return `
               <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button aria-label="Menu aksi" type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                   <i class="mdi mdi-dots-vertical"></i>
                 </button>
                 <div class="dropdown-menu">

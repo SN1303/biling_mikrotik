@@ -22,7 +22,7 @@
                 data: 'id',
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-sm btn-danger btn-delete" data-id="${row.id}">
+                        <button aria-label="Hapus" class="btn btn-sm btn-danger btn-delete" data-id="${row.id}">
                             <i class="mdi mdi-trash-can-outline"></i>
                         </button>
                     `;
@@ -112,7 +112,7 @@
                     <div class="col-md-6">
                         <h5 class="card-title mb-0">
                             Sinkronisasi Address List
-                            <a href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
+                            <a aria-label="Lihat keterangan" href="javascript:void(0);" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#modalInfoIp">
                                 <i class="mdi mdi-information-outline mdi-24px"></i>
                             </a>
                         </h5>

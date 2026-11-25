@@ -83,10 +83,10 @@
         <a href="{{config('variables.creatorUrl')}}" target="_blank" class="footer-link fw-medium footer-theme-link">{{config('variables.creatorName')}}</a>
       </div>
       <div>
-        <a href="{{config('variables.githubUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-github"></i></a>
-        <a href="{{config('variables.facebookUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-facebook"></i></a>
-        <a href="{{config('variables.twitterUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-twitter"></i></a>
-        <a href="{{config('variables.instagramUrl')}}" class="footer-link" target="_blank"><i class='mdi mdi-instagram'></i></a>
+        <a aria-label="GitHub" href="{{config('variables.githubUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-github"></i></a>
+        <a aria-label="Facebook" href="{{config('variables.facebookUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-facebook"></i></a>
+        <a aria-label="Twitter" href="{{config('variables.twitterUrl')}}" class="footer-link me-2" target="_blank"><i class="mdi mdi-twitter"></i></a>
+        <a aria-label="Instagram" href="{{config('variables.instagramUrl')}}" class="footer-link" target="_blank"><i class='mdi mdi-instagram'></i></a>
       </div>
     </div>
   </div>

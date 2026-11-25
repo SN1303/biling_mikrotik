@@ -588,7 +588,7 @@ function renderPagination() {
   let pagesHtml = '';
 
   // Previous button
-  pagesHtml += `<button class="pagination-btn" onclick="goToPage(${current_page - 1})" ${current_page === 1 ? 'disabled' : ''}>
+  pagesHtml += `<button aria-label="Halaman sebelumnya" class="pagination-btn" onclick="goToPage(${current_page - 1})" ${current_page === 1 ? 'disabled' : ''}>
     <i class="mdi mdi-chevron-left"></i>
   </button>`;
 
@@ -615,7 +615,7 @@ function renderPagination() {
   }
 
   // Next button
-  pagesHtml += `<button class="pagination-btn" onclick="goToPage(${current_page + 1})" ${current_page === last_page ? 'disabled' : ''}>
+  pagesHtml += `<button aria-label="Halaman berikutnya" class="pagination-btn" onclick="goToPage(${current_page + 1})" ${current_page === last_page ? 'disabled' : ''}>
     <i class="mdi mdi-chevron-right"></i>
   </button>`;
 

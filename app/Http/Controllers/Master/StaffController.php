@@ -67,7 +67,7 @@ class StaffController extends Controller
               <a class="dropdown-item fw-semibold" href="javascript:void(0);" onclick="openEditModal(' . $user->id . ')">
                 <i class="mdi mdi-pencil-outline me-2 text-primary"></i> Edit Data
               </a>
-              <a class="dropdown-item fw-semibold" href="javascript:void(0);" onclick="openResetPasswordModal(' . $user->id . ', \'' . e($user->name) . '\')">
+              <a class="dropdown-item fw-semibold" href="javascript:void(0);" onclick="openResetPasswordModal(' . $user->id . ', ' . e(json_encode($user->name)) . ')">
                 <i class="mdi mdi-key-outline me-2 text-info"></i> Reset Password
               </a>' .
               (!$isCurrentUser ? '
@@ -75,7 +75,7 @@ class StaffController extends Controller
                 <i class="mdi ' . $toggleIcon . ' me-2"></i> ' . $toggleLabel . '
               </a>
               <div class="dropdown-divider"></div>
-              <a class="dropdown-item text-danger fw-semibold" href="javascript:void(0);" onclick="deleteStaff(' . $user->id . ', \'' . e($user->name) . '\')">
+              <a class="dropdown-item text-danger fw-semibold" href="javascript:void(0);" onclick="deleteStaff(' . $user->id . ', ' . e(json_encode($user->name)) . ')">
                 <i class="mdi mdi-trash-can-outline me-2"></i> Hapus Akun
               </a>' : '') . '
             </div>

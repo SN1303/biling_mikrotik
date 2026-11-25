@@ -32,7 +32,7 @@
       @if($configData['hasCustomizer'] == true)
       <!-- Style Switcher -->
       <li class="nav-item dropdown-style-switcher dropdown me-2 me-xl-0">
-        <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+        <a aria-label="Ganti tema" class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
           <i class='mdi mdi-24px'></i>
         </a>
         <ul class="dropdown-menu dropdown-menu-end dropdown-styles">

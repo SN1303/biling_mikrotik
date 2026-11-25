@@ -802,7 +802,7 @@
               <div class="input-group">
                 <span class="input-group-text"><i class="mdi mdi-lock-check-outline"></i></span>
                 <input type="password" id="pppoe_password" name="pppoe_password" class="form-control font-monospace fw-bold" placeholder="otomatis terisi..." required />
-                <button type="button" class="btn btn-outline-secondary" id="toggle-pppoe-pass">
+                <button aria-label="Tampilkan atau sembunyikan password" type="button" class="btn btn-outline-secondary" id="toggle-pppoe-pass">
                   <i class="mdi mdi-eye-off-outline"></i>
                 </button>
               </div>

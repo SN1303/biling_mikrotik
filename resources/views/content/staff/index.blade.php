@@ -24,6 +24,17 @@
 <script>
   let tableStaff;
 
+  // Escape teks sebelum disisipkan ke HTML (nama staf masuk ke dialog konfirmasi)
+  function esc(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   $(document).ready(function() {
     // Inisialisasi DataTable Staf
     tableStaff = $('#table-staff').DataTable({
@@ -162,13 +173,7 @@
             $('#modal-add-staff').modal('hide');
             $('#form-add-staff')[0].reset();
             tableStaff.ajax.reload(null, false);
-            if (typeof toastr !== 'undefined') {
-              toastr.success(res.message);
-            } else if (typeof Swal !== 'undefined') {
-              Swal.fire({ icon: 'success', title: 'Berhasil', text: res.message, timer: 2000, showConfirmButton: false });
-            } else {
-              alert(res.message);
-            }
+            toastr.success(res.message);
           }
         },
         error: function(xhr) {
@@ -177,13 +182,7 @@
           if (xhr.responseJSON && xhr.responseJSON.message) {
             msg = xhr.responseJSON.message;
           }
-          if (typeof toastr !== 'undefined') {
-            toastr.error(msg);
-          } else if (typeof Swal !== 'undefined') {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
-          } else {
-            alert(msg);
-          }
+          toastr.error(msg);
         }
       });
     });
@@ -209,13 +208,7 @@
           if (res.success) {
             $('#modal-edit-staff').modal('hide');
             tableStaff.ajax.reload(null, false);
-            if (typeof toastr !== 'undefined') {
-              toastr.success(res.message);
-            } else if (typeof Swal !== 'undefined') {
-              Swal.fire({ icon: 'success', title: 'Berhasil', text: res.message, timer: 2000, showConfirmButton: false });
-            } else {
-              alert(res.message);
-            }
+            toastr.success(res.message);
           }
         },
         error: function(xhr) {
@@ -224,13 +217,7 @@
           if (xhr.responseJSON && xhr.responseJSON.message) {
             msg = xhr.responseJSON.message;
           }
-          if (typeof toastr !== 'undefined') {
-            toastr.error(msg);
-          } else if (typeof Swal !== 'undefined') {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
-          } else {
-            alert(msg);
-          }
+          toastr.error(msg);
         }
       });
     });
@@ -256,13 +243,7 @@
           if (res.success) {
             $('#modal-reset-password').modal('hide');
             $('#form-reset-password')[0].reset();
-            if (typeof toastr !== 'undefined') {
-              toastr.success(res.message);
-            } else if (typeof Swal !== 'undefined') {
-              Swal.fire({ icon: 'success', title: 'Berhasil', text: res.message, timer: 2000, showConfirmButton: false });
-            } else {
-              alert(res.message);
-            }
+            toastr.success(res.message);
           }
         },
         error: function(xhr) {
@@ -271,11 +252,7 @@
           if (xhr.responseJSON && xhr.responseJSON.message) {
             msg = xhr.responseJSON.message;
           }
-          if (typeof toastr !== 'undefined') {
-            toastr.error(msg);
-          } else {
-            alert(msg);
-          }
+          toastr.error(msg);
         }
       });
     });
@@ -313,8 +290,7 @@
       },
       error: function(xhr) {
         const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal memuat data staf.';
-        if (typeof toastr !== 'undefined') toastr.error(msg);
-        else alert(msg);
+        toastr.error(msg);
       }
     });
   }
@@ -337,13 +313,11 @@
       },
       success: function(res) {
         tableStaff.ajax.reload(null, false);
-        if (typeof toastr !== 'undefined') toastr.success(res.message);
-        else alert(res.message);
+        toastr.success(res.message);
       },
       error: function(xhr) {
         const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal mengubah status.';
-        if (typeof toastr !== 'undefined') toastr.error(msg);
-        else alert(msg);
+        toastr.error(msg);
       }
     });
   }
@@ -359,35 +333,27 @@
         },
         success: function(res) {
           tableStaff.ajax.reload(null, false);
-          if (typeof toastr !== 'undefined') toastr.success(res.message);
-          else alert(res.message);
+          toastr.success(res.message);
         },
         error: function(xhr) {
           const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal menghapus akun.';
-          if (typeof toastr !== 'undefined') toastr.error(msg);
-          else alert(msg);
+          toastr.error(msg);
         }
       });
     };
 
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        title: 'Hapus Akun Staf?',
-        html: `Apakah Anda yakin ingin menghapus akun <b>${name}</b>?<br><small class="text-danger">Aksi ini tidak dapat dibatalkan.</small>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#eb5757',
-        cancelButtonColor: '#a1acb8',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) doDelete();
-      });
-    } else {
-      if (confirm(`Apakah Anda yakin ingin menghapus akun staf "${name}"?`)) {
-        doDelete();
-      }
-    }
+    Swal.fire({
+      title: 'Hapus Akun Staf?',
+      html: `Apakah Anda yakin ingin menghapus akun <b>${esc(name)}</b>?<br><small class="text-danger">Aksi ini tidak dapat dibatalkan.</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#eb5757',
+      cancelButtonColor: '#a1acb8',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) doDelete();
+    });
   }
 </script>
 @endsection
@@ -509,7 +475,7 @@
             <div class="input-group">
               <span class="input-group-text"><i class="mdi mdi-lock-outline"></i></span>
               <input type="password" class="form-control" id="add_password" name="password" placeholder="Minimal 8 karakter" minlength="8" required>
-              <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="add_password">
+              <button aria-label="Tampilkan atau sembunyikan password" class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="add_password">
                 <i class="mdi mdi-eye-outline"></i>
               </button>
             </div>
@@ -608,7 +574,7 @@
             <div class="input-group">
               <span class="input-group-text"><i class="mdi mdi-lock-reset"></i></span>
               <input type="password" class="form-control" id="edit_password" name="password" placeholder="Minimal 8 karakter" minlength="8">
-              <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="edit_password">
+              <button aria-label="Tampilkan atau sembunyikan password" class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="edit_password">
                 <i class="mdi mdi-eye-outline"></i>
               </button>
             </div>
@@ -643,7 +609,7 @@
             <label class="form-label fw-semibold" for="reset_password">Password Baru</label>
             <div class="input-group">
               <input type="password" class="form-control" id="reset_password" name="password" placeholder="Min. 8 karakter" minlength="8" required>
-              <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="reset_password">
+              <button aria-label="Tampilkan atau sembunyikan password" class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="reset_password">
                 <i class="mdi mdi-eye-outline"></i>
               </button>
             </div>
