@@ -21,12 +21,6 @@
         "ajax": "{{ route('user.mapping.json') }}",
         displayLength: 20,
         lengthMenu: [10, 20, 35, 40, 50, 80, 100],
-        language: {
-          paginate: {
-            next: '<i class="ri-arrow-right-s-line"></i>',
-            previous: '<i class="ri-arrow-left-s-line"></i>'
-          }
-        },
         columns: [
           {
             data: null,

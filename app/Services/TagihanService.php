@@ -650,6 +650,11 @@ class TagihanService
             ? Carbon::parse($row->created_at)->format('d-m-Y H:i:s')
             : '-';
         })
+        ->editColumn('tglJatuhTempo', function ($row) {
+          return $row->tglJatuhTempo
+            ? Carbon::parse($row->tglJatuhTempo)->locale('id')->translatedFormat('j M Y')
+            : null;
+        })
         ->editColumn('status_bayar', function ($row) {
           return $row->statusBayar == 1 ? 'paid' : 'unpaid';
         })

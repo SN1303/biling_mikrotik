@@ -186,20 +186,14 @@ if ($hour >= 5 && $hour < 11) {
 <!-- Compact Modern Hero Banner: Telecom & ISP Command Center -->
 <div class="row mb-2.5 mb-md-3">
   <div class="col-12">
-    <div class="card mryes-hero-banner py-2.5 px-3 px-md-3.5">
+    <div class="card mryes-hero-banner py-3 px-3 px-md-3.5">
       <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
         <div class="min-w-0">
-          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-            <span class="badge hero-noc-badge py-0.5 px-2" style="font-size: 0.68rem; letter-spacing: 0.03em;">
-              <i class="mdi mdi-access-point-network me-1"></i> MRYES NOC CONTROL
-            </span>
-            <span class="hero-date small" style="font-size: 0.75rem;">&bull;</span>
-            <span class="hero-date small" style="font-size: 0.75rem;">{{ Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
-          </div>
+          <div class="hero-date small mb-1" style="font-size: 0.75rem;">{{ Carbon\Carbon::now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</div>
           <h5 class="hero-title fw-bold mb-0.5" style="letter-spacing: -0.01em; font-size: 1.15rem;">
             {{ $greeting }}, {{ $currentUser->name ?? 'Administrator' }}! 👋
           </h5>
-          <p class="hero-subtitle mb-0 text-truncate" style="font-size: 0.78rem; max-width: 650px;">
+          <p class="hero-subtitle mb-0 text-truncate d-none d-md-block" style="font-size: 0.78rem; max-width: 650px;">
             Sistem operasional terintegrasi: Monitoring MikroTik, Manajemen PPPoE/Isolir, Penagihan, dan Pemetaan ODP.
           </p>
         </div>
@@ -219,38 +213,6 @@ if ($hour >= 5 && $hour < 11) {
           </a>
           @endif
 
-          <!-- Theme Mode Switcher Dropdown on Dashboard Banner (Anti Overflow Clipping) -->
-          @php
-            $currentTheme = $configData['style'] ?? 'light';
-            $nextTheme = ($currentTheme === 'dark') ? 'light' : 'dark';
-          @endphp
-          <div class="dropdown">
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 shadow-xs px-2.5 py-1.5" data-bs-toggle="dropdown" aria-expanded="false" title="Pilih Mode Tema (Light/Dark/System)" style="font-size: 0.8125rem;">
-              <i class="mdi {{ ($currentTheme === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }} fs-5"></i>
-              <span class="d-none d-sm-inline fw-semibold">{{ ($currentTheme === 'dark') ? 'Dark' : 'Light' }}</span>
-              <i class="mdi mdi-chevron-down text-muted" style="font-size: 0.75rem;"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg border py-1" style="border-radius: 10px; min-width: 140px; z-index: 1080;">
-              <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'light') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('light')">
-                  <i class="mdi mdi-weather-sunny text-warning me-2 fs-5"></i>
-                  <span class="align-middle fw-medium">Light</span>
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'dark') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('dark')">
-                  <i class="mdi mdi-weather-night text-info me-2 fs-5"></i>
-                  <span class="align-middle fw-medium">Dark</span>
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item py-1.5 d-flex align-items-center {{ ($currentTheme === 'system') ? 'active' : '' }}" href="javascript:void(0);" onclick="setAppTheme('system')">
-                  <i class="mdi mdi-monitor text-secondary me-2 fs-5"></i>
-                  <span class="align-middle fw-medium">System</span>
-                </a>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
@@ -305,7 +267,7 @@ if ($hour >= 5 && $hour < 11) {
       <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Pendapatan Bulan Ini</span>
-          <div class="metric-value mb-1" style="font-size: 1.25rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
+          <div class="metric-value mb-1 text-nowrap" style="font-size: 1.25rem; color: #047857;">Rp {{ number_format($stats['monthly_revenue'], 0, ',', '.') }}</div>
           <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
             <span>{{ $stats['monthly_transactions'] }} transaksi masuk</span>
           </div>
@@ -323,9 +285,9 @@ if ($hour >= 5 && $hour < 11) {
       <div class="card-body d-flex align-items-center justify-content-between p-2 p-sm-3">
         <div>
           <span class="metric-label d-block mb-1">Tagihan Tertunda</span>
-          <div class="metric-value mb-1" style="font-size: 1.25rem; color: #b91c1c;">Rp {{ number_format($stats['pending_revenue'], 0, ',', '.') }}</div>
-          <div class="d-flex align-items-center gap-1" style="font-size: 0.75rem; color: #64748b;">
-            <span class="text-danger fw-semibold">{{ $stats['unpaid_bills'] }} invoice</span> belum lunas
+          <div class="metric-value mb-1 text-nowrap" style="font-size: 1.25rem; color: #b91c1c;">Rp {{ number_format($stats['pending_revenue'], 0, ',', '.') }}</div>
+          <div style="font-size: 0.75rem; color: #64748b;">
+            <span class="text-danger fw-semibold">{{ $stats['pending_bills'] }} invoice</span> belum lunas
           </div>
         </div>
         <div class="metric-icon-box bg-danger-subtle text-danger border border-danger-subtle">
@@ -439,55 +401,55 @@ if ($hour >= 5 && $hour < 11) {
           <table class="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>No. Invoice</th>
+                <th class="d-none d-md-table-cell">No. Invoice</th>
                 <th>Pelanggan</th>
-                <th>Paket Layanan</th>
+                <th class="d-none d-sm-table-cell">Paket Layanan</th>
                 <th>Nominal</th>
-                <th>Waktu Pembayaran</th>
+                <th class="d-none d-sm-table-cell">Waktu Pembayaran</th>
                 <th class="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               @foreach($recent_transactions as $transaction)
               <tr>
-                <td>
+                <td class="d-none d-md-table-cell">
                   <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.8rem;">
                     #{{ $transaction->noTagihan ?? '-' }}
                   </span>
                 </td>
                 <td>
                   <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #0ea5e9); font-size: 0.8rem;">
+                    <div class="rounded-circle d-none d-sm-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #0ea5e9); font-size: 0.8rem;">
                       {{ strtoupper(substr($transaction->user->name ?? 'P', 0, 1)) }}
                     </div>
-                    <div>
-                      <div class="fw-semibold text-dark">{{ $transaction->user->name ?? 'Pelanggan N/A' }}</div>
-                      <small class="text-muted">ID: {{ $transaction->user->username ?? '-' }}</small>
-                    </div>
+                    <div class="fw-semibold text-dark">{{ $transaction->user->name ?? 'Pelanggan N/A' }}</div>
                   </div>
                 </td>
-                <td>
+                <td class="d-none d-sm-table-cell">
                   <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
                     {{ $transaction->namaPaket ?? 'Paket N/A' }}
                   </span>
-                  @if(!$transaction->tagihanLunas)
-                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1">Cicilan</span>
-                  @endif
                 </td>
                 <td>
-                  <span class="fw-bold text-success" style="font-size: 0.95rem;">
+                  <span class="fw-bold text-success text-nowrap" style="font-size: 0.95rem;">
                     Rp {{ number_format($transaction->total, 0, ',', '.') }}
                   </span>
                 </td>
-                <td>
+                <td class="d-none d-sm-table-cell">
                   <span class="text-secondary small">
-                    <i class="mdi mdi-clock-outline me-1"></i>{{ Carbon\Carbon::parse($transaction->tglBayar)->isoFormat('D MMM Y, HH:mm') }} WIB
+                    <i class="mdi mdi-clock-outline me-1"></i>{{ Carbon\Carbon::parse($transaction->tglBayar)->locale('id')->isoFormat('D MMM Y, HH:mm') }} WIB
                   </span>
                 </td>
                 <td class="text-center">
+                  @if($transaction->tagihanLunas)
                   <span class="badge badge-status-active">
                     <i class="mdi mdi-check-circle-outline me-1"></i>LUNAS
                   </span>
+                  @else
+                  <span class="badge badge-status-partial">
+                    <i class="mdi mdi-progress-clock me-1"></i>CICILAN
+                  </span>
+                  @endif
                 </td>
               </tr>
               @endforeach
@@ -499,8 +461,8 @@ if ($hour >= 5 && $hour < 11) {
           <div class="mb-2 text-muted" style="font-size: 2.5rem;">
             <i class="mdi mdi-receipt-text-outline"></i>
           </div>
-          <h6 class="text-dark fw-bold mb-1">Belum Ada Transaksi Bulan Ini</h6>
-          <p class="text-muted small mb-0">Pembayaran tagihan pelanggan yang terkonfirmasi lunas akan langsung muncul di sini.</p>
+          <h6 class="text-dark fw-bold mb-1">Belum Ada Pembayaran</h6>
+          <p class="text-muted small mb-0">Pembayaran yang dicatat di menu Tagihan akan muncul di sini.</p>
         </div>
         @endif
       </div>

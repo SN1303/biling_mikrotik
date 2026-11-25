@@ -12,10 +12,10 @@ let config = {
   colors: {
     primary: '#666cff',
     secondary: '#6d788d',
-    success: '#72e128',
-    info: '#26c6f9',
-    warning: '#fdb528',
-    danger: '#ff4d49',
+    success: '#2f7d0a',
+    info: '#0b7aa8',
+    warning: '#b45309',
+    danger: '#d92d20',
     dark: '#4b4b4b',
     black: '#000',
     white: '#fff',
@@ -29,10 +29,10 @@ let config = {
   colors_label: {
     primary: '#666cff29',
     secondary: '#6d788d29',
-    success: '#72e12829',
-    info: '#26c6f929',
-    warning: '#fdb52829',
-    danger: '#ff4d4929',
+    success: '#2f7d0a29',
+    info: '#0b7aa829',
+    warning: '#b4530929',
+    danger: '#d92d2029',
     dark: '#4b4b4b29'
   },
   colors_dark: {

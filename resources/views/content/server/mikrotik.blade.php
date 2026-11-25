@@ -90,12 +90,6 @@
          '<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         displayLength: 20,
         lengthMenu: [10, 20, 35, 40, 50, 80, 100],
-        language: {
-          paginate: {
-            next: '<i class="ri-arrow-right-s-line"></i>',
-            previous: '<i class="ri-arrow-left-s-line"></i>'
-          }
-        },
          buttons: [
           {
               text: '<i class="mdi mdi-plus me-sm-1"></i> <span class="d-none d-sm-inline-block">Add</span>',

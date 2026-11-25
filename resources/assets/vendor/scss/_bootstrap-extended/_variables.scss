@@ -47,10 +47,11 @@ $cyan: #28c3d7 !default;
 // scss-docs-start theme-color-variables
 $primary: $indigo !default;
 $secondary: #6d788d !default;
-$success: $green !default;
-$info: $blue !default;
-$warning: $orange !default;
-$danger: $red !default;
+// Versi lebih tua dari warna template supaya teks putih/teks berwarna lolos kontras 4.5:1 (WCAG AA)
+$success: #2f7d0a !default;
+$info: #0b7aa8 !default;
+$warning: #b45309 !default;
+$danger: #d92d20 !default;
 $light: #dfdfe3 !default;
 $dark: #4b4b4b !default;
 $gray: $gray-100 !default; // (C)

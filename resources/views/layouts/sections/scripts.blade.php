@@ -11,6 +11,28 @@
 @yield('vendor-script')
 <!--dari mrye-->
 <script src="{{ asset('assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js') }}"></script>
+<script>
+  // Bahasa bawaan semua tabel; halaman yang punya `language` sendiri tetap menimpa bagian yang ia isi
+  $.extend(true, $.fn.dataTable.defaults, {
+    language: {
+      search: 'Cari:',
+      lengthMenu: 'Tampilkan _MENU_ data',
+      info: 'Menampilkan _START_–_END_ dari _TOTAL_ data',
+      infoEmpty: 'Tidak ada data',
+      infoFiltered: '(disaring dari _MAX_ data)',
+      zeroRecords: 'Tidak ada data yang cocok',
+      emptyTable: 'Belum ada data',
+      processing: 'Memuat...',
+      loadingRecords: 'Memuat...',
+      paginate: {
+        first: 'Pertama',
+        last: 'Terakhir',
+        previous: '<i class="mdi mdi-chevron-left" aria-label="Halaman sebelumnya"></i>',
+        next: '<i class="mdi mdi-chevron-right" aria-label="Halaman berikutnya"></i>'
+      }
+    }
+  });
+</script>
 <script src="{{asset('assets/vendor/libs/sweetalert2/sweetalert2.js')}}"></script>
 <script src="{{asset('assets/vendor/libs/toastr/toastr.js')}}"></script>
 <script src="{{asset('assets/vendor/libs/select2/select2.js')}}"></script>

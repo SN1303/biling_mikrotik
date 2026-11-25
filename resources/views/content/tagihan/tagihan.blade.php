@@ -1215,7 +1215,7 @@
       <!-- Right: Filters & Action -->
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="d-flex align-items-center gap-1 bg-light rounded-3 p-1 border">
-          <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-1 text-primary"></i>Periode:</span>
+          <span class="text-muted small px-1 fw-semibold" style="font-size: 0.72rem;"><i class="mdi mdi-filter-variant me-sm-1 text-primary" aria-hidden="true"></i><span class="d-none d-sm-inline">Periode:</span></span>
           <select id="filter-bulan" class="form-select form-select-sm border-0 bg-white shadow-xs fw-semibold" style="width: 140px; font-size: 0.78rem;">
             <option value="">Semua Bulan</option>
             @php
@@ -1242,9 +1242,6 @@
           </select>
           <button type="button" class="btn btn-sm btn-icon btn-primary rounded-2 shadow-xs" id="btn-refresh-table" title="Refresh Data" style="width: 30px; height: 30px;">
             <i class="mdi mdi-refresh"></i>
-          </button>
-          <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-2 shadow-xs" onclick="setAppTheme('{{ (($configData['style'] ?? 'light') === 'dark') ? 'light' : 'dark' }}')" title="Ganti Mode Tema (Light/Dark)" style="width: 30px; height: 30px;">
-            <i class="mdi {{ (($configData['style'] ?? 'light') === 'dark') ? 'mdi-weather-night text-info' : 'mdi-weather-sunny text-warning' }}"></i>
           </button>
         </div>
 

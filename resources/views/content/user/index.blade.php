@@ -133,12 +133,6 @@
          '<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         displayLength: 20,
         lengthMenu: [10, 20, 35, 40, 50, 80, 100],
-        language: {
-          paginate: {
-            next: '<i class="ri-arrow-right-s-line"></i>',
-            previous: '<i class="ri-arrow-left-s-line"></i>'
-          }
-        },
         buttons: [],
         initComplete: function() {
           // If dom still contains 'B' this will remove the (empty) buttons container so no Copy/HTML/PDF tampil
