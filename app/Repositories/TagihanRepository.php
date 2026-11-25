@@ -107,6 +107,17 @@ class TagihanRepository
     return $periode->copy()->startOfMonth()->day(min($hari, $periode->daysInMonth));
   }
 
+  /**
+   * PPN dihitung dari harga setelah diskon (DPP). Hasil: [ppn, total], total tidak pernah negatif.
+   */
+  public static function hitungTotal(float $harga, float $diskon, float $persenPpn): array
+  {
+    $dpp = max(0, $harga - $diskon);
+    $ppn = round($dpp * $persenPpn / 100);
+
+    return [$ppn, $dpp + $ppn];
+  }
+
   public function generateTagihanBulananRepo()
   {
     $result = [
@@ -186,13 +197,10 @@ class TagihanRepository
         // Opsi B: PPN Fleksibel per Pelanggan
         // PPN hanya dikenakan jika statusPpn pada profil pelanggan bernilai 1 (Aktif)
         $isPpnActive = (int) optional($user->user_detail)->statusPpn === 1;
-        $ppnPercentage = $isPpnActive ? (config('billing.ppn', 11) / 100) : 0;
-        $ppn = $isPpnActive ? round($hargaPaket * $ppnPercentage) : 0;
-        $total = $hargaPaket + $ppn - $nilaiDiskon;
+        [$ppn, $finalTotal] = self::hitungTotal($hargaPaket, (float) $nilaiDiskon, $isPpnActive ? config('billing.ppn', 11) : 0);
 
         // Opsi B User Gratisan: Jika total <= 0, otomatis langsung berstatus LUNAS (Gratis)
-        $isGratis = ($total <= 0);
-        $finalTotal = max(0, $total);
+        $isGratis = ($finalTotal <= 0);
 
         DB::beginTransaction();
 
