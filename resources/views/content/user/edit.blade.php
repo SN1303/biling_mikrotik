@@ -1,6 +1,6 @@
 @extends('layouts/layoutMaster')
 
-@section('title', 'Add User')
+@section('title', 'Edit Pelanggan')
 
 @section("vendor-style")
 @endsection
@@ -24,7 +24,9 @@
 
         const form = this;
         const formData = new FormData(form); // Ambil data dari form
-        console.log(formData);
+        const $btn = $('#btn-simpan');
+        const labelAwal = $btn.html();
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Menyimpan...');
 
         $.ajax({
             url: "{{ route('user.update', ['id' => $id]) }}", // Endpoint untuk update data
@@ -49,6 +51,9 @@
                     message = xhr.responseJSON.message;
                 }
                 toastr.error(message); // Tampilkan pesan error
+            },
+            complete: function () {
+                $btn.prop('disabled', false).html(labelAwal);
             }
         });
     });
@@ -60,72 +65,69 @@
 
 @section('content')
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Form Tambah Pelanggan</h5>
-    <a href="{{ url()->previous() }}" class="btn btn-sm btn-secondary">
-      <i class="mdi mdi-arrow-left-bold"></i> Kembali
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="min-w-0">
+      <h5 class="mb-0">Edit Pelanggan</h5>
+      <small class="text-muted text-truncate d-block">{{ $query->name }}</small>
+    </div>
+    <a href="{{ route('user.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="mdi mdi-arrow-left me-1"></i> Kembali ke Daftar
     </a>
   </div>
   <form id="form-add-user" class="card-body" enctype="multipart/form-data">
     @csrf
-    <h6>1. Akun Pengguna</h6>
+    <h6 class="mb-3">Akun Pengguna</h6>
     <div class="row g-4">
-      <div class="col-md-2">
+      <div class="col-md-4">
         <div class="form-floating form-floating-outline">
-          <input type="text" name="nama" class="form-control" autocomplete="off" placeholder="Nama Lengkap"
+          <input type="text" name="nama" id="nama" class="form-control" autocomplete="off" placeholder="Nama Lengkap"
             value="{{ $query->name }}" required />
-          <label for="nama">Nama User</label>
+          <label for="nama">Nama</label>
         </div>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-4">
         <div class="form-floating form-floating-outline">
-          <input value="{{ $query->julukan }}" type="text" name="julukan" class="form-control" autocomplete="off"
-            placeholder="nama julukan" />
+          <input value="{{ $query->julukan }}" type="text" name="julukan" id="julukan" class="form-control" autocomplete="off"
+            placeholder="Nama panggilan" />
           <label for="julukan">Julukan</label>
         </div>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-4">
         <div class="form-floating form-floating-outline">
-          <input value="{{ $query->wa }}" type="text" name="wa" class="form-control" autocomplete="off"
-            placeholder="nomor WA" required />
-          <label for="nama">WA User</label>
+          <input value="{{ $query->wa }}" type="tel" inputmode="tel" name="wa" id="wa" class="form-control" autocomplete="off"
+            placeholder="08..." required />
+          <label for="wa">Nomor WhatsApp</label>
         </div>
       </div>
 
-      {{-- <div class="col-md-6">
+      <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <input type="email" name="email" class="form-control" placeholder="Email" required />
-          <label for="email">Email</label>
+          <input type="password" name="password" id="password" class="form-control" autocomplete="new-password"
+            placeholder="Password baru" />
+          <label for="password">Password Baru</label>
         </div>
-      </div> --}}
-
-      <div class="col-md-3">
-        <div class="form-floating form-floating-outline">
-          <input type="password" name="password" class="form-control" autocomplete="new-password"
-            placeholder="Password" />
-          <label for="password">Password</label>
-        </div>
-        <span class="text-muted">kosongkan jika tidak mau update password</span>
+        <div class="form-text">Kosongkan jika tidak ingin mengganti password.</div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select id="status-user" name="status_user" class="form-control" required>
-            <option {{ $query->isActive == 1 ? 'selected' : '' }} value="1">AKTIF</option>
-            <option {{ $query->isActive == 0 ? 'selected' : '' }} value="0">OFF</option>
+          <select id="status-user" name="status_user" class="form-select" required>
+            <option {{ $query->isActive == 1 ? 'selected' : '' }} value="1">Aktif</option>
+            <option {{ $query->isActive == 0 ? 'selected' : '' }} value="0">Nonaktif</option>
           </select>
-          <label for="area-select">Statu Pelanggan</label>
+          <label for="status-user">Status Akun</label>
         </div>
       </div>
     </div>
 
     <hr class="my-4 mx-n4" />
-    <h6>2. Informasi Tambahan</h6>
+    <h6 class="mb-3">Informasi Pelanggan</h6>
     <div class="row g-4">
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select name="area" id="area-select" class="form-select" required>
-            <option value="" disabled>Pilih Area</option>
+          <select name="area" id="area-select" class="form-select">
+            {{-- Kosong harus benar-benar terpilih; kalau tidak, browser memilih area pertama diam-diam --}}
+            <option value="" @selected(empty($query->user_detail?->idArea))>Belum ada area</option>
             @foreach (Helper::getArea() as $val)
             <option value="{{ $val->id }}" {{ !empty($query->user_detail?->idArea) && $query->user_detail->idArea == $val->getRawOriginal('id') ? 'selected' : '' }}>
               {{ $val->name }}
@@ -140,9 +142,9 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select name="status_isolir" class="form-select" required>
-            <option {{ $query->user_mikrotik?->statusIsolir == 1 ? 'selected' : '' }} value="1">Iya</option>
-            <option {{ $query->user_mikrotik?->statusIsolir == 0 ? 'selected' : '' }} value="0">Tidak</option>
+          <select name="status_isolir" id="status_isolir" class="form-select" required>
+            <option {{ $query->user_mikrotik?->statusIsolir == 1 ? 'selected' : '' }} value="1">Ya, terisolir</option>
+            <option {{ $query->user_mikrotik?->statusIsolir == 0 ? 'selected' : '' }} value="0">Tidak (normal)</option>
           </select>
           <label for="status_isolir">Status Isolir</label>
         </div>
@@ -150,17 +152,18 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <input type="date" name="tgl_daftar" class="form-control" value="{{ $query->user_detail?->tglDafatar }}" />
-          <label for="tgl_daftar">Tanggal Daftar </label>
+          <input type="date" name="tgl_daftar" id="tgl_daftar" class="form-control" value="{{ $query->user_detail?->tglDafatar }}" />
+          <label for="tgl_daftar">Tanggal Daftar</label>
         </div>
       </div>
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <input type="date" name="jatuh_tempo" value="{{ $query->user_detail?->tglJatuhTempo }}" class="form-control"
+          <input type="date" name="jatuh_tempo" id="jatuh_tempo" value="{{ $query->user_detail?->tglJatuhTempo }}" class="form-control"
             required />
-          <label for="jatuh_tempo">Tanggal Jatuh Tempo</label>
+          <label for="jatuh_tempo">Jatuh Tempo</label>
         </div>
+        <div class="form-text">Yang dipakai hanya tanggalnya, tiap bulan.</div>
       </div>
 
       <div class="col-md-6">
@@ -174,7 +177,7 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select name="status_ppn" class="form-select">
+          <select name="status_ppn" id="status_ppn" class="form-select">
             <option @selected($query->user_detail?->statusPpn != 1) value="0">Tidak</option>
             <option @selected($query->user_detail?->statusPpn == 1) value="1">Aktif</option>
           </select>
@@ -184,11 +187,11 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select name="status_tagihan" class="form-select">
+          <select name="status_tagihan" id="status_tagihan" class="form-select">
             <option @selected($query->user_detail?->statusTagihan == 1) value="1">Aktif</option>
-            <option @selected($query->user_detail?->statusTagihan == 0) value="0">Tidak</option>
+            <option @selected($query->user_detail?->statusTagihan == 0) value="0">Nonaktif</option>
           </select>
-          <label for="status_tagihan">Status Tagihan</label>
+          <label for="status_tagihan">Generate Tagihan</label>
         </div>
       </div>
 
@@ -198,41 +201,27 @@
             <option @selected($query->user_detail?->jenisBayar == 1) value="1">Pascabayar</option>
             <option @selected($query->user_detail?->jenisBayar == 2) value="2">Prabayar</option>
           </select>
-          <label for="jenis_bayar">Jenis Bayar</label>
+          <label for="jenis_bayar">Sistem Bayar</label>
         </div>
       </div>
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <input value="{{ $query->user_detail?->googleMap }}" type="url" name="google_map_url" class="form-control"
-            placeholder="https://..." />
-          <label for="google_map_url">URL Google Map</label>
+          <input value="{{ $query->user_detail?->googleMap }}" type="url" name="google_map_url" id="google_map_url" class="form-control"
+            placeholder="https://maps.app.goo.gl/..." />
+          <label for="google_map_url">Link Google Maps</label>
         </div>
       </div>
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <select name="jenis_kelamin" class="form-select">
+          <select name="jenis_kelamin" id="jenis_kelamin" class="form-select">
             <option @selected($query->user_detail?->js == 'L') value="L">Laki-laki</option>
             <option @selected($query->user_detail?->js == 'P') value="P">Perempuan</option>
           </select>
           <label for="jenis_kelamin">Jenis Kelamin</label>
         </div>
       </div>
-
-      {{-- <div class="col-md-6">
-        <div class="form-floating form-floating-outline">
-          <input type="text" name="telegram" class="form-control" />
-          <label for="telegram">Telegram</label>
-        </div>
-      </div> --}}
-      {{--
-      <div class="col-md-6">
-        <div class="form-floating form-floating-outline">
-          <input type="file" name="foto_profile" class="form-control" accept="image/*" />
-          <label for="foto_profile">Foto Profil</label>
-        </div>
-      </div> --}}
 
       <div class="col-md-6">
         @php
@@ -249,7 +238,7 @@
         ];
         @endphp
         <div class="form-floating form-floating-outline">
-          <select name="jenis_identitas" class="form-select">
+          <select name="jenis_identitas" id="jenis_identitas" class="form-select">
             @foreach ($listIdentitas as $value => $label)
             <option value="{{ $value }}" @selected($query->user_detail?->identitas ==$value) >
               {{ $label }}
@@ -262,7 +251,7 @@
 
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
-          <input value="{{ $query->user_detail?->noIdentitas }}" type="text" name="no_identitas" class="form-control"
+          <input value="{{ $query->user_detail?->noIdentitas }}" type="text" name="no_identitas" id="no_identitas" class="form-control"
             placeholder="Nomor Identitas" />
           <label for="no_identitas">Nomor Identitas</label>
         </div>
@@ -270,22 +259,25 @@
 
       <div class="col-12">
         <div class="form-floating form-floating-outline">
-          <textarea name="alamat" class="form-control" style="height: 100px;"
+          <textarea name="alamat" id="alamat" class="form-control" style="height: 100px;"
             placeholder="Alamat lengkap">{{ $query->user_detail?->alamat }}</textarea>
-          <label for="alamat">Alamat</label>
+          <label for="alamat">Alamat Pemasangan</label>
         </div>
       </div>
       <div class="col-12">
         <div class="form-floating form-floating-outline">
-          <textarea name="keterangan" class="form-control" style="height: 100px;"
-            placeholder="Keterangan Tambahan Jika ada ">{{ $query->user_detail?->keterangan }}</textarea>
-          <label for="alamat">Keterangan Tambahan</label>
+          <textarea name="keterangan" id="keterangan" class="form-control" style="height: 100px;"
+            placeholder="Catatan untuk teknisi">{{ $query->user_detail?->keterangan }}</textarea>
+          <label for="keterangan">Catatan</label>
         </div>
       </div>
     </div>
 
-    <div class="pt-4">
-      <button type="submit" class="btn btn-primary me-sm-3 me-1">Update</button>
+    <div class="pt-4 d-flex flex-wrap gap-2">
+      <button type="submit" id="btn-simpan" class="btn btn-primary">
+        <i class="mdi mdi-content-save-outline me-1"></i> Simpan Perubahan
+      </button>
+      <a href="{{ route('user.index') }}" class="btn btn-outline-secondary">Batal</a>
     </div>
   </form>
 </div>

@@ -741,18 +741,18 @@
                     <small class="fw-semibold text-muted">
                       <i class="mdi mdi-map-marker-radius me-1"></i> Pratinjau Peta (Klik/seret marker untuk ubah lokasi):
                     </small>
-                    <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher">
+                    <div class="btn-group btn-group-sm shadow-xs" role="group" id="map-layer-switcher" aria-label="Jenis peta">
                       <button type="button" class="btn btn-primary active btn-map-type" data-layer="googleHybrid" title="Peta Satelit dengan Nama Jalan">
-                        <i class="mdi mdi-satellite-variant me-1"></i> Satelit Hybrid
+                        <i class="mdi mdi-satellite-variant me-1 d-none d-sm-inline-block"></i> Hybrid
                       </button>
                       <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleSat" title="Citra Satelit Asli">
-                        <i class="mdi mdi-earth me-1"></i> Satelit Murni
+                        <i class="mdi mdi-earth me-1 d-none d-sm-inline-block"></i> Satelit
                       </button>
                       <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="googleStreets" title="Peta Jalan Google Maps">
-                        <i class="mdi mdi-google-maps me-1"></i> Google Jalan
+                        <i class="mdi mdi-google-maps me-1 d-none d-sm-inline-block"></i> Jalan
                       </button>
                       <button type="button" class="btn btn-outline-secondary btn-map-type" data-layer="osm" title="Peta OpenStreetMap">
-                        <i class="mdi mdi-map-outline me-1"></i> OSM
+                        <i class="mdi mdi-map-outline me-1 d-none d-sm-inline-block"></i> OSM
                       </button>
                     </div>
                   </div>
@@ -850,21 +850,22 @@
               </div>
 
               <!-- Tanggal Pasang & Jatuh Tempo -->
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <input type="date" name="tgl_daftar" id="tgl_daftar" class="form-control" value="{{ now()->format('Y-m-d') }}" required />
                   <label for="tgl_daftar">Tgl Registrasi</label>
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <input type="date" name="jatuh_tempo" id="jatuh_tempo" class="form-control" value="{{ now()->day(10)->format('Y-m-d') }}" required />
-                  <label for="jatuh_tempo">Jatuh Tempo (yang dipakai hanya tanggalnya)</label>
+                  <label for="jatuh_tempo">Jatuh Tempo</label>
                 </div>
+                <div class="form-text">Yang dipakai hanya tanggalnya, tiap bulan.</div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <input type="month" name="mulai_tagih" id="mulai_tagih" class="form-control"
                     value="{{ substr(\App\Models\Lamtim_user_details::mulaiTagihDefault(now()), 0, 7) }}" />
@@ -883,7 +884,7 @@
               </script>
 
               <!-- Jenis Bayar & PPN -->
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <select name="jenis_bayar" id="jenis_bayar" class="form-select" required>
                     <option value="1" selected>Pascabayar</option>
@@ -893,7 +894,7 @@
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <select name="status_ppn" id="status_ppn" class="form-select">
                     <option value="0" selected>Tidak Ada PPN</option>
@@ -904,7 +905,7 @@
               </div>
 
               <!-- Status Tagihan & Isolir -->
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <select name="status_tagihan" id="status_tagihan" class="form-select">
                     <option value="1" selected>Aktif</option>
@@ -914,7 +915,7 @@
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-sm-6 col-lg-12 col-xxl-6">
                 <div class="form-floating form-floating-outline">
                   <select name="status_isolir" id="status_isolir" class="form-select">
                     <option value="0" selected>Normal (Aktif)</option>
@@ -932,7 +933,7 @@
           <div class="card-header bg-transparent pb-3 border-bottom d-flex align-items-center justify-content-between">
             <h5 class="card-title mb-0 d-flex align-items-center gap-2 fs-6">
               <span class="step-badge bg-label-dark text-body">5</span>
-              <span>Perangkat ONT / Modem</span>
+              <span>ONT / Modem</span>
             </h5>
             <span class="badge bg-label-secondary">Opsional</span>
           </div>
