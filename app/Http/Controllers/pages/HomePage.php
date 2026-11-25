@@ -34,9 +34,13 @@ class HomePage extends Controller
       if (auth()->user()->hasRole(6, 7)) {
         $kolom = ['idUser', 'bulan', 'tahun', 'total', 'terbayar', 'tglJatuhTempo', 'tglBayar'];
         $tagihan = [
-          'belum' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 0)
+          // Belum bayar sama sekali (yang sudah mencicil masuk daftar "cicilan")
+          'belum' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 0)->where('terbayar', '<=', 0)
             ->orderBy('tglJatuhTempo')->limit(10)->get($kolom),
-          'jumlah_belum' => Lamtim_tagihans::where('statusBayar', 0)->count(),
+          'jumlah_belum' => Lamtim_tagihans::where('statusBayar', 0)->where('terbayar', '<=', 0)->count(),
+          // Sudah mencicil tapi belum lunas: tampil terus sampai lunas
+          'cicilan' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 0)->where('terbayar', '>', 0)
+            ->orderBy('tglJatuhTempo')->get($kolom),
           // Lunas bulan ini (tanggal bayar), tagihan periode mana pun
           'sudah' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 1)
             ->whereBetween('tglBayar', [now()->startOfMonth(), now()->endOfMonth()])

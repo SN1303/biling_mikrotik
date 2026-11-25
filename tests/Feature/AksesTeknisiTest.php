@@ -78,11 +78,14 @@ class AksesTeknisiTest extends TestCase
       $tagihan + ['idUser' => $lunas, 'noTagihan' => 'T2', 'statusBayar' => 1, 'terbayar' => 100000, 'tglBayar' => now()],
     ]);
 
+    $andi = User::create(['name' => 'Andi Nunggak', 'email' => 'andi@test', 'wa' => '4', 'password' => 'x', 'idRole' => 5, 'isActive' => 1])->id;
+    DB::table('lamtim_tagihans')->insert($tagihan + ['idUser' => $andi, 'noTagihan' => 'T3', 'statusBayar' => 0, 'terbayar' => 0]);
+
     $this->masukSebagai(7);
-    $this->get('/')->assertOk()
-      ->assertSee('Belum Bayar')->assertSee('Budi')->assertSee('60.000') // sisa yang harus ditagih
-      ->assertSee('Sudah Bayar')->assertSee('Sari Lunas')
-      ->assertDontSee('Pendapatan Bulan Ini');
+    $res = $this->get('/')->assertOk()->assertSee('Belum Bayar')->assertSee('Sudah Bayar')->assertDontSee('Pendapatan Bulan Ini');
+    // Belum Bayar = belum bayar sama sekali; cicilan pindah ke Sudah Bayar, di atas yang lunas, dengan sisanya
+    $res->assertSeeInOrder(['id="tab-belum"', 'Andi Nunggak', 'id="tab-sudah"', 'Budi', 'CICILAN', '60.000', 'Sari Lunas', 'LUNAS']);
+    $this->assertSame(1, substr_count($res->getContent(), 'Budi'), 'Pelanggan cicilan tidak boleh tampil dobel');
 
     $this->masukSebagai(4); // teknisi murni tidak menagih
     $this->get('/')->assertOk()->assertDontSee('Belum Bayar')->assertDontSee('Budi');

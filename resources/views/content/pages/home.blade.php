@@ -588,7 +588,7 @@ if ($hour >= 5 && $hour < 11) {
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sudah" type="button" role="tab">
-          Sudah Bayar <span class="badge rounded-pill bg-success ms-1">{{ $tagihan['jumlah_sudah'] }}</span>
+          Sudah Bayar <span class="badge rounded-pill bg-success ms-1">{{ $tagihan['cicilan']->count() + $tagihan['jumlah_sudah'] }}</span>
         </button>
       </li>
     </ul>
@@ -602,13 +602,10 @@ if ($hour >= 5 && $hour < 11) {
             <div class="fw-semibold text-truncate">{{ $t->user->name ?? '-' }}</div>
             <small class="text-muted">{{ $periode($t) }}@if($t->tglJatuhTempo) · jatuh tempo {{ $t->tglJatuhTempo->locale('id')->translatedFormat('j M') }}@endif</small>
           </div>
-          <div class="text-end flex-shrink-0">
-            <div class="fw-bold text-danger text-nowrap">{{ $rupiah(max(0, $t->total - $t->terbayar)) }}</div>
-            @if($t->terbayar > 0)<small class="text-muted">sisa cicilan</small>@endif
-          </div>
+          <div class="fw-bold text-danger text-nowrap flex-shrink-0">{{ $rupiah($t->total) }}</div>
         </li>
         @empty
-        <li class="list-group-item text-center text-muted py-4">Semua tagihan sudah lunas 🎉</li>
+        <li class="list-group-item text-center text-muted py-4">Tidak ada yang belum bayar sama sekali 🎉</li>
         @endforelse
       </ul>
       <div class="card-footer text-center py-2">
@@ -617,6 +614,19 @@ if ($hour >= 5 && $hour < 11) {
     </div>
     <div class="tab-pane fade" id="tab-sudah" role="tabpanel">
       <ul class="list-group list-group-flush">
+        {{-- Cicilan selalu di atas sampai lunas --}}
+        @foreach($tagihan['cicilan'] as $t)
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-2">
+          <div class="min-w-0">
+            <div class="fw-semibold text-truncate">{{ $t->user->name ?? '-' }}</div>
+            <small class="text-muted">{{ $periode($t) }} · dibayar {{ $rupiah($t->terbayar) }}</small>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <span class="badge badge-status-partial">CICILAN</span>
+            <div><small class="text-danger fw-semibold text-nowrap">sisa {{ $rupiah(max(0, $t->total - $t->terbayar)) }}</small></div>
+          </div>
+        </li>
+        @endforeach
         @forelse($tagihan['sudah'] as $t)
         <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-2">
           <div class="min-w-0">
@@ -629,7 +639,9 @@ if ($hour >= 5 && $hour < 11) {
           </div>
         </li>
         @empty
+        @if($tagihan['cicilan']->isEmpty())
         <li class="list-group-item text-center text-muted py-4">Belum ada tagihan yang lunas bulan ini</li>
+        @endif
         @endforelse
       </ul>
       <div class="card-footer text-center py-2">
