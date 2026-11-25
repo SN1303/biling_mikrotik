@@ -29,7 +29,23 @@ class HomePage extends Controller
         'active_mikrotik' => Lamtim_mikrotik::where('isActive', 1)->count(),
         'total_mikrotik' => Lamtim_mikrotik::count(),
       ];
-      return view('content.pages.home', ['stats' => $stats, 'lihatUang' => false, 'recent_transactions' => collect(), 'monthlyRevenue' => []]);
+      // Kolektor (6) & Teknisi-Kolektor (7): siapa yang masih perlu ditagih dan siapa yang sudah bayar
+      $tagihan = null;
+      if (auth()->user()->hasRole(6, 7)) {
+        $kolom = ['idUser', 'bulan', 'tahun', 'total', 'terbayar', 'tglJatuhTempo', 'tglBayar'];
+        $tagihan = [
+          'belum' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 0)
+            ->orderBy('tglJatuhTempo')->limit(10)->get($kolom),
+          'jumlah_belum' => Lamtim_tagihans::where('statusBayar', 0)->count(),
+          // Lunas bulan ini (tanggal bayar), tagihan periode mana pun
+          'sudah' => Lamtim_tagihans::with('user:id,name,wa')->where('statusBayar', 1)
+            ->whereBetween('tglBayar', [now()->startOfMonth(), now()->endOfMonth()])
+            ->orderByDesc('tglBayar')->limit(10)->get($kolom),
+          'jumlah_sudah' => Lamtim_tagihans::where('statusBayar', 1)
+            ->whereBetween('tglBayar', [now()->startOfMonth(), now()->endOfMonth()])->count(),
+        ];
+      }
+      return view('content.pages.home', ['stats' => $stats, 'lihatUang' => false, 'tagihan' => $tagihan, 'recent_transactions' => collect(), 'monthlyRevenue' => []]);
     }
 
     // Statistics for dashboard

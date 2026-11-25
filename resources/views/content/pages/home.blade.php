@@ -186,7 +186,7 @@ if ($hour >= 5 && $hour < 11) {
 @section('content')
 
 <!-- Compact Modern Hero Banner: Telecom & ISP Command Center -->
-<div class="row mb-2.5 mb-md-3">
+<div class="row mb-2 mb-sm-3">
   <div class="col-12">
     <div class="card mryes-hero-banner py-3 px-3 px-md-3.5">
       <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
@@ -571,5 +571,73 @@ if ($hour >= 5 && $hour < 11) {
   </div>
   @endif
 </div>
+
+@if(!empty($tagihan))
+{{-- Kolektor: daftar tagih. Nominal per pelanggan saja, tanpa total pendapatan. --}}
+@php
+  $periode = fn ($t) => Carbon\Carbon::create($t->tahun, $t->bulan, 1)->locale('id')->translatedFormat('M Y');
+  $rupiah = fn ($n) => 'Rp ' . number_format((float) $n, 0, ',', '.');
+@endphp
+<div class="card mt-2 mt-sm-3">
+  <div class="card-header pb-0 border-bottom-0">
+    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-belum" type="button" role="tab">
+          Belum Bayar <span class="badge rounded-pill bg-danger ms-1">{{ $tagihan['jumlah_belum'] }}</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sudah" type="button" role="tab">
+          Sudah Bayar <span class="badge rounded-pill bg-success ms-1">{{ $tagihan['jumlah_sudah'] }}</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+  <div class="tab-content p-0">
+    <div class="tab-pane fade show active" id="tab-belum" role="tabpanel">
+      <ul class="list-group list-group-flush">
+        @forelse($tagihan['belum'] as $t)
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-2">
+          <div class="min-w-0">
+            <div class="fw-semibold text-truncate">{{ $t->user->name ?? '-' }}</div>
+            <small class="text-muted">{{ $periode($t) }}@if($t->tglJatuhTempo) · jatuh tempo {{ $t->tglJatuhTempo->locale('id')->translatedFormat('j M') }}@endif</small>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="fw-bold text-danger text-nowrap">{{ $rupiah(max(0, $t->total - $t->terbayar)) }}</div>
+            @if($t->terbayar > 0)<small class="text-muted">sisa cicilan</small>@endif
+          </div>
+        </li>
+        @empty
+        <li class="list-group-item text-center text-muted py-4">Semua tagihan sudah lunas 🎉</li>
+        @endforelse
+      </ul>
+      <div class="card-footer text-center py-2">
+        <a href="{{ route('tagihan.index') }}" class="fw-semibold">Buka Tagihan Aktif untuk menagih <i class="mdi mdi-chevron-right"></i></a>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="tab-sudah" role="tabpanel">
+      <ul class="list-group list-group-flush">
+        @forelse($tagihan['sudah'] as $t)
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-2">
+          <div class="min-w-0">
+            <div class="fw-semibold text-truncate">{{ $t->user->name ?? '-' }}</div>
+            <small class="text-muted">{{ $periode($t) }}</small>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <span class="badge bg-success-subtle text-success border border-success-subtle">LUNAS</span>
+            @if($t->tglBayar)<div><small class="text-muted text-nowrap">{{ $t->tglBayar->locale('id')->translatedFormat('j M') }}</small></div>@endif
+          </div>
+        </li>
+        @empty
+        <li class="list-group-item text-center text-muted py-4">Belum ada tagihan yang lunas bulan ini</li>
+        @endforelse
+      </ul>
+      <div class="card-footer text-center py-2">
+        <a href="{{ route('tagihan.lunas') }}" class="fw-semibold">Lihat Riwayat Lunas <i class="mdi mdi-chevron-right"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
 
 @endsection

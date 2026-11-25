@@ -67,6 +67,27 @@ class AksesTeknisiTest extends TestCase
       ->assertDontSee('Pembayaran Terakhir');
   }
 
+  public function test_kolektor_melihat_daftar_belum_dan_sudah_bayar(): void
+  {
+    $bulan = now()->month;
+    $tahun = now()->year;
+    $lunas = User::create(['name' => 'Sari Lunas', 'email' => 'sari@test', 'wa' => '3', 'password' => 'x', 'idRole' => 5, 'isActive' => 1])->id;
+    $tagihan = ['idPaket' => $this->paket, 'bulan' => $bulan, 'tahun' => $tahun, 'harga' => 100000, 'ppn' => 0, 'diskon' => 0, 'total' => 100000, 'tglJatuhTempo' => now()->format('Y-m-10')];
+    DB::table('lamtim_tagihans')->insert([
+      $tagihan + ['idUser' => $this->pelanggan, 'noTagihan' => 'T1', 'statusBayar' => 0, 'terbayar' => 40000, 'tglBayar' => null],
+      $tagihan + ['idUser' => $lunas, 'noTagihan' => 'T2', 'statusBayar' => 1, 'terbayar' => 100000, 'tglBayar' => now()],
+    ]);
+
+    $this->masukSebagai(7);
+    $this->get('/')->assertOk()
+      ->assertSee('Belum Bayar')->assertSee('Budi')->assertSee('60.000') // sisa yang harus ditagih
+      ->assertSee('Sudah Bayar')->assertSee('Sari Lunas')
+      ->assertDontSee('Pendapatan Bulan Ini');
+
+    $this->masukSebagai(4); // teknisi murni tidak menagih
+    $this->get('/')->assertOk()->assertDontSee('Belum Bayar')->assertDontSee('Budi');
+  }
+
   public function test_admin_dan_bendahara_tetap_melihat_angka_uang(): void
   {
     foreach ([2, 3] as $role) {
