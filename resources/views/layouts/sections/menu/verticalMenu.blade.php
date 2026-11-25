@@ -273,8 +273,10 @@ $isTagihanAktif  = request()->is('tagihan') || (request()->is('tagihan/*') && !r
   </ul>
 
   @if($currentUser)
-  {{-- ================= FOOTER: PROFIL, TEMA & LOGOUT ================= --}}
-  <div class="sidebar-user-footer border-top">
+  {{-- ================= FOOTER: PROFIL, TEMA & LOGOUT =================
+       Hanya desktop: navbar desktop dimatikan ($isNavbar = false), jadi di sinilah logout & ganti tema.
+       Di HP/tablet (< 1200px) sudah ada di mobileNavbar kanan atas, jadi disembunyikan. --}}
+  <div class="sidebar-user-footer border-top d-none d-xl-block">
     <div class="d-flex align-items-center justify-content-between gap-2">
       <div class="d-flex align-items-center gap-2 overflow-hidden">
         <div class="sidebar-user-avatar flex-shrink-0">
