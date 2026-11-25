@@ -307,10 +307,6 @@ $isFlex = true;
     position: relative !important;
   }
 
-  .layout-menu {
-    z-index: 1020 !important;
-  }
-
   .navbar {
     z-index: 9998 !important;
     position: relative !important;
