@@ -1,6 +1,20 @@
 # lamtim_biling_mikrotik
 aplikasi biling rt rw net sederhana
 
+## Pasang / update di server
+
+1. `.env` produksi: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` milik server sendiri (jangan salin dari `.env.example`).
+2. Ambil kode lalu jalankan:
+   ```
+   composer install --no-dev --optimize-autoloader
+   php artisan migrate --force
+   npm ci && npm run build
+   php artisan optimize
+   ```
+   Build frontend butuh Node 18 ke atas.
+3. Cron sekali saja, supaya tagihan bulanan terbit otomatis tiap tanggal 1 jam 00:10:
+   `* * * * * cd /path/ke/aplikasi && php artisan schedule:run >> /dev/null 2>&1`
+
 ## Menjalankan tes
 
 Tes memakai database terpisah `lamtim_biling_test` (lihat `phpunit.xml`), jadi data asli tidak tersentuh.
