@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Master\GoogleMapClientController;
 use App\Http\Controllers\Master\GoogleMapController;
 
 Route::prefix('google-map')->as('google-map.')->controller(GoogleMapController::class)->group(function () {
@@ -38,11 +39,11 @@ Route::prefix('google-map')->as('google-map.')->controller(GoogleMapController::
     Route::delete('/odp/{id}', 'deleteODP')->name('odp.delete');
 
     // Client
-    Route::get('/clients', 'getClients')->name('clients');
-    Route::get('/client/{id}', 'getClient')->name('client.show');
-    Route::post('/client', 'createClient')->name('client.create');
-    Route::put('/client/{id}', 'updateClient')->name('client.update');
-    Route::delete('/client/{id}', 'deleteClient')->name('client.delete');
+    Route::get('/clients', [GoogleMapClientController::class, 'getClients'])->name('clients');
+    Route::get('/client/{id}', [GoogleMapClientController::class, 'getClient'])->name('client.show');
+    Route::post('/client', [GoogleMapClientController::class, 'createClient'])->name('client.create');
+    Route::put('/client/{id}', [GoogleMapClientController::class, 'updateClient'])->name('client.update');
+    Route::delete('/client/{id}', [GoogleMapClientController::class, 'deleteClient'])->name('client.delete');
 
     // === IMPORT ===
     Route::get('/unmapped-items', 'getUnmappedItems')->name('unmapped-items');
