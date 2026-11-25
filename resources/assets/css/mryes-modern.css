@@ -518,7 +518,7 @@ html.dark-style .mryes-hero-banner .hero-date {
 }
 
 .table tbody tr:hover td {
-  background-color: #f1f5f9 !important;
+  background-color: var(--mryes-border-subtle) !important;
 }
 
 /* DataTables Controls Modernization */
