@@ -114,17 +114,13 @@ class TagihanService
       return $this->errorResponse('Metode bayar harus diisi', [], 400);
     }
 
-    $lockKey = "payment_process_{$id}";
-
     try {
-      Cache::put($lockKey, true, 60);
       DB::beginTransaction();
 
       $tagihan = $this->repository->findByIdWithLock($id);
 
       if (!$tagihan) {
         DB::rollBack();
-        Cache::forget($lockKey);
         return $this->errorResponse('Tagihan tidak ditemukan', [], 404);
       }
 
@@ -133,7 +129,6 @@ class TagihanService
 
       if (!Auth::check()) {
         DB::rollBack();
-        Cache::forget($lockKey);
         return $this->errorResponse('User tidak terautentikasi', [], 401);
       }
 
@@ -154,7 +149,6 @@ class TagihanService
 
         if ($allUnpaid->isEmpty()) {
           DB::rollBack();
-          Cache::forget($lockKey);
           return $this->errorResponse('Tidak ada tagihan tertunggak untuk pelanggan ini', [], 400);
         }
 
@@ -168,7 +162,6 @@ class TagihanService
 
         if ($nominalDiterima <= 0) {
           DB::rollBack();
-          Cache::forget($lockKey);
           return $this->errorResponse('Nominal pembayaran harus lebih besar dari 0', [], 400);
         }
 
@@ -233,7 +226,6 @@ class TagihanService
         }
 
         DB::commit();
-        Cache::forget($lockKey);
 
         $namaPelanggan = optional($tagihan->user)->name ?? 'Pelanggan';
         Logger::payment(
@@ -263,7 +255,6 @@ class TagihanService
       // =========================================================================
       if ($tagihan->statusBayar == 1) {
         DB::rollBack();
-        Cache::forget($lockKey);
         return $this->errorResponse('Tagihan sudah lunas sebelumnya', [], 400);
       }
 
@@ -274,7 +265,6 @@ class TagihanService
       if ($sisaSaatIni <= 0) {
         $tagihan->update(['statusBayar' => 1]);
         DB::commit();
-        Cache::forget($lockKey);
         return $this->errorResponse('Tagihan sudah lunas', [], 400);
       }
 
@@ -285,7 +275,6 @@ class TagihanService
 
       if ($uangDiterima <= 0) {
         DB::rollBack();
-        Cache::forget($lockKey);
         return $this->errorResponse('Nominal pembayaran harus lebih besar dari 0', [], 400);
       }
 
@@ -314,7 +303,6 @@ class TagihanService
 
       if (!$transaksi) {
         DB::rollBack();
-        Cache::forget($lockKey);
         return $this->errorResponse('Gagal membuat transaksi', [], 500);
       }
 
@@ -331,7 +319,6 @@ class TagihanService
       ]);
 
       DB::commit();
-      Cache::forget($lockKey);
 
       $namaPelanggan = optional($tagihan->user)->name ?? 'Nama tidak diketahui';
       Logger::payment(
@@ -356,12 +343,10 @@ class TagihanService
       ], $isLunas ? 'Tagihan berhasil dilunasi!' : 'Pembayaran cicilan berhasil dicatat!');
     } catch (QueryException $e) {
       DB::rollBack();
-      Cache::forget($lockKey);
 
       return $this->handleDatabaseException($e, 'Gagal memproses pembayaran');
     } catch (\Exception $e) {
       DB::rollBack();
-      Cache::forget($lockKey);
 
       Log::error('Gagal membayar tagihan: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
       return $this->errorResponse('Gagal membayar tagihan. Silakan coba lagi atau hubungi admin.');

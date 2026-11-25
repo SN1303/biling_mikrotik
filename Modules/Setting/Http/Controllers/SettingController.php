@@ -67,7 +67,6 @@ class SettingController extends Controller
             if (in_array('pemetaan', $groups)) {
                 $this->safeTruncate('lamtim_areas');
                 $this->safeTruncate('lamtim_fotos');
-                $this->safeTruncate('lamtim_map_routes'); 
                 $deletedTables[] = 'Data Pemetaan (Area, Foto)';
             }
 
