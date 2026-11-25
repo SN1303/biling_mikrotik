@@ -21,6 +21,17 @@ class HomePage extends Controller
     $currentMonth = Carbon::now()->month;
     $currentYear = Carbon::now()->year;
 
+    // Angka uang (pendapatan, tunggakan, transaksi) hanya untuk Admin & Bendahara
+    $lihatUang = auth()->user()->hasRole(1, 2, 3);
+    if (!$lihatUang) {
+      $stats = [
+        'total_users' => User::where('isActive', 1)->where('idRole', 5)->count(),
+        'active_mikrotik' => Lamtim_mikrotik::where('isActive', 1)->count(),
+        'total_mikrotik' => Lamtim_mikrotik::count(),
+      ];
+      return view('content.pages.home', ['stats' => $stats, 'lihatUang' => false, 'recent_transactions' => collect(), 'monthlyRevenue' => []]);
+    }
+
     // Statistics for dashboard
     $stats = [
       // Total Users
@@ -78,7 +89,7 @@ class HomePage extends Controller
       ];
     }
 
-    return view('content.pages.home', compact('stats', 'recent_transactions', 'monthlyRevenue'));
+    return view('content.pages.home', compact('stats', 'recent_transactions', 'monthlyRevenue') + ['lihatUang' => true]);
   }
 
   /** Transaksi berbayar yang tanggal bayarnya jatuh di bulan $bulan. */

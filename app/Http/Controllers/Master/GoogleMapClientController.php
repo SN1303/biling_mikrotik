@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\DB;
  */
 class GoogleMapClientController extends Controller
 {
+    /** Kolom yang boleh diubah teknisi lewat updateClient (lihat juga standalone.blade.php). */
+    private const FIELD_LOKASI = ['latitude', 'longitude', 'idOdp', 'portOdp', 'idArea', 'keterangan'];
+
     public function getClients()
     {
         $clients = Lamtim_user_mikrotik_details::with('user:id,name')
@@ -202,6 +205,11 @@ class GoogleMapClientController extends Controller
             'tglDaftar' => 'nullable|date',
             'tglJatuhTempo' => 'nullable|date',
         ]);
+
+        // Selain Admin (teknisi) hanya boleh mengubah data lokasi; paket, PPPoE, status/isolir, nama tetap
+        if (!auth()->user()->hasRole(1, 2)) {
+            $validated = array_intersect_key($validated, array_flip(self::FIELD_LOKASI));
+        }
 
         // Cegah 2 pelanggan memakai username PPPoE yang sama
         if (!empty($validated['secretName']) && $validated['secretName'] !== $client->namaMikrotikUser) {

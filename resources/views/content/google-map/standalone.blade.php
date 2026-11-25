@@ -1080,10 +1080,14 @@
   <!-- FAB -->
   <div class="fab-container">
     <div class="fab-menu" id="fabMenu">
+      @if(auth()->user()->hasRole(1, 2))
       <button class="fab-item" data-type="olt"><i class="mdi mdi-access-point-network"></i> OLT</button>
+      @endif
       <button class="fab-item" data-type="odc"><i class="mdi mdi-router-network"></i> ODC</button>
       <button class="fab-item" data-type="odp"><i class="mdi mdi-cube-outline"></i> ODP</button>
+      @if(auth()->user()->hasRole(1, 2))
       <button class="fab-item" data-type="client"><i class="mdi mdi-account-outline"></i> Client</button>
+      @endif
       <button class="fab-item" data-type="area"><i class="mdi mdi-vector-polygon"></i> Area</button>
     </div>
     <div style="display:flex;gap:12px;align-items:center;">
@@ -1121,6 +1125,9 @@
 // =============== GLOBALS ===============
 const CSRF = '{{ csrf_token() }}';
 const BASE = '/google-map';
+// Teknisi: OLT hanya dilihat, pelanggan hanya diubah lokasinya (server menolak sisanya, lihat routes/modules/google-map.php)
+const BOLEH_ADMIN = @json(auth()->user()->hasRole(1, 2));
+const FIELD_LOKASI_PELANGGAN = ['s-lat', 's-lng', 's-idOdp', 's-portOdp', 's-idArea', 's-keterangan'];
 let map;
 let tileLayers = {};
 let currentLayer = 'google';
@@ -1175,6 +1182,7 @@ function refreshMarkerLabels() {
 function applyDragMode() {
   allMarkers.forEach(m => {
     if (!m._dtype) return; // server marker tidak bisa digeser
+    if (m._dtype === 'olt' && !BOLEH_ADMIN) return; // OLT hanya digeser Admin
     m.options.draggable = dragMode; // untuk marker yang belum tampil (layer difilter)
     if (m.dragging) { if (dragMode) m.dragging.enable(); else m.dragging.disable(); }
   });
@@ -1446,10 +1454,15 @@ function buildPopupContent(type, d) {
     html += row('Status', `<span class="badge bg-${stColor}">${stLabel}</span>`);
     html += `</table>`;
   }
-  html += `<div class="popup-actions">`;
-  html += `<button onclick="editDevice('${type}',${d.id})" class="popup-btn popup-btn-edit"><i class="mdi mdi-pencil"></i> Edit</button>`;
-  html += `<button onclick="deleteDevice('${type}',${d.id})" class="popup-btn popup-btn-delete"><i class="mdi mdi-delete"></i> Hapus</button>`;
-  html += `</div></div>`;
+  const bolehUbah = BOLEH_ADMIN || type !== 'olt';
+  const bolehHapus = BOLEH_ADMIN || (type !== 'olt' && type !== 'client');
+  if (bolehUbah || bolehHapus) {
+    html += `<div class="popup-actions">`;
+    if (bolehUbah) html += `<button onclick="editDevice('${type}',${d.id})" class="popup-btn popup-btn-edit"><i class="mdi mdi-pencil"></i> Edit</button>`;
+    if (bolehHapus) html += `<button onclick="deleteDevice('${type}',${d.id})" class="popup-btn popup-btn-delete"><i class="mdi mdi-delete"></i> Hapus</button>`;
+    html += `</div>`;
+  }
+  html += `</div>`;
   return html;
 }
 
@@ -2518,6 +2531,12 @@ function showClientModal(editData, lat, lng) {
             searchInput.placeholder = 'Klik untuk ganti, atau ganti Mikrotik Server';
           }
         }
+      }
+
+      if (!BOLEH_ADMIN) {
+        // Teknisi: hanya kolom lokasi yang bisa diisi, sisanya dikunci (server juga mengabaikannya)
+        document.querySelectorAll('.swal2-html-container input, .swal2-html-container select, .swal2-html-container textarea')
+          .forEach(el => { if (!FIELD_LOKASI_PELANGGAN.includes(el.id)) el.disabled = true; });
       }
     },
     preConfirm: () => {

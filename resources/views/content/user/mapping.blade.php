@@ -33,19 +33,24 @@
             orderable: false,
             searchable: false,
             render: function (data) {
+              let actions = '';
+              @if(auth()->user()->hasRole(1,2))
+              actions += `<a class="dropdown-item fw-bold btn-edit" href="/user/edit/mapping/${data}">
+                  <i class="mdi mdi-pencil-outline me-1"></i> Mapping
+                </a>`;
+              @endif
+              @if(auth()->user()->hasRole(1,2,4,7))
+              actions += `<a class="dropdown-item fw-bold btn-upload-foto" href="javascript:void(0);" data-id="${data}">
+                  <i class="mdi mdi-camera-outline me-1"></i> Upload Foto
+                </a>`;
+              @endif
+              if (!actions) return '-';
               return `
                 <div class="dropdown">
                   <button aria-label="Menu aksi" type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="mdi mdi-dots-vertical"></i>
                   </button>
-                  <div class="dropdown-menu">
-                <a class="dropdown-item fw-bold btn-edit" href="/user/edit/mapping/${data}">
-                  <i class="mdi mdi-pencil-outline me-1"></i> Mapping
-                </a>
-                    <a class="dropdown-item fw-bold btn-upload-foto" href="javascript:void(0);" data-id="${data}">
-                      <i class="mdi mdi-camera-outline me-1"></i> Upload Foto
-                    </a>
-                  </div>
+                  <div class="dropdown-menu">${actions}</div>
                 </div>
               `;
             }

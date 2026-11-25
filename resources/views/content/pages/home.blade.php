@@ -28,6 +28,7 @@ if ($hour >= 5 && $hour < 11) {
 @endsection
 
 @section('page-script')
+@if($lihatUang)
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Revenue Chart with Modern NOC styling
@@ -179,6 +180,7 @@ if ($hour >= 5 && $hour < 11) {
     }
   });
 </script>
+@endif
 @endsection
 
 @section('content')
@@ -199,7 +201,7 @@ if ($hour >= 5 && $hour < 11) {
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-          @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
+          @if($currentUser && $currentUser->hasRole(1, 2))
           <a href="{{ route('user.create') }}" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1 shadow-sm px-2.5 py-1.5" style="font-size: 0.8125rem;">
             <i class="mdi mdi-account-plus fs-6"></i>
             <span>Pelanggan Baru</span>
@@ -261,6 +263,7 @@ if ($hour >= 5 && $hour < 11) {
     </div>
   </div>
 
+  @if($lihatUang)
   <!-- Pendapatan Bulan Ini -->
   <div class="col-6 col-xl-3">
     <div class="card metric-card h-100">
@@ -296,8 +299,10 @@ if ($hour >= 5 && $hour < 11) {
       </div>
     </div>
   </div>
+  @endif
 </div>
 
+@if($lihatUang)
 <!-- Main Operations Hub: Charts & Fast Status -->
 <div class="row g-3 mb-4">
   <!-- Trend Pendapatan Chart -->
@@ -469,10 +474,40 @@ if ($hour >= 5 && $hour < 11) {
     </div>
   </div>
 </div>
+@endif
 
 <!-- Operational Quick Navigation Grid -->
 <div class="row g-2 g-sm-3">
-  @if($currentUser && $currentUser->hasRole(1, 2, 4, 7))
+  @if($currentUser && $currentUser->hasRole(4, 7))
+  <div class="col-6 col-md-3">
+    <a href="{{ route('google-map.standalone') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-primary-subtle text-primary">
+          <i class="mdi mdi-map-marker-radius fs-4"></i>
+        </div>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Peta Jaringan</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Lokasi pelanggan &amp; ODP</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ route('user.index') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
+      <div class="d-flex align-items-center gap-2 gap-sm-3">
+        <div class="rounded-3 p-2 p-sm-3 bg-info-subtle text-info">
+          <i class="mdi mdi-account-group fs-4"></i>
+        </div>
+        <div class="overflow-hidden">
+          <h6 class="text-dark fw-bold mb-0 text-truncate" style="font-size: 0.875rem;">Daftar Pelanggan</h6>
+          <small class="text-muted text-truncate d-none d-sm-block">Alamat, WA, foto</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  @endif
+
+  @if($currentUser && $currentUser->hasRole(1, 2))
   <div class="col-6 col-md-3">
     <a href="{{ route('user.create') }}" class="card text-decoration-none h-100 metric-card p-2 p-sm-3 border">
       <div class="d-flex align-items-center gap-2 gap-sm-3">

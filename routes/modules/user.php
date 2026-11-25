@@ -3,7 +3,8 @@
 use App\Http\Controllers\Master\UserController;
 use App\Http\Controllers\Master\FotoController;
 
-// Lihat data pelanggan: semua staf. Ubah data pelanggan (tambah/edit/hapus/mapping/foto/ekspor): hanya Admin (role 1, 2).
+// Lihat data pelanggan: semua staf. Ubah data pelanggan (tambah/edit/hapus/mapping/ekspor): hanya Admin (role 1, 2).
+// Foto pelanggan: Admin + Teknisi + Teknisi-Kolektor (role 1, 2, 4, 7), untuk foto pemasangan di lapangan.
 // Urutan route dipertahankan: route statis harus di atas wildcard /{id}.
 Route::prefix('user')->as('user.')->controller(UserController::class)->group(function () {
   Route::get('/data/json', 'json')->name('json');
@@ -27,9 +28,9 @@ Route::prefix('user')->as('user.')->controller(UserController::class)->group(fun
   Route::delete('/{id}', 'destroy')->name('destroy')->middleware('role:1,2');
 });
 
-// Foto routes
+// Foto routes (lihat komentar di atas)
 Route::prefix('foto')->as('foto.')->controller(FotoController::class)->group(function () {
-  Route::post('/upload', 'store')->name('store')->middleware('role:1,2');
+  Route::post('/upload', 'store')->name('store')->middleware('role:1,2,4,7');
   Route::get('/user/{id}', 'getByUser')->name('user');
-  Route::delete('/{id}', 'destroy')->name('destroy')->middleware('role:1,2');
+  Route::delete('/{id}', 'destroy')->name('destroy')->middleware('role:1,2,4,7');
 });

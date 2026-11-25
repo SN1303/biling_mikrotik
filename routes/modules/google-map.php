@@ -20,9 +20,10 @@ Route::prefix('google-map')->as('google-map.')->controller(GoogleMapController::
     // OLT
     Route::get('/olts', 'getOLTs')->name('olts');
     Route::get('/olt/{id}', 'getOLT')->name('olt.show');
-    Route::post('/olt', 'createOLT')->name('olt.create');
-    Route::put('/olt/{id}', 'updateOLT')->name('olt.update');
-    Route::delete('/olt/{id}', 'deleteOLT')->name('olt.delete');
+    // OLT (perangkat inti) dan tambah/hapus pelanggan: hanya Admin. Teknisi cukup melihat dan mengubah lokasi.
+    Route::post('/olt', 'createOLT')->name('olt.create')->middleware('role:1,2');
+    Route::put('/olt/{id}', 'updateOLT')->name('olt.update')->middleware('role:1,2');
+    Route::delete('/olt/{id}', 'deleteOLT')->name('olt.delete')->middleware('role:1,2');
 
     // ODC
     Route::get('/odcs', 'getODCs')->name('odcs');
@@ -41,9 +42,9 @@ Route::prefix('google-map')->as('google-map.')->controller(GoogleMapController::
     // Client
     Route::get('/clients', [GoogleMapClientController::class, 'getClients'])->name('clients');
     Route::get('/client/{id}', [GoogleMapClientController::class, 'getClient'])->name('client.show');
-    Route::post('/client', [GoogleMapClientController::class, 'createClient'])->name('client.create');
+    Route::post('/client', [GoogleMapClientController::class, 'createClient'])->name('client.create')->middleware('role:1,2');
     Route::put('/client/{id}', [GoogleMapClientController::class, 'updateClient'])->name('client.update');
-    Route::delete('/client/{id}', [GoogleMapClientController::class, 'deleteClient'])->name('client.delete');
+    Route::delete('/client/{id}', [GoogleMapClientController::class, 'deleteClient'])->name('client.delete')->middleware('role:1,2');
 
     // === IMPORT ===
     Route::get('/unmapped-items', 'getUnmappedItems')->name('unmapped-items');

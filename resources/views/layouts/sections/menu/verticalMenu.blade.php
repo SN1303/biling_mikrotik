@@ -107,12 +107,14 @@ $isTagihanAktif  = request()->is('tagihan') || (request()->is('tagihan/*') && !r
     </li>
 
     @if($currentUser->hasRole(1, 2, 4, 7))
+    @if($currentUser->hasRole(1, 2))
     <li class="menu-item {{ request()->is('user/create') ? 'active' : '' }}">
       <a href="{{ route('user.create') }}" class="menu-link">
         <i class="menu-icon tf-icons mdi mdi-account-plus-outline"></i>
         <div>Tambah Pelanggan</div>
       </a>
     </li>
+    @endif
     <li class="menu-item {{ $isPetaMapping ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons mdi mdi-map-search-outline"></i>

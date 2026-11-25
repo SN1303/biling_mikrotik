@@ -51,6 +51,7 @@ class GoogleMapController extends Controller
 
     public function updatePosition(Request $request, $type, $id)
     {
+        $this->hanyaAdminUntukOlt($type);
         $request->validate([
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
@@ -526,6 +527,7 @@ class GoogleMapController extends Controller
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
         ]);
+        $this->hanyaAdminUntukOlt($validated['type']);
 
         $model = $this->resolveModel($validated['type']);
         $device = $model::findOrFail($validated['id']);
@@ -592,6 +594,12 @@ class GoogleMapController extends Controller
     }
 
     // ==================== HELPERS ====================
+
+    /** OLT perangkat inti: teknisi boleh melihat, hanya Admin (role 1, 2) yang boleh mengubah. */
+    private function hanyaAdminUntukOlt(string $type): void
+    {
+        abort_if($type === 'olt' && !auth()->user()->hasRole(1, 2), 403, 'Akses ditolak');
+    }
 
     private function resolveModel(string $type): string
     {
