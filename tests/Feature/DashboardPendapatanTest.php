@@ -40,7 +40,29 @@ class DashboardPendapatanTest extends TestCase
     $this->assertEquals(100000, $res->viewData('stats')['monthly_revenue']);
     $this->assertSame(1, $res->viewData('stats')['monthly_transactions']);
     $grafik = collect($res->viewData('monthlyRevenue'))->pluck('revenue', 'month');
-    $this->assertEquals(100000, $grafik['Oct 2026']);
+    $this->assertEquals(100000, $grafik['Okt 2026']);
     $this->assertEquals(100000, $grafik['Nov 2026']);
+  }
+
+  public function test_tagihan_tertunda_mencakup_tunggakan_bulan_lalu(): void
+  {
+    Carbon::setTestNow('2026-11-20 10:00:00');
+    $admin = User::create(['name' => 'Admin', 'email' => 'a@test', 'wa' => '1', 'password' => 'x', 'idRole' => 1, 'isActive' => 1]);
+    $pelanggan = User::create(['name' => 'Budi', 'email' => 'b@test', 'wa' => '2', 'password' => 'x', 'idRole' => 5])->id;
+    $kategori = DB::table('lamtim_kategoris')->insertGetId(['nama' => 'R', 'description' => '-']);
+    $paket = DB::table('lamtim_pakets')->insertGetId(['idKategori' => $kategori, 'kode' => 'P', 'nama' => 'P', 'price' => '100000']);
+    $tagihan = fn (int $bulan, int $terbayar) => DB::table('lamtim_tagihans')->insert([
+      'idUser' => $pelanggan, 'idPaket' => $paket, 'noTagihan' => uniqid(), 'bulan' => $bulan, 'tahun' => 2026,
+      'statusBayar' => 0, 'harga' => 100000, 'ppn' => 0, 'diskon' => 0, 'total' => 100000, 'terbayar' => $terbayar,
+      'tglJatuhTempo' => "2026-$bulan-10",
+    ]);
+    $tagihan(9, 0);       // tunggakan September
+    $tagihan(11, 40000);  // November, sudah dicicil 40.000
+
+    $stats = $this->actingAs($admin)->get('/')->viewData('stats');
+
+    $this->assertEquals(160000, $stats['pending_revenue']);
+    $this->assertSame(2, $stats['pending_bills']);
+    $this->assertSame(1, $stats['unpaid_bills'], 'donut realisasi tetap khusus bulan ini');
   }
 }

@@ -50,10 +50,10 @@ class HomePage extends Controller
       'monthly_revenue' => self::uangMasuk(Carbon::now())->sum('total'),
       'monthly_transactions' => self::uangMasuk(Carbon::now())->count(),
 
-      'pending_revenue' => (float) Lamtim_tagihans::where('bulan', $currentMonth)
-        ->where('tahun', $currentYear)
-        ->where('statusBayar', 0)
+      // Tagihan tertunda = semua sisa yang belum lunas, termasuk tunggakan bulan-bulan lalu
+      'pending_revenue' => (float) Lamtim_tagihans::where('statusBayar', 0)
         ->sum(DB::raw('GREATEST(total - COALESCE(terbayar, 0), 0)')),
+      'pending_bills' => Lamtim_tagihans::where('statusBayar', 0)->count(),
 
       // Total Packages
       'total_packages' => Lamtim_paket::count(),
@@ -73,7 +73,7 @@ class HomePage extends Controller
     for ($i = 5; $i >= 0; $i--) {
       $date = Carbon::now()->startOfMonth()->subMonths($i);
       $monthlyRevenue[] = [
-        'month' => $date->format('M Y'),
+        'month' => $date->locale('id')->translatedFormat('M Y'),
         'revenue' => (float) self::uangMasuk($date)->sum('total'),
       ];
     }
