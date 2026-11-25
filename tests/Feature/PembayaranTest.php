@@ -65,6 +65,17 @@ class PembayaranTest extends TestCase
     $this->assertSame(1, Lamtim_transaksi::where('idTagihan', $id)->count());
   }
 
+  public function test_bayar_tagihan_lunas_ditolak_tanpa_data_nyasar(): void
+  {
+    $id = $this->tagihan(11);
+    $this->bayar($id, []);
+
+    $res = $this->bayar($id, []);
+    $this->assertFalse($res['success']);
+    $this->assertNull($res['data'], 'kode HTTP tidak boleh masuk ke field data');
+    $this->assertSame(1, Lamtim_transaksi::where('idTagihan', $id)->count());
+  }
+
   public function test_cicilan_baru_lunas_setelah_sisa_dibayar(): void
   {
     $id = $this->tagihan(11);
