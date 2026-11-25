@@ -175,8 +175,8 @@
       <div class="col-md-6">
         <div class="form-floating form-floating-outline">
           <select name="status_ppn" class="form-select">
+            <option @selected($query->user_detail?->statusPpn != 1) value="0">Tidak</option>
             <option @selected($query->user_detail?->statusPpn == 1) value="1">Aktif</option>
-            <option @selected($query->user_detail?->statusPpn == 0) value="0">Tidak</option>
           </select>
           <label for="status_ppn">Status PPN</label>
         </div>
