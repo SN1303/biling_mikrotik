@@ -95,6 +95,7 @@
     right: 12px;
     z-index: 1001;
     background: #fff;
+    color: #566a7f; /* panel selalu terang: jangan ikut warna teks tema gelap */
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.18);
     padding: 8px 0;
@@ -886,7 +887,7 @@
   .leaflet-top.leaflet-right { top: 54px; }
 
   /* Tombol kontrol berupa link (Dashboard) tampil sama dengan button */
-  a.control-btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+  a.control-btn { text-decoration: none; display: inline-flex; align-items: center; }
 
   /* Tombol Mode Geser aktif → warna peringatan agar jelas sedang bisa memindah marker */
   .control-btn.control-btn-warning,
