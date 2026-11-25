@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Lamtim_paket;
 use App\Models\Lamtim_tagihans;
 use App\Models\Lamtim_transaksi;
+use App\Models\User;
 use App\Repositories\TagihanRepository;
 use App\Traits\ApiResponseTrait;
 use App\Traits\DatabaseErrorHandlerTrait;
@@ -514,6 +516,27 @@ class TagihanService
    * Menyediakan data yang sudah diformat untuk ditampilkan di frontend.
    *
    */
+  /** Angka ringkasan tabel tagihan dalam satu query agregat (tanpa memuat baris). */
+  private function ringkasanTagihan($query, string $today): object
+  {
+    $sisa = 'GREATEST(total - COALESCE(terbayar, 0), 0)';
+
+    return $query->toBase()->cloneWithout(['columns', 'orders'])->selectRaw("
+      COUNT(*) AS total_count,
+      COALESCE(SUM(harga), 0) AS total_harga,
+      COALESCE(SUM(ppn), 0) AS total_ppn,
+      COALESCE(SUM(diskon), 0) AS total_diskon,
+      COALESCE(SUM(CASE WHEN statusBayar = 1 THEN total ELSE COALESCE(terbayar, 0) END), 0) AS uang_masuk,
+      COALESCE(SUM($sisa), 0) AS sisa,
+      COALESCE(SUM(DATE(tglJatuhTempo) < ?), 0) AS overdue_count,
+      COALESCE(SUM(CASE WHEN DATE(tglJatuhTempo) < ? THEN $sisa ELSE 0 END), 0) AS overdue_total,
+      COALESCE(SUM(DATE(tglJatuhTempo) = ?), 0) AS today_due_count,
+      COALESCE(SUM(statusBayar = 1), 0) AS lunas_count,
+      COALESCE(SUM(statusBayar = 0), 0) AS cicilan_count,
+      COALESCE(SUM(CASE WHEN statusBayar = 0 THEN COALESCE(terbayar, 0) ELSE 0 END), 0) AS cicilan_masuk
+    ", [$today, $today, $today])->first();
+  }
+
   public function getDatatablesJson($request)
   {
     try {
@@ -526,114 +549,79 @@ class TagihanService
         $where['bulan'] = $request->bulan;
       }
 
-      if ($request->status_bayar == 1) {
-        // Tagihan Lunas & Cicilan Berjalan (Ada Uang Masuk)
-        $query = $this->repository->getLunasDanCicilanJson($where);
-      } else {
+      $isLunas = $request->status_bayar == 1;
+      if (!$isLunas) {
         // Tagihan Aktif (Belum Lunas)
         $where['statusBayar'] = 0;
-        $query = $this->repository->getDatatablesJson($where);
       }
+      // Lunas: tagihan lunas & cicilan berjalan (ada uang masuk)
+      $query = $this->repository->queryTagihan($where, $isLunas);
 
       $today = date('Y-m-d');
 
-      // tglJatuhTempo di-cast ke Carbon, jadi harus dinormalisasi ke string Y-m-d
-      // sebelum dibandingkan (Carbon vs string menghasilkan "Y-m-d H:i:s" sehingga
-      // perbandingan === dan < / > menjadi salah).
-      $dueStr = function ($item) {
-        if (empty($item->tglJatuhTempo)) return null;
-        return Carbon::parse($item->tglJatuhTempo)->format('Y-m-d');
-      };
-
-      // ✅ Hitung summary data SEBELUM filtering quick filter
-      $summaryQuery = clone $query;
-      $overdueItems = $summaryQuery->filter(function ($item) use ($today, $dueStr) {
-        $due = $dueStr($item);
-        return $due !== null && $due < $today;
-      });
-      $todayDueItems = $summaryQuery->filter(function ($item) use ($today, $dueStr) {
-        return $dueStr($item) === $today;
-      });
-
+      // Ringkasan dihitung SEBELUM filter cepat, langsung di database (satu query)
+      $s = $this->ringkasanTagihan($query, $today);
       $summaryData = [
-        'total_count' => $summaryQuery->count(),
-        'total_unpaid' => $request->status_bayar == 1
-          ? $summaryQuery->sum(fn($item) => $item->statusBayar == 1 ? (float)$item->total : (float)($item->terbayar ?? 0))
-          : $summaryQuery->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
-        'total_harga' => $summaryQuery->sum('harga'),
-        'total_ppn' => $summaryQuery->sum('ppn'),
-        'total_diskon' => $summaryQuery->sum('diskon'),
-        'overdue_count' => $overdueItems->count(),
-        'overdue_total' => $overdueItems->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
-        'today_due_count' => $todayDueItems->count(),
-        'lunas_count' => $summaryQuery->where('statusBayar', 1)->count(),
-        'cicilan_count' => $summaryQuery->where('statusBayar', 0)->count(),
+        'total_count' => (int) $s->total_count,
+        'total_unpaid' => (float) ($isLunas ? $s->uang_masuk : $s->sisa),
+        'total_harga' => (float) $s->total_harga,
+        'total_ppn' => (float) $s->total_ppn,
+        'total_diskon' => (float) $s->total_diskon,
+        'overdue_count' => (int) $s->overdue_count,
+        'overdue_total' => (float) $s->overdue_total,
+        'today_due_count' => (int) $s->today_due_count,
+        'lunas_count' => (int) $s->lunas_count,
+        'cicilan_count' => (int) $s->cicilan_count,
       ];
       $summaryData['potential_income'] = $summaryData['total_unpaid'];
       // Total uang cicilan yang sudah masuk dari tagihan yang belum lunas
-      $summaryData['cicilan_masuk'] = $summaryQuery
-        ->where('statusBayar', 0)
-        ->sum(fn($item) => (float)($item->terbayar ?? 0));
+      $summaryData['cicilan_masuk'] = (float) $s->cicilan_masuk;
       $summaryData['average_amount'] = $summaryData['total_count'] > 0 ?
         $summaryData['total_unpaid'] / $summaryData['total_count'] : 0;
 
       // Filter cepat status jatuh tempo (opsional dari tab)
-      if (!empty($request->quick_filter)) {
-        if ($request->quick_filter === 'overdue') {
-          $query = $query->filter(function ($item) use ($today, $dueStr) {
-            $due = $dueStr($item);
-            return $due !== null && $due < $today;
-          });
-        } elseif ($request->quick_filter === 'today') {
-          $query = $query->filter(function ($item) use ($today, $dueStr) {
-            return $dueStr($item) === $today;
-          });
-        } elseif ($request->quick_filter === 'upcoming') {
-          $query = $query->filter(function ($item) use ($today, $dueStr) {
-            $due = $dueStr($item);
-            return $due !== null && $due > $today;
-          });
-        }
+      $operatorJatuhTempo = ['overdue' => '<', 'today' => '=', 'upcoming' => '>'][$request->quick_filter ?? ''] ?? null;
+      if ($operatorJatuhTempo) {
+        $query->whereDate('tglJatuhTempo', $operatorJatuhTempo, $today);
       }
 
       // Filter khusus tab halaman lunas: Semua vs Lunas Penuh vs Cicilan Berjalan
-      if ($request->status_bayar == 1 && !empty($request->filter_lunas)) {
-        if ($request->filter_lunas === 'lunas') {
-          $query = $query->filter(fn($item) => $item->statusBayar == 1);
-        } elseif ($request->filter_lunas === 'cicilan') {
-          $query = $query->filter(fn($item) => $item->statusBayar == 0 && (float)($item->terbayar ?? 0) > 0);
-        }
+      if ($isLunas && $request->filter_lunas === 'lunas') {
+        $query->where('statusBayar', 1);
+      } elseif ($isLunas && $request->filter_lunas === 'cicilan') {
+        $query->where('statusBayar', 0)->where('terbayar', '>', 0);
       }
 
-      // ✅ TAMBAHAN: Untuk halaman tagihan lunas, ambil juga data tagihan belum bayar
+      // Halaman lunas juga menampilkan ringkasan tagihan yang belum bayar
       $unpaidSummary = [];
-      if ($request->status_bayar == 1) { // Jika request untuk tagihan lunas
-        $unpaidWhere = [];
-
-        // Filter tahun yang sama jika ada
-        if (!empty($request->tahun)) {
-          $unpaidWhere['tahun'] = $request->tahun;
-        }
-
-        // Filter bulan yang sama jika ada
-        if (!empty($request->bulan)) {
-          $unpaidWhere['bulan'] = $request->bulan;
-        }
-
-        // Set status belum bayar
-        $unpaidWhere['statusBayar'] = 0; // Ambil yang belum bayar
-
-        $unpaidQuery = $this->repository->getDatatablesJson($unpaidWhere);
+      if ($isLunas) {
+        $u = $this->ringkasanTagihan($this->repository->queryTagihan(array_merge(
+          array_intersect_key($where, array_flip(['tahun', 'bulan'])),
+          ['statusBayar' => 0]
+        )), $today);
         $unpaidSummary = [
-          'unpaid_count' => $unpaidQuery->count(),
-          'unpaid_total' => $unpaidQuery->sum(fn($item) => max(0, (float)$item->total - (float)($item->terbayar ?? 0))),
-          'unpaid_harga' => $unpaidQuery->sum('harga'),
-          'unpaid_ppn' => $unpaidQuery->sum('ppn'),
-          'unpaid_diskon' => $unpaidQuery->sum('diskon'),
+          'unpaid_count' => (int) $u->total_count,
+          'unpaid_total' => (float) $u->sisa,
+          'unpaid_harga' => (float) $u->total_harga,
+          'unpaid_ppn' => (float) $u->total_ppn,
+          'unpaid_diskon' => (float) $u->total_diskon,
         ];
       }
 
+      // Kolom turunan (nama pelanggan / paket) dicari & diurutkan lewat relasi
+      $namaUser = User::select('name')->whereColumn('users.id', 'lamtim_tagihans.idUser');
+      $namaPaket = fn ($kolom) => Lamtim_paket::selectRaw($kolom)->whereColumn('lamtim_pakets.id', 'lamtim_tagihans.idPaket');
+
       $dataTable = DataTables::of($query)
+        ->filterColumn('user_nama', function ($q, $keyword) {
+          $q->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$keyword}%")->orWhere('julukan', 'like', "%{$keyword}%"));
+        })
+        ->filterColumn('paket_nama', function ($q, $keyword) {
+          $q->whereHas('paket', fn ($p) => $p->where('nama', 'like', "%{$keyword}%"));
+        })
+        ->orderColumn('user_nama', fn ($q, $order) => $q->orderBy($namaUser, $order))
+        // panjang dulu agar "PAKET-5M" < "PAKET-10M" (urutan natural, sama seperti sebelumnya)
+        ->orderColumn('paket_nama', fn ($q, $order) => $q->orderBy($namaPaket('LENGTH(nama)'), $order)->orderBy($namaPaket('nama'), $order))
         ->addColumn('paket_nama', function ($row) {
           return optional($row->paket)->nama;
         })

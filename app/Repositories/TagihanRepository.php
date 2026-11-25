@@ -67,100 +67,31 @@ class TagihanRepository
 
 
   /**
-   * Query untuk datatables
-   * Memproses request dari datatables dan mengembalikan data dalam format yang sesuai.
-   * Mendukung filter, sorting, dan pagination.
-   * Menggunakan Yajra DataTables untuk mempermudah proses ini.
-   * Menyediakan data yang sudah diformat untuk ditampilkan di frontend
-   * tagihan yang belum lunas
-   *
+   * Query (belum dieksekusi) untuk tabel tagihan. Paging, cari & urut dikerjakan database.
+   * $adaUangMasuk = true: lunas + cicilan berjalan (halaman Lunas); false: hanya pakai $where.
    */
-  public function getDatatablesJson(array $where = [])
+  public function queryTagihan(array $where = [], bool $adaUangMasuk = false)
   {
-    $columns = [
-      'id',
-      'idUser',
-      'idPaket',
-      'noTagihan',
-      'bulan',
-      'tahun',
-      'statusBayar',
-      'harga',
-      'ppn',
-      'diskon',
-      'total',
-      'terbayar',
-      'tglJatuhTempo',
-      'tglBayar',
-      'prosesNama',
-      'metode',
-      'aksi',
-      'created_at',
-      'updated_at',
-      'create_by',
-    ];
-
     $query = $this->model::query()
+      ->select('lamtim_tagihans.*')
       ->with([
         'paket:id,nama,price',
         'user:id,name,julukan,wa,email',
         'transaksis:id,idTagihan,idUser,total,metodeBayar,tglBayar,prosesNama,keterangan'
       ]);
 
-    if (!empty($where)) {
-      $query->where($where);
-    }
-
-    return $query->select($columns)->get();
-  }
-
-  /**
-   * Mengambil riwayat lunas DAN cicilan berjalan (uang sudah masuk)
-   */
-  public function getLunasDanCicilanJson(array $where = [])
-  {
-    $columns = [
-      'id',
-      'idUser',
-      'idPaket',
-      'noTagihan',
-      'bulan',
-      'tahun',
-      'statusBayar',
-      'harga',
-      'ppn',
-      'diskon',
-      'total',
-      'terbayar',
-      'tglJatuhTempo',
-      'tglBayar',
-      'prosesNama',
-      'metode',
-      'aksi',
-      'created_at',
-      'updated_at',
-      'create_by',
-    ];
-
-    $query = $this->model::query()
-      ->with([
-        'paket:id,nama,price',
-        'user:id,name,julukan,wa,email',
-        'transaksis:id,idTagihan,idUser,total,metodeBayar,tglBayar,prosesNama,keterangan'
-      ])
-      ->where(function ($q) {
+    if ($adaUangMasuk) {
+      $query->where(function ($q) {
         $q->where('statusBayar', 1)
-          ->orWhere(function ($sub) {
-            $sub->where('statusBayar', 0)
-                ->where('terbayar', '>', 0);
-          });
+          ->orWhere(fn ($sub) => $sub->where('statusBayar', 0)->where('terbayar', '>', 0));
       });
+    }
 
     if (!empty($where)) {
       $query->where($where);
     }
 
-    return $query->select($columns)->orderBy('tglBayar', 'desc')->get();
+    return $query;
   }
 
   /**
