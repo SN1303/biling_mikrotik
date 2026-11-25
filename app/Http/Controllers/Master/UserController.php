@@ -119,11 +119,8 @@ class UserController extends Controller
 
     $validated = $request->validate($rules);
 
-    // Default password login dashboard pelanggan jika tidak diisi
-    $plainPassword = $validated['password'] ?? '123456789abc';
-    if (empty($plainPassword)) {
-      $plainPassword = '123456789abc';
-    }
+    // Kosong = password acak; pelanggan belum bisa login sampai password diset
+    $plainPassword = ($validated['password'] ?? '') ?: \Illuminate\Support\Str::random(32);
 
     // Resolusi Area
     $idArea = null;

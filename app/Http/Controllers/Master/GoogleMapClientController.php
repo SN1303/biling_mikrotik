@@ -112,7 +112,7 @@ class GoogleMapClientController extends Controller
             $user = User::create([
                 'name' => $validated['nama'],
                 'email' => 'client_' . time() . '_' . rand(100, 999) . '@local.net',
-                'password' => bcrypt('password'),
+                'password' => bcrypt(\Illuminate\Support\Str::random(32)),
                 'wa' => $validated['wa'] ?? '-',
                 'idRole' => 5,
             ]);

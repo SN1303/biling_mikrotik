@@ -574,7 +574,7 @@
                     <i class="mdi mdi-eye-off-outline"></i>
                   </span>
                 </div>
-                <small class="text-muted">Default jika kosong: <code>123456789abc</code></small>
+                <small class="text-muted">Kosongkan jika belum perlu; akun dibuat dengan password acak</small>
               </div>
 
               <!-- Jenis & Nomor Identitas -->
