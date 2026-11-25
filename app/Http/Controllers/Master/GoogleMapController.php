@@ -538,17 +538,25 @@ class GoogleMapController extends Controller
 
     // ==================== AREA CRUD ====================
 
+    private const PESAN_AREA_GANDA = [
+        'name.unique' => 'Nama area sudah dipakai, gunakan nama lain.',
+        'code_area.unique' => 'Kode area sudah dipakai, gunakan kode lain.',
+    ];
+
     public function createArea(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:lamtim_areas,name',
             'address' => 'nullable|string|max:500',
             'code_area' => 'required|string|max:10|unique:lamtim_areas,code_area',
             'coordinates' => 'required|array|min:3',
             'coordinates.*.lat' => 'required|numeric',
             'coordinates.*.lng' => 'required|numeric',
             'color' => 'nullable|string|max:7',
-        ]);
+        ], self::PESAN_AREA_GANDA);
+        // Kolom address NOT NULL dan color punya default di tabel; form boleh mengosongkan keduanya
+        $validated['address'] = $validated['address'] ?? '';
+        $validated['color'] = ($validated['color'] ?? null) ?: '#696cff';
 
         $area = Lamtim_area::create($validated);
         return response()->json(['success' => true, 'message' => 'Area berhasil ditambahkan', 'data' => $area]);
@@ -560,14 +568,17 @@ class GoogleMapController extends Controller
         $area = Lamtim_area::findOrFail($decryptedId);
 
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'name' => 'nullable|string|max:255|unique:lamtim_areas,name,' . $decryptedId,
             'address' => 'nullable|string|max:500',
             'code_area' => 'nullable|string|max:10|unique:lamtim_areas,code_area,' . $decryptedId,
             'coordinates' => 'nullable|array|min:3',
             'coordinates.*.lat' => 'required|numeric',
             'coordinates.*.lng' => 'required|numeric',
             'color' => 'nullable|string|max:7',
-        ]);
+        ], self::PESAN_AREA_GANDA);
+        if (array_key_exists('address', $validated)) {
+            $validated['address'] = $validated['address'] ?? '';
+        }
 
         $area->update($validated);
         return response()->json(['success' => true, 'message' => 'Area berhasil diupdate']);
