@@ -268,11 +268,11 @@ class UserController extends Controller
       'julukan' => ['nullable', 'string', 'max:100'],
       'status_user' => ['required', 'in:0,1'],
       'wa' => ['required', 'string', 'max:100'],
-      'password' => ['nullable', 'string', 'min:8'], // jika dikosongkan, default di-handle di controller
-      'area' => ['required', 'string'],
+      'password' => ['nullable', 'string', 'min:8'], // kosong = password lama dipertahankan
+      // Pelanggan hasil sinkron MikroTik belum punya area / nomor identitas: boleh kosong
+      'area' => ['nullable', 'string'],
       'status_isolir' => ['required', 'in:0,1'],
       'tgl_daftar' => ['required', 'date'],
-      //'jatuh_tempo' => ['required', 'date', 'after_or_equal:tgl_daftar'],
       'jatuh_tempo' => ['required', 'date'],
       'mulai_tagih' => ['nullable', 'date_format:Y-m'],
       'status_ppn' => ['required', 'in:0,1'],
@@ -282,15 +282,10 @@ class UserController extends Controller
       'jenis_kelamin' => ['required', 'in:L,P'],
       //'telegram' => ['nullable', 'string', 'max:100'],
       'jenis_identitas' => ['required', 'in:KTP,KK,SIM,PASPOR,KARTU_PELAJAR,KARTU_MAHASISWA,NPWP,BPJS,LAINNYA'],
-      'no_identitas' => ['required', 'string', 'max:100'],
+      'no_identitas' => ['nullable', 'string', 'max:100'],
       'alamat' => ['nullable', 'string'],
       'keterangan' => ['nullable', 'string'],
     ]);
-    if (!empty($validated['password'])) {
-      $validated['password'] = bcrypt($validated['password']);
-    } else {
-      unset($validated['password']); // jangan kirim ke update
-    }
 
     $arataArray = [
       'name'          => $validated['nama'],
@@ -299,12 +294,12 @@ class UserController extends Controller
       'wa'            => $validated['wa'],
       'idRole'        => 5,
     ];
-    // Kalau password ADA isinya, hash dan tambahkan ke array update
+    // Password diisi = ganti. Di-hash otomatis oleh cast 'hashed' di model User (jangan bcrypt di sini).
     if (!empty($validated['password'])) {
-      $arataArray['password'] = bcrypt($validated['password']);
+      $arataArray['password'] = $validated['password'];
     }
     $arataArrayDetail = [
-      'idArea'        => decrypt($validated['area']),
+      'idArea'        => !empty($validated['area']) ? decrypt($validated['area']) : null,
       'tglDafatar'    => $validated['tgl_daftar'],
       'tglJatuhTempo' => $validated['jatuh_tempo'],
       'statusPpn'     => $validated['status_ppn'],
