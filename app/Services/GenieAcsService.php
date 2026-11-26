@@ -49,7 +49,11 @@ class GenieAcsService
     }
 
     $ont = $this->devices(['VirtualParameters.pppoeUsername' => $client->namaMikrotikUser]);
-    if (count($ont) > 1) {
+    // Lebih dari satu ONT, atau SN-nya sudah milik pelanggan lain: jangan hubungkan otomatis.
+    // Pilihan lewat "Hubungkan" meminta konfirmasi sebelum memindahkan SN.
+    $milikLain = count($ont) === 1 && Lamtim_user_mikrotik_details::where('ont_sn', $ont[0]['sn'])
+      ->where('id', '!=', $client->id)->exists();
+    if (count($ont) > 1 || $milikLain) {
       return ['status' => 'kandidat', 'kandidat' => $ont];
     }
     if (count($ont) === 1) {
@@ -67,7 +71,12 @@ class GenieAcsService
       'projection' => self::PROYEKSI,
     ]));
 
-    return array_map(fn(array $d) => $this->bentukOnt($d), $respons->json() ?? []);
+    // 4xx (mis. login proxy salah) atau balasan yang bukan daftar jangan dianggap "tidak ada ONT"
+    $daftar = $respons->json();
+    if (!$respons->successful() || !is_array($daftar) || !array_is_list($daftar)) {
+      throw new GenieAcsTidakTerjangkau('GenieACS membalas tidak wajar (HTTP ' . $respons->status() . '). Periksa GENIEACS_URL/USER/PASS.');
+    }
+    return array_map(fn(array $d) => $this->bentukOnt($d), $daftar);
   }
 
   /** Kunci isian WiFi aplikasi → virtual parameter di GenieACS. */
@@ -78,14 +87,14 @@ class GenieAcsService
     'password5' => 'VirtualParameters.wifiPassword5',
   ];
 
-  /** Minta ONT melapor ulang nilai virtual parameter. @return 'selesai'|'antri' */
+  /** Minta ONT melapor ulang nilai virtual parameter. @return 'selesai'|'antri'|'terkirim' */
   public function refresh(string $deviceId): string
   {
     $nama = array_map(fn($vp) => "VirtualParameters.$vp", ['pppoeUsername', 'RXPower', 'getSerialNumber', 'WlanPassword']);
     return $this->task($deviceId, ['name' => 'getParameterValues', 'parameterNames' => [...$nama, ...array_values(self::VP_WIFI)]]);
   }
 
-  /** @return 'selesai'|'antri' */
+  /** @return 'selesai'|'antri'|'terkirim' */
   public function reboot(string $deviceId): string
   {
     return $this->task($deviceId, ['name' => 'reboot']);
@@ -93,7 +102,7 @@ class GenieAcsService
 
   /**
    * @param array<'ssid'|'password'|'ssid5'|'password5', string> $nilai hanya kunci yang diubah
-   * @return 'selesai'|'antri'
+   * @return 'selesai'|'antri'|'terkirim'
    */
   public function setWifi(string $deviceId, array $nilai): string
   {
@@ -104,15 +113,31 @@ class GenieAcsService
     return $this->task($deviceId, ['name' => 'setParameterValues', 'parameterValues' => $parameter]);
   }
 
-  /** 200 = sudah dikerjakan ONT; 202 = masuk antrian karena ONT tidak menjawab. */
+  /**
+   * 200 = sudah dikerjakan ONT; 202 "Task queued…" = antri karena ONT tidak menjawab;
+   * 202 "Task faulted" = ONT menolak. NBI menunggu sesi ONT selesai (sampai 120 detik), jadi
+   * bila belum ada jawaban dalam 25 detik (di bawah batas 30 detik PHP) hasilnya 'terkirim':
+   * perintah sudah di GenieACS, tapi hasilnya belum diketahui.
+   *
+   * @return 'selesai'|'antri'|'terkirim'
+   */
   private function task(string $deviceId, array $body): string
   {
-    $respons = $this->kirim(fn(PendingRequest $http) => $http->asJson()
-      ->post('/devices/' . rawurlencode($deviceId) . '/tasks?timeout=3000&connection_request', $body));
+    try {
+      $respons = $this->kirim(fn(PendingRequest $http) => $http->timeout(25)->connectTimeout(3)->asJson()
+        ->post('/devices/' . rawurlencode($deviceId) . '/tasks?timeout=3000&connection_request', $body));
+    } catch (GenieAcsTidakTerjangkau $e) {
+      if (str_contains((string) $e->getPrevious()?->getMessage(), 'Operation timed out')) {
+        return 'terkirim';
+      }
+      throw $e;
+    }
 
-    return match ($respons->status()) {
-      200 => 'selesai',
-      202 => 'antri',
+    return match (true) {
+      $respons->status() === 200 => 'selesai',
+      $respons->status() === 202 && str_contains(strtolower($respons->reason()), 'fault')
+        => throw new GenieAcsTidakTerjangkau('ONT menolak perintah. Periksa nilai yang dikirim, atau lihat Faults di GenieACS.'),
+      $respons->status() === 202 => 'antri',
       default => throw new GenieAcsTidakTerjangkau('GenieACS menolak perintah (HTTP ' . $respons->status() . ')'),
     };
   }

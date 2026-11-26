@@ -66,11 +66,16 @@ Mengganti password 2,4 GHz juga memperbarui `X_CT-COM_CardKey`. Itu salinan yang
 
 ## 4. Pastikan virtual parameter ikut diperbarui saat ONT lapor
 
-Di **Admin → Provisions**, provision yang dipakai preset inform harus memuat baris berikut. Paket R-Tech biasanya sudah punya; tambahkan bila belum ada:
+Di **Admin → Provisions → default**, tambahkan 4 baris ini di bawah blok `// Virtual Parameters periodic check`. Konstanta `hourly` sudah ada di provision itu:
 
 ```
-declare("VirtualParameters.*", {value: Date.now() - 300 * 1000});
+declare("VirtualParameters.wifiSsid", {path: hourly, value: hourly});
+declare("VirtualParameters.wifiPassword", {path: hourly, value: hourly});
+declare("VirtualParameters.wifiSsid5", {path: hourly, value: hourly});
+declare("VirtualParameters.wifiPassword5", {path: hourly, value: hourly});
 ```
+
+Jangan pakai `declare("VirtualParameters.*", …)`. Baris seperti itu memaksa ke-22 virtual parameter yang ada dihitung ulang setiap kali ONT lapor, sehingga jadwal per jam atau per hari di atas tidak berlaku lagi. Tombol **Refresh** di billing tetap mengambil nilai terbaru saat itu juga.
 
 ## 5. Cek redaman dan coba
 

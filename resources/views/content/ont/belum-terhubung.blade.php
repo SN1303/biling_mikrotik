@@ -6,6 +6,7 @@
 <script>
   $(function () {
     const csrf = $('meta[name="csrf-token"]').attr('content');
+    toastr.options.escapeHtml = true; // pesan memuat nama pelanggan
     const $modal = $('#modal-hubungkan');
     const $pilih = $('#pilih-pelanggan');
 

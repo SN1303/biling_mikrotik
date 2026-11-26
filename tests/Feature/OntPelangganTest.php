@@ -154,6 +154,36 @@ class OntPelangganTest extends TestCase
     $this->postJson($this->url('wifi'), ['band' => '24', 'ssid' => 'Rumah Budi 2'])->assertOk();
   }
 
+  public function test_ssid_tidak_terbaca_form_wifi_tidak_tampil_dan_ditolak(): void
+  {
+    // ONT tanpa jalur WiFi yang dikenal: menulis akan "berhasil" palsu, jadi jangan izinkan
+    $this->masukSebagai(1);
+    $this->fakeNbi(200, ['wifiSsid' => '']);
+    $this->get($this->url())->assertOk()->assertDontSee('Simpan WiFi')->assertSee('Reboot ONT');
+    $this->postJson($this->url('wifi'), ['band' => '24', 'ssid' => 'Rumah'])->assertStatus(422);
+    Http::assertNotSent(fn($r) => str_contains($r->url(), '/tasks') && str_contains($r->body(), 'setParameterValues'));
+  }
+
+  public function test_task_lambat_pesan_terkirim(): void
+  {
+    $this->masukSebagai(1);
+    Http::fake([
+      'acs.test:7557/devices/?*' => Http::response([GenieAcsServiceTest::device()]),
+      'acs.test:7557/devices/*/tasks*' => fn() => throw new ConnectionException('cURL error 28: Operation timed out after 25001 milliseconds'),
+    ]);
+    $res = $this->postJson($this->url('wifi'), ['band' => '24', 'ssid' => 'Rumah Budi'])->assertOk()->assertJson(['status' => 'terkirim']);
+    $this->assertStringContainsString('Refresh', $res->json('message'));
+    $this->assertDatabaseHas('lamtim_user_mikrotik_details', ['id' => $this->client, 'wifi_name' => 'NAMA-LAMA']);
+  }
+
+  public function test_toast_tidak_menafsirkan_html(): void
+  {
+    $this->masukSebagai(1);
+    $this->fakeNbi();
+    $this->get($this->url())->assertSee('toastr.options.escapeHtml = true', false);
+    $this->get('/ont/belum-terhubung')->assertSee('toastr.options.escapeHtml = true', false);
+  }
+
   public function test_menu_ont_tampil_bila_aktif(): void
   {
     $this->masukSebagai(4);

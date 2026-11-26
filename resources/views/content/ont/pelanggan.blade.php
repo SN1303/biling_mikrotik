@@ -17,6 +17,7 @@
 <script>
   $(function () {
     const csrf = $('meta[name="csrf-token"]').attr('content');
+    toastr.options.escapeHtml = true; // pesan memuat nama pelanggan / SSID
 
     function kirim(url, data, $btn, setelahSelesai) {
       const labelAwal = $btn.html();
@@ -24,11 +25,19 @@
       $.ajax({ url, method: 'POST', data, headers: { 'X-CSRF-TOKEN': csrf } })
         .done(function (res) {
           if (res.status === 'selesai') { toastr.success(res.message); if (setelahSelesai) setelahSelesai(); }
-          else if (res.status === 'antri') toastr.warning(res.message);
+          else if (res.status === 'antri' || res.status === 'terkirim') toastr.warning(res.message);
           else toastr.error(res.message);
         })
         .fail(function (xhr) {
           const r = xhr.responseJSON || {};
+          if (xhr.status === 409) { // SN milik pelanggan lain: minta konfirmasi pindah
+            Swal.fire({
+              title: 'Pindahkan ONT?', text: r.message, icon: 'warning', showCancelButton: true,
+              confirmButtonText: 'Ya, pindahkan', cancelButtonText: 'Batal',
+              customClass: { confirmButton: 'btn btn-warning me-2', cancelButton: 'btn btn-outline-secondary' }, buttonsStyling: false,
+            }).then(x => { if (x.isConfirmed) kirim(url, Object.assign({}, data, { pindahkan: 1 }), $btn, setelahSelesai); });
+            return;
+          }
           const galat = r.errors ? Object.values(r.errors)[0][0] : null;
           toastr.error(galat || r.message || 'Terjadi kesalahan.');
         })
@@ -201,6 +210,15 @@
 @if ($ont)
 <div class="card mb-4">
   <div class="card-header"><h6 class="mb-0">Ganti WiFi</h6></div>
+  @if ($ont['wifi']['ssid'] === null)
+  {{-- Nama WiFi tidak terbaca = jalur WiFi ONT ini belum dikenal virtual parameter; menulis tidak akan sampai ke ONT --}}
+  <div class="card-body">
+    <p class="text-muted">Nama WiFi ONT ini belum bisa dibaca, jadi belum bisa diganti dari billing. Pastikan virtual parameter WiFi sudah dipasang di GenieACS, lalu tekan Refresh.</p>
+    <button type="button" id="btn-reboot" class="btn btn-outline-danger">
+      <i class="mdi mdi-restart me-1"></i> Reboot ONT
+    </button>
+  </div>
+  @else
   <form id="form-wifi" class="card-body" autocomplete="off">
     @if ($dualBand)
     <div class="d-flex flex-wrap gap-3 mb-3" role="radiogroup" aria-label="Pita WiFi">
@@ -254,6 +272,7 @@
       </button>
     </div>
   </form>
+  @endif
 </div>
 @endif
 @endsection

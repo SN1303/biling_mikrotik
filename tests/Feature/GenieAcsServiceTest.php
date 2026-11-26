@@ -193,6 +193,60 @@ class GenieAcsServiceTest extends TestCase
     });
   }
 
+  public function test_task_lambat_jadi_terkirim(): void
+  {
+    // NBI menunggu sesi ONT selesai (bisa >25 detik); perintah tetap jalan di GenieACS
+    Http::fake(fn() => throw new ConnectionException('cURL error 28: Operation timed out after 25001 milliseconds with 0 bytes received'));
+    $this->assertSame('terkirim', $this->service()->reboot(self::ID));
+  }
+
+  public function test_task_gagal_konek_tetap_exception(): void
+  {
+    Http::fake(fn() => throw new ConnectionException('cURL error 7: Failed to connect to acs.test port 7557'));
+    $this->expectException(GenieAcsTidakTerjangkau::class);
+    $this->service()->reboot(self::ID);
+  }
+
+  public function test_task_faulted_bukan_antri(): void
+  {
+    Http::fake(fn() => new \GuzzleHttp\Promise\FulfilledPromise(new \GuzzleHttp\Psr7\Response(202, [], '{}', '1.1', 'Task faulted')));
+    $this->expectException(GenieAcsTidakTerjangkau::class);
+    $this->expectExceptionMessage('ONT menolak perintah');
+    $this->service()->setWifi(self::ID, ['ssid' => 'Rumah']);
+  }
+
+  public function test_task_202_antri_pakai_reason_asli(): void
+  {
+    Http::fake(fn() => new \GuzzleHttp\Promise\FulfilledPromise(new \GuzzleHttp\Psr7\Response(202, [], '{}', '1.1', 'Task queued but not processed')));
+    $this->assertSame('antri', $this->service()->reboot(self::ID));
+  }
+
+  public function test_pppoe_cocok_ont_milik_pelanggan_lain_tidak_dihubungkan(): void
+  {
+    // X sudah memegang SN ini; ONT kemudian dial dengan PPPoE milik Y
+    $this->client('lama@tji-1', 'ZTEGC1234567');
+    $y = $this->client('rizal@tji-1');
+    Http::fake(['acs.test:7557/devices/*' => Http::response([self::device()])]);
+
+    $hasil = $this->service()->ontPelanggan($y);
+
+    $this->assertSame('kandidat', $hasil['status']);
+    $this->assertNull($y->fresh()->ont_sn);
+  }
+
+  public function test_respons_401_atau_bukan_daftar_lempar_exception(): void
+  {
+    Http::fake(['acs.test:7557/*' => Http::response('<html>Unauthorized</html>', 401)]);
+    try {
+      $this->service()->devices([]);
+      $this->fail('401 harus dilempar');
+    } catch (GenieAcsTidakTerjangkau) {
+    }
+    Http::fake(['acs.test:7557/*' => Http::response(['bukan' => 'daftar'])]);
+    $this->expectException(GenieAcsTidakTerjangkau::class);
+    $this->service()->devices([]);
+  }
+
   public function test_respons_500_lempar_exception(): void
   {
     Http::fake(['acs.test:7557/*' => Http::response('error', 500)]);
