@@ -46,6 +46,8 @@ return [
     'user' => env('GENIEACS_USER'),
     'pass' => env('GENIEACS_PASS'),
     'online_menit' => (int) env('GENIEACS_ONLINE_MENIT', 10),
+    // Subdomain untuk remote web ONT (mis. ont.domainmu.com). Kosong = remote mati.
+    'remote_host' => env('GENIEACS_REMOTE_HOST', ''),
   ],
 
 ];

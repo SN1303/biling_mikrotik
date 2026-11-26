@@ -191,6 +191,12 @@ class GenieAcsService
       'online' => $lastInform !== null && $lastInform->gt(now()->subMinutes((int) config('services.genieacs.online_menit', 10))),
       'rxPower' => is_numeric($rx) ? (float) $rx : null,
       'pppoe' => $vp('pppoeUsername'),
+      // IP untuk remote web ONT: IP manajemen TR-069, cadangannya IP PPPoE
+      'ip' => $vp('IPTR069') ?? $vp('pppoeIP'),
+      'login' => [
+        'admin' => ['user' => $vp('superAdmin'), 'pass' => $vp('superPassword')],
+        'user' => ['user' => $vp('userAdmin'), 'pass' => $vp('userPassword')],
+      ],
       'dualBand' => (bool) $jalur['ssid5'],
       'jalurWifi' => $jalur,
       'wifi' => [
