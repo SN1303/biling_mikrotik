@@ -66,7 +66,7 @@
     $('.btn-lihat').on('click', function () {
       const $nilai = $('#' + $(this).data('target'));
       const terlihat = $nilai.text() !== '••••••••';
-      $nilai.text(terlihat ? '••••••••' : $nilai.data('nilai'));
+      $nilai.text(terlihat ? '••••••••' : $nilai.attr('data-nilai')); // attr: jangan diurai sebagai JSON
       $(this).text(terlihat ? 'lihat' : 'sembunyikan');
     });
 
@@ -112,6 +112,22 @@
     $('.btn-pilih-ont').on('click', function () {
       kirim(@json($bisaHubungkan ? route('ont.hubungkan') : ''), { sn: $(this).data('sn'), pelanggan: @json($id) }, $(this), () => location.reload());
     });
+
+    // Remote web ONT: minta tiket baru setiap kali dibuka / dimuat ulang
+    function bukaRemote() {
+      const $btn = $('#btn-remote');
+      const labelAwal = $btn.html();
+      $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Membuka...');
+      $.ajax({ url: @json($ont ? route('ont.remote', $id) : ''), method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+        .done(function (res) {
+          $('#remote-bingkai').html('').append($('<iframe>', { src: res.url, title: 'Web ONT', class: 'remote-iframe' }));
+          $('#remote-area').removeClass('d-none');
+        })
+        .fail(function (xhr) { toastr.error((xhr.responseJSON || {}).message || 'Gagal membuka remote ONT.'); })
+        .always(function () { $btn.prop('disabled', false).html(labelAwal); });
+    }
+    $('#btn-remote, #btn-remote-muat').on('click', bukaRemote);
+    $('#btn-remote-tutup').on('click', function () { $('#remote-bingkai').html(''); $('#remote-area').addClass('d-none'); });
   });
 </script>
 @endsection
@@ -274,5 +290,51 @@
   </form>
   @endif
 </div>
+
+@if ($remoteAktif)
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h6 class="mb-0">Remote ONT</h6>
+    <button type="button" id="btn-remote" class="btn btn-sm btn-primary">
+      <i class="mdi mdi-monitor-share me-1"></i> Buka remote
+    </button>
+  </div>
+  <div class="card-body">
+    @php $loginOnt = array_filter(['Login admin' => $ont['login']['admin'], 'Login user' => $ont['login']['user']], fn($l) => $l['user'] !== null); @endphp
+    @if ($loginOnt)
+    <dl class="row mb-3">
+      @foreach ($loginOnt as $judul => $l)
+      <dt class="col-sm-3 col-xl-2">{{ $judul }}</dt>
+      <dd class="col-sm-9 col-xl-10">
+        <span class="fw-medium text-break">{{ $l['user'] }}</span>
+        @if ($l['pass'] !== null)
+        <span class="d-inline-flex align-items-center gap-1 ms-sm-2">
+          <code id="login-{{ $loop->index }}" data-nilai="{{ $l['pass'] }}">••••••••</code>
+          <button type="button" class="btn btn-link btn-sm p-0 btn-lihat" data-target="login-{{ $loop->index }}">lihat</button>
+        </span>
+        @endif
+      </dd>
+      @endforeach
+    </dl>
+    @endif
+    <p class="text-muted small mb-0" id="remote-keterangan">Web ONT dibuka lewat server billing{{ $ont['ip'] ? ' (' . $ont['ip'] . ')' : '' }}. Sesi remote berakhir sendiri setelah 2 jam atau saat kamu logout.</p>
+
+    <div id="remote-area" class="d-none mt-3">
+      <div id="remote-bingkai" class="remote-bingkai"></div>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <button type="button" id="btn-remote-muat" class="btn btn-sm btn-outline-primary"><i class="mdi mdi-refresh me-1"></i> Muat ulang</button>
+        <button type="button" id="btn-remote-tutup" class="btn btn-sm btn-outline-secondary"><i class="mdi mdi-close me-1"></i> Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
 @endif
+@endif
+@endsection
+
+@section('page-style')
+<style>
+  .remote-bingkai { border: 1px solid var(--mryes-border, #e5e7eb); border-radius: .5rem; overflow: hidden; background: #fff; }
+  .remote-iframe { display: block; width: 100%; height: 70vh; min-height: 420px; border: 0; }
+</style>
 @endsection

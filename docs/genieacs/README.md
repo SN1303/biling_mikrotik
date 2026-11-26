@@ -76,3 +76,31 @@ Jika muncul pesan *"ONT tidak merespons; perintah akan dijalankan saat ONT onlin
 1. Bila pelanggan sudah punya SN tersimpan, billing mencarinya lewat SN.
 2. Bila belum, billing mencari lewat username PPPoE pelanggan, yaitu `VirtualParameters.pppoeUsername`. Kalau ketemu tepat satu ONT, SN-nya langsung disimpan.
 3. ONT yang tidak cocok dengan siapa pun muncul di **ONT Belum Terhubung**, dan bisa dihubungkan ke pelanggan secara manual.
+
+## Remote web ONT (opsional)
+
+Kartu **Remote ONT** di halaman ONT pelanggan menampilkan web admin ONT di dalam billing. Yang menghubungi ONT adalah server billing, jadi teknisi bisa memakainya dari mana saja selama billing bisa dibuka. ONT tidak perlu dibuka ke internet.
+
+1. **Subdomain remote.** Pakai satu domain induk dengan billing, misalnya billing di `billing.domainmu.com` dan remote di `ont.domainmu.com`. Kalau domain induknya beda, login web ONT di dalam kotak bisa gagal di Safari atau iPhone.
+2. **Cloudflare Tunnel.** Di tunnel yang sama, tambahkan **Public Hostname** `ont.domainmu.com` dengan service yang **sama persis** dengan billing.
+3. **aaPanel.** Tambahkan `ont.domainmu.com` sebagai domain di situs billing, supaya nginx menerimanya.
+4. **`.env` billing:**
+   ```
+   GENIEACS_REMOTE_HOST=ont.domainmu.com
+   SESSION_DOMAIN=            # biarkan kosong: cookie login billing tidak boleh terkirim ke subdomain remote
+   ```
+   Lalu jalankan `php artisan optimize`.
+5. **Server billing harus bisa menjangkau IP ONT.** Billing memakai `VirtualParameters.IPTR069`, dan kalau kosong memakai `pppoeIP`. Web ONT juga harus mengizinkan akses dari sisi WAN, port 80.
+
+Batasan:
+- Satu browser hanya bisa me-remote satu ONT pada satu waktu.
+- Sesi remote berakhir setelah 2 jam, saat staf logout, atau saat akunnya dinonaktifkan.
+- Halaman ONT yang di dalam JavaScript-nya melompat langsung ke `http://<IP ONT>/…` akan keluar dari kotak remote. Kalau ketemu, catat merek dan halamannya.
+
+**Uji di lokal:** billing dan remote harus satu domain induk, seperti di produksi.
+- `localhost` dan `ont.localhost` dianggap **beda situs** oleh Chrome, sehingga cookie remote ditolak.
+- Tambahkan ke file `hosts` komputer:
+  ```
+  127.0.0.1 billing.mryes.test ont.mryes.test
+  ```
+- Buka billing lewat `http://billing.mryes.test:8099`, lalu isi `GENIEACS_REMOTE_HOST=ont.mryes.test`.

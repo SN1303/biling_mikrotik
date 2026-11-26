@@ -186,6 +186,61 @@ class OntPelangganTest extends TestCase
     $this->get('/ont/belum-terhubung')->assertSee('toastr.options.escapeHtml = true', false);
   }
 
+  /** NBI membalas ONT Rizal dengan IP remote dan login admin; $vp menimpa nilai bawaan. */
+  private function fakeNbiRemote(array $vp = []): void
+  {
+    config(['services.genieacs.remote_host' => 'ont.test', 'cache.default' => 'array']);
+    Http::fake(['acs.test:7557/devices/*' => Http::response([GenieAcsServiceTest::device($vp + [
+      'IPTR069' => '10.1.1.5', 'superAdmin' => 'telecomadmin', 'superPassword' => 'adm1n',
+    ])])]);
+  }
+
+  public function test_remote_buat_url_tiket(): void
+  {
+    $this->masukSebagai(7);
+    $this->fakeNbiRemote();
+    Log::spy();
+    // Skema dan port mengikuti alamat billing yang sedang dipakai
+    $url = $this->postJson('http://billing.test:8099' . $this->url('remote'))->assertOk()->json('url');
+    $this->assertStringStartsWith('http://ont.test:8099/_remote/mulai?tiket=', $url);
+    $url = $this->postJson('https://billing.test' . $this->url('remote'))->assertOk()->json('url');
+    $this->assertStringStartsWith('https://ont.test/_remote/mulai?tiket=', $url);
+    Log::shouldHaveReceived('info')->withArgs(fn($pesan, $konteks = []) => $pesan === 'ONT remote'
+      && ($konteks['ip'] ?? null) === '10.1.1.5' && !str_contains(json_encode($konteks), 'adm1n'))->twice();
+  }
+
+  public function test_remote_ditolak_kolektor(): void
+  {
+    $this->masukSebagai(6);
+    $this->fakeNbiRemote();
+    $this->postJson($this->url('remote'))->assertForbidden();
+  }
+
+  public function test_kartu_remote_dan_login_tampil(): void
+  {
+    $this->masukSebagai(4);
+    $this->fakeNbiRemote();
+    $this->get($this->url())->assertOk()->assertSee('Remote ONT')->assertSee('telecomadmin')
+      ->assertDontSee('adm1n</', false);
+  }
+
+  public function test_kartu_remote_hilang_bila_host_kosong(): void
+  {
+    $this->masukSebagai(1);
+    $this->fakeNbiRemote();
+    config(['services.genieacs.remote_host' => '']);
+    $this->get($this->url())->assertOk()->assertDontSee('Remote ONT');
+    $this->postJson($this->url('remote'))->assertStatus(422);
+  }
+
+  public function test_remote_tanpa_ip_422(): void
+  {
+    $this->masukSebagai(1);
+    $this->fakeNbiRemote(['IPTR069' => '', 'pppoeIP' => '']);
+    $res = $this->postJson($this->url('remote'))->assertStatus(422);
+    $this->assertStringContainsString('IP', $res->json('message'));
+  }
+
   public function test_menu_ont_tampil_bila_aktif(): void
   {
     $this->masukSebagai(4);

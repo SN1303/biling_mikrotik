@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lamtim_user_mikrotik_details;
 use App\Models\User;
 use App\Services\GenieAcsService;
+use App\Services\RemoteOntService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +23,38 @@ class OntController extends Controller
   private const PESAN_BELUM_DIATUR = 'GenieACS belum diatur. Isi GENIEACS_URL di file .env.';
   private const PESAN_ANTRI = 'ONT tidak merespons; perintah akan dijalankan saat ONT online lagi.';
 
-  public function __construct(private GenieAcsService $acs)
+  public function __construct(private GenieAcsService $acs, private RemoteOntService $remote)
   {
+  }
+
+  /** Buat tiket remote web ONT; balas {url} untuk dimuat di iframe. */
+  public function remote(Request $request, string $id): JsonResponse
+  {
+    if (!$this->remote->aktif()) {
+      return response()->json(['message' => 'Remote ONT belum diatur. Isi GENIEACS_REMOTE_HOST di file .env.'], 422);
+    }
+    $pelanggan = $this->pelangganDari($id);
+    try {
+      $hasil = $pelanggan->user_mikrotik ? $this->acs->ontPelanggan($pelanggan->user_mikrotik) : ['status' => 'belum'];
+      if ($hasil['status'] !== 'terhubung') {
+        return response()->json(['message' => 'ONT pelanggan ini belum terhubung.'], 422);
+      }
+      $tiket = $this->remote->buatTiket($request->user(), $request->session()->getId(), $hasil['ont']);
+    } catch (GenieAcsTidakTerjangkau $e) {
+      return response()->json(['message' => $e->getMessage()], 503);
+    } catch (\DomainException $e) {
+      return response()->json(['message' => $e->getMessage()], 422);
+    }
+
+    Log::info('ONT remote', [
+      'oleh' => $request->user()->id, 'pelanggan' => $pelanggan->id,
+      'sn' => $hasil['ont']['sn'], 'ip' => $hasil['ont']['ip'],
+    ]);
+
+    // Skema dan port mengikuti alamat billing saat ini (https lewat Cloudflare, http:8099 saat uji lokal)
+    $port = in_array($request->getPort(), [80, 443], true) ? '' : ':' . $request->getPort();
+    $url = $request->getScheme() . '://' . config('services.genieacs.remote_host') . $port . '/_remote/mulai?tiket=' . urlencode($tiket);
+    return response()->json(['url' => $url]);
   }
 
   public function pelanggan(string $id)
@@ -47,6 +78,7 @@ class OntController extends Controller
       'pesanBelumDiatur' => self::PESAN_BELUM_DIATUR,
       'hasil' => $hasil,
       'galat' => $galat,
+      'remoteAktif' => $this->remote->aktif(),
     ]);
   }
 

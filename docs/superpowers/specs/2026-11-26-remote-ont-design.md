@@ -50,7 +50,7 @@ Di Cloudflare: Public Hostname `ont.domainmu.com` diarahkan ke layanan yang sama
 
 `SESSION_DOMAIN` billing tetap kosong, supaya cookie login billing tidak dikirim ke host remote, tempat kode web ONT berjalan.
 
-Untuk uji lokal: billing dibuka lewat `localhost:8099`, dengan `GENIEACS_REMOTE_HOST=ont.localhost`. Chrome mengarahkan `*.localhost` ke komputer sendiri, dan keduanya dianggap satu situs, sama seperti produksi.
+Untuk uji lokal: billing dibuka lewat `billing.mryes.test:8099`, dengan `GENIEACS_REMOTE_HOST=ont.mryes.test`. Keduanya diarahkan ke `127.0.0.1` lewat file hosts, dan dianggap satu situs, sama seperti produksi. (Koreksi saat implementasi: `localhost` dan `ont.localhost` ternyata dianggap **beda situs** oleh Chrome, sehingga cookie remote di iframe ditolak.)
 
 ### Alur
 

@@ -24,6 +24,7 @@ GENIEACS_URL=http://<ip-genieacs>:7557   # kosong = fitur ONT mati
 GENIEACS_USER=
 GENIEACS_PASS=
 GENIEACS_ONLINE_MENIT=10
+GENIEACS_REMOTE_HOST=                    # opsional: subdomain remote web ONT, lihat panduan
 ```
 
 ## Menjalankan tes
