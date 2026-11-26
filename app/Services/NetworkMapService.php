@@ -121,12 +121,14 @@ class NetworkMapService
 
     public function getClients(): array
     {
+        // Peta hanya untuk role 1,2,4,7, yang juga boleh membuka halaman ONT
+        $acsAktif = app(GenieAcsService::class)->aktif();
         return Lamtim_user_mikrotik_details::with(['user:id,name', 'odp:id,nama,latitude,longitude'])
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->get()
-            ->map(function ($client) {
-                return [
+            ->map(function ($client) use ($acsAktif) {
+                return ($acsAktif ? ['ont_url' => route('ont.pelanggan', encrypt($client->idUser))] : []) + [
                     'id' => $client->id,
                     'nama' => $client->user->name ?? 'Unknown',
                     'idOdp' => $client->idOdp,

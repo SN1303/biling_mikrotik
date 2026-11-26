@@ -41,6 +41,11 @@
                     <i class="mdi mdi-pencil-outline me-1"></i> Edit
                   </a>`;
               @endif
+              @if(auth()->user()->hasRole(1,2,4,7) && app(\App\Services\GenieAcsService::class)->aktif())
+              actions += `<a class="dropdown-item fw-bold" href="/pelanggan/${data}/ont">
+                    <i class="mdi mdi-router-wireless me-1"></i> ONT &amp; WiFi
+                  </a>`;
+              @endif
               @if(auth()->user()->hasRole(1,2))
               actions += `<a class="dropdown-item btn-delete text-danger fw-bold" href="javascript:void(0);" data-id="${data}">
                     <i class="mdi mdi-trash-can-outline me-1"></i> Delete

@@ -17,7 +17,7 @@ if ($currentUser && $currentUser->hasRole(1, 2, 3, 6, 7)) {
 
 // State aktif grup submenu
 $isPetaMapping = request()->is('user/list/mapping') || request()->is('user/show/map') || request()->is('area*');
-$isPerangkat   = request()->is('olt*') || request()->is('odc*') || request()->is('odp*');
+$isPerangkat   = request()->is('olt*') || request()->is('odc*') || request()->is('odp*') || request()->is('ont*');
 $isPelangganList = request()->is('user') || (request()->is('user/*') && !request()->is('user/create') && !$isPetaMapping);
 $isTagihanAktif  = request()->is('tagihan') || (request()->is('tagihan/*') && !request()->is('tagihan/lunas') && !request()->is('tagihan/rekap') && !request()->is('tagihan/generate'));
 @endphp
@@ -206,6 +206,13 @@ $isTagihanAktif  = request()->is('tagihan') || (request()->is('tagihan/*') && !r
             <div>ODP</div>
           </a>
         </li>
+        @if(app(\App\Services\GenieAcsService::class)->aktif())
+        <li class="menu-item {{ request()->is('ont*') ? 'active' : '' }}">
+          <a href="{{ route('ont.belum') }}" class="menu-link">
+            <div>ONT Belum Terhubung</div>
+          </a>
+        </li>
+        @endif
       </ul>
     </li>
 

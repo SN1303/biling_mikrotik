@@ -154,6 +154,37 @@ class OntPelangganTest extends TestCase
     $this->postJson($this->url('wifi'), ['band' => '24', 'ssid' => 'Rumah Budi 2'])->assertOk();
   }
 
+  public function test_menu_ont_tampil_bila_aktif(): void
+  {
+    $this->masukSebagai(4);
+    $this->get('/user')->assertOk()->assertSee('ONT Belum Terhubung')->assertSee('ONT &amp; WiFi', false);
+  }
+
+  public function test_menu_ont_hilang_bila_url_kosong(): void
+  {
+    config(['services.genieacs.url' => '']);
+    $this->masukSebagai(4);
+    $this->get('/user')->assertOk()->assertDontSee('ONT Belum Terhubung')->assertDontSee('ONT &amp; WiFi', false);
+  }
+
+  public function test_menu_ont_tidak_untuk_kolektor(): void
+  {
+    $this->masukSebagai(6);
+    $this->get('/user')->assertOk()->assertDontSee('ONT Belum Terhubung')->assertDontSee('ONT &amp; WiFi', false);
+  }
+
+  public function test_peta_menyertakan_ont_url(): void
+  {
+    DB::table('lamtim_user_mikrotik_details')->where('id', $this->client)->update(['latitude' => -5.0, 'longitude' => 105.0]);
+    $this->masukSebagai(4);
+    $client = app(\App\Services\NetworkMapService::class)->getClients()[0];
+    $this->assertStringContainsString('/pelanggan/', $client['ont_url']);
+    $this->assertStringEndsWith('/ont', $client['ont_url']);
+
+    config(['services.genieacs.url' => '']);
+    $this->assertArrayNotHasKey('ont_url', app(\App\Services\NetworkMapService::class)->getClients()[0]);
+  }
+
   public function test_log_tidak_memuat_password(): void
   {
     $this->masukSebagai(1);

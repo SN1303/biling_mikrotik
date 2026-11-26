@@ -1458,6 +1458,7 @@ function buildPopupContent(type, d) {
   const bolehHapus = BOLEH_ADMIN || (type !== 'olt' && type !== 'client');
   if (bolehUbah || bolehHapus) {
     html += `<div class="popup-actions">`;
+    if (type === 'client' && d.ont_url) html += `<a href="${escHtml(d.ont_url)}" class="popup-btn popup-btn-edit"><i class="mdi mdi-router-wireless"></i> ONT</a>`;
     if (bolehUbah) html += `<button onclick="editDevice('${type}',${d.id})" class="popup-btn popup-btn-edit"><i class="mdi mdi-pencil"></i> Edit</button>`;
     if (bolehHapus) html += `<button onclick="deleteDevice('${type}',${d.id})" class="popup-btn popup-btn-delete"><i class="mdi mdi-delete"></i> Hapus</button>`;
     html += `</div>`;
