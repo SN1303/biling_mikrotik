@@ -40,4 +40,12 @@ return [
     'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
   ],
 
+  // NBI GenieACS (port 7557). URL kosong = fitur ONT mati.
+  'genieacs' => [
+    'url' => env('GENIEACS_URL', ''),
+    'user' => env('GENIEACS_USER'),
+    'pass' => env('GENIEACS_PASS'),
+    'online_menit' => (int) env('GENIEACS_ONLINE_MENIT', 10),
+  ],
+
 ];
