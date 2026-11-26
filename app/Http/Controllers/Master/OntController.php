@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Master;
 
 use App\Exceptions\GenieAcsTidakTerjangkau;
 use App\Http\Controllers\Controller;
+use App\Models\Lamtim_user_mikrotik_details;
 use App\Models\User;
 use App\Services\GenieAcsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -127,6 +129,68 @@ class OntController extends Controller
         default => $pesanGagal ?? 'GenieACS tidak terjangkau.',
       },
     ], $status === 'gagal' ? 503 : 200);
+  }
+
+  /** ONT yang lapor ke GenieACS tapi SN dan username PPPoE-nya tidak cocok dengan pelanggan mana pun. */
+  public function belum()
+  {
+    $ont = [];
+    $galat = null;
+    if ($this->acs->aktif()) {
+      try {
+        $snTerpakai = array_flip(Lamtim_user_mikrotik_details::whereNotNull('ont_sn')->pluck('ont_sn')->all());
+        $pppoe = array_flip(Lamtim_user_mikrotik_details::whereNotNull('namaMikrotikUser')->pluck('namaMikrotikUser')->all());
+        $ont = array_values(array_filter($this->acs->devices([]),
+          fn(array $o) => !isset($snTerpakai[$o['sn']]) && !($o['pppoe'] !== null && isset($pppoe[$o['pppoe']]))));
+      } catch (GenieAcsTidakTerjangkau) {
+        $galat = 'GenieACS tidak terjangkau. Coba lagi beberapa saat, atau periksa server GenieACS.';
+      }
+    }
+
+    $pelanggan = User::where('idRole', 5)->whereHas('user_mikrotik')->with('user_mikrotik:id,idUser,namaMikrotikUser,ont_sn')
+      ->orderBy('name')->get(['id', 'name']);
+
+    return view('content.ont.belum-terhubung', [
+      'aktif' => $this->acs->aktif(),
+      'pesanBelumDiatur' => self::PESAN_BELUM_DIATUR,
+      'ont' => $ont,
+      'galat' => $galat,
+      'pelanggan' => $pelanggan,
+    ]);
+  }
+
+  /** Simpan SN ke pelanggan. SN milik pelanggan lain hanya dipindah bila `pindahkan` dikirim. */
+  public function hubungkan(Request $request): JsonResponse
+  {
+    $data = $request->validate([
+      'sn' => 'required|string|max:100',
+      'pelanggan' => 'required|string',
+      'pindahkan' => 'nullable|boolean',
+    ]);
+    $tujuan = $this->pelangganDari($data['pelanggan']);
+    if (!$tujuan->user_mikrotik) {
+      return response()->json(['status' => 'gagal', 'message' => 'Pelanggan ini belum punya data PPPoE.'], 422);
+    }
+
+    $pemilik = Lamtim_user_mikrotik_details::with('user:id,name')
+      ->where('ont_sn', $data['sn'])->where('idUser', '!=', $tujuan->id)->first();
+    if ($pemilik && empty($data['pindahkan'])) {
+      return response()->json([
+        'status' => 'konfirmasi',
+        'message' => "ONT {$data['sn']} sudah terhubung ke " . ($pemilik->user->name ?? 'pelanggan lain') . '. Pindahkan ke ' . $tujuan->name . '?',
+      ], 409);
+    }
+
+    DB::transaction(function () use ($data, $tujuan) {
+      Lamtim_user_mikrotik_details::where('ont_sn', $data['sn'])->update(['ont_sn' => null]);
+      $tujuan->user_mikrotik->update(['ont_sn' => $data['sn']]);
+    });
+
+    Log::info('ONT hubungkan', [
+      'oleh' => auth()->id(), 'pelanggan' => $tujuan->id, 'sn' => $data['sn'],
+      'dari' => $pemilik?->idUser, 'hasil' => 'selesai',
+    ]);
+    return response()->json(['status' => 'selesai', 'message' => "ONT terhubung ke {$tujuan->name}."]);
   }
 
   private function pelangganDari(string $id): User

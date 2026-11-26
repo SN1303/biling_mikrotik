@@ -8,4 +8,6 @@ Route::controller(OntController::class)->as('ont.')->group(function () {
   Route::post('/pelanggan/{id}/ont/refresh', 'refresh')->name('refresh');
   Route::post('/pelanggan/{id}/ont/reboot', 'reboot')->name('reboot');
   Route::post('/pelanggan/{id}/ont/wifi', 'wifi')->name('wifi');
+  Route::get('/ont/belum-terhubung', 'belum')->name('belum');
+  Route::post('/ont/hubungkan', 'hubungkan')->name('hubungkan');
 });
