@@ -70,6 +70,53 @@ class GenieAcsService
     return array_map(fn(array $d) => $this->bentukOnt($d), $respons->json() ?? []);
   }
 
+  /** Kunci isian WiFi aplikasi → virtual parameter di GenieACS. */
+  private const VP_WIFI = [
+    'ssid' => 'VirtualParameters.wifiSsid',
+    'password' => 'VirtualParameters.wifiPassword',
+    'ssid5' => 'VirtualParameters.wifiSsid5',
+    'password5' => 'VirtualParameters.wifiPassword5',
+  ];
+
+  /** Minta ONT melapor ulang nilai virtual parameter. @return 'selesai'|'antri' */
+  public function refresh(string $deviceId): string
+  {
+    $nama = array_map(fn($vp) => "VirtualParameters.$vp", ['pppoeUsername', 'RXPower', 'getSerialNumber', 'WlanPassword']);
+    return $this->task($deviceId, ['name' => 'getParameterValues', 'parameterNames' => [...$nama, ...array_values(self::VP_WIFI)]]);
+  }
+
+  /** @return 'selesai'|'antri' */
+  public function reboot(string $deviceId): string
+  {
+    return $this->task($deviceId, ['name' => 'reboot']);
+  }
+
+  /**
+   * @param array<'ssid'|'password'|'ssid5'|'password5', string> $nilai hanya kunci yang diubah
+   * @return 'selesai'|'antri'
+   */
+  public function setWifi(string $deviceId, array $nilai): string
+  {
+    $parameter = [];
+    foreach (array_intersect_key($nilai, self::VP_WIFI) as $kunci => $isi) {
+      $parameter[] = [self::VP_WIFI[$kunci], $isi, 'xsd:string'];
+    }
+    return $this->task($deviceId, ['name' => 'setParameterValues', 'parameterValues' => $parameter]);
+  }
+
+  /** 200 = sudah dikerjakan ONT; 202 = masuk antrian karena ONT tidak menjawab. */
+  private function task(string $deviceId, array $body): string
+  {
+    $respons = $this->kirim(fn(PendingRequest $http) => $http->asJson()
+      ->post('/devices/' . rawurlencode($deviceId) . '/tasks?timeout=3000&connection_request', $body));
+
+    return match ($respons->status()) {
+      200 => 'selesai',
+      202 => 'antri',
+      default => throw new GenieAcsTidakTerjangkau('GenieACS menolak perintah (HTTP ' . $respons->status() . ')'),
+    };
+  }
+
   private function bentukOnt(array $d): array
   {
     $vp = fn(string $nama) => ($v = $d['VirtualParameters'][$nama]['_value'] ?? null) === '' ? null : $v;

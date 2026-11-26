@@ -139,6 +139,60 @@ class GenieAcsServiceTest extends TestCase
     $this->service()->ontPelanggan($this->client());
   }
 
+  public function test_reboot_200_selesai(): void
+  {
+    Http::fake(['acs.test:7557/devices/*' => Http::response('', 200)]);
+    $this->assertSame('selesai', $this->service()->reboot(self::ID));
+    Http::assertSent(fn(Request $r) => $r->method() === 'POST'
+      && str_contains($r->url(), '/devices/' . self::ID . '/tasks?timeout=3000&connection_request')
+      && json_decode($r->body(), true) === ['name' => 'reboot']);
+  }
+
+  public function test_reboot_202_antri(): void
+  {
+    Http::fake(['acs.test:7557/devices/*' => Http::response('', 202)]);
+    $this->assertSame('antri', $this->service()->reboot(self::ID));
+  }
+
+  public function test_device_id_di_url_encode(): void
+  {
+    Http::fake(['acs.test:7557/*' => Http::response('', 200)]);
+    $this->service()->reboot('A B/1');
+    Http::assertSent(fn(Request $r) => str_contains($r->url(), '/devices/A%20B%2F1/tasks'));
+  }
+
+  public function test_set_wifi_kirim_satu_task(): void
+  {
+    Http::fake(['acs.test:7557/devices/*' => Http::response('', 200)]);
+    $this->assertSame('selesai', $this->service()->setWifi(self::ID, ['ssid' => 'Rumah Budi', 'ssid5' => 'Rumah Budi-5G', 'password' => '12345678']));
+
+    Http::assertSentCount(1);
+    Http::assertSent(function (Request $r) {
+      $body = json_decode($r->body(), true);
+      $this->assertSame('setParameterValues', $body['name']);
+      $this->assertEqualsCanonicalizing([
+        ['VirtualParameters.wifiSsid', 'Rumah Budi', 'xsd:string'],
+        ['VirtualParameters.wifiSsid5', 'Rumah Budi-5G', 'xsd:string'],
+        ['VirtualParameters.wifiPassword', '12345678', 'xsd:string'],
+      ], $body['parameterValues']);
+      return true;
+    });
+  }
+
+  public function test_refresh_minta_virtual_parameter(): void
+  {
+    Http::fake(['acs.test:7557/devices/*' => Http::response('', 200)]);
+    $this->service()->refresh(self::ID);
+    Http::assertSent(function (Request $r) {
+      $body = json_decode($r->body(), true);
+      $this->assertSame('getParameterValues', $body['name']);
+      foreach (['pppoeUsername', 'RXPower', 'getSerialNumber', 'WlanPassword', 'wifiSsid', 'wifiPassword', 'wifiSsid5', 'wifiPassword5'] as $vp) {
+        $this->assertContains("VirtualParameters.$vp", $body['parameterNames']);
+      }
+      return true;
+    });
+  }
+
   public function test_respons_500_lempar_exception(): void
   {
     Http::fake(['acs.test:7557/*' => Http::response('error', 500)]);
