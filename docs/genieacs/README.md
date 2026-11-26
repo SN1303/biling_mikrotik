@@ -40,44 +40,29 @@ NBI tidak memakai login, jadi port 7557 **wajib** dibatasi hanya untuk IP yang b
 
 Di VM GenieACS milik pemilik (26 Nov 2026) langkah ini sudah dikerjakan. Yang diizinkan baru `127.0.0.1`, `172.1.10.20` dan `172.1.10.85` (PC pengembangan). **IP VM billing perlu ditambahkan** ke `nbi_boleh` setelah VM itu jadi.
 
-## 3. Pasang 4 virtual parameter WiFi
+## 3. Yang dibaca billing dari GenieACS
 
-Billing memakai virtual parameter yang **sudah ada** di GenieACS apa adanya: `pppoeUsername`, `RXPower`, `getSerialNumber` dan `WlanPassword`. Keempatnya jangan diubah.
+Tidak ada yang perlu dipasang di GenieACS. Billing memakai yang sudah ada apa adanya:
 
-Yang perlu ditambahkan hanya WiFi per pita, karena `WlanPassword` selalu mengganti semua WiFi sekaligus. Di UI GenieACS, buka **Admin → Virtual Parameters → New**. Isi nama persis seperti nama file, lalu tempel isinya:
+- **Virtual parameter lama:** `pppoeUsername`, `RXPower`, `getSerialNumber` dan `WlanPassword`. Keempatnya jangan diubah.
+- **Jalur WiFi TR-069 yang sudah diperbarui tiap jam** oleh provision `default`:
+  - `WLANConfiguration.*.SSID`
+  - `KeyPassphrase`
+  - `PreSharedKey.1.KeyPassphrase`
 
-| Nama | File |
-|---|---|
-| `wifiSsid` | [virtual-parameters/wifiSsid.js](virtual-parameters/wifiSsid.js) |
-| `wifiPassword` | [virtual-parameters/wifiPassword.js](virtual-parameters/wifiPassword.js) |
-| `wifiSsid5` | [virtual-parameters/wifiSsid5.js](virtual-parameters/wifiSsid5.js) |
-| `wifiPassword5` | [virtual-parameters/wifiPassword5.js](virtual-parameters/wifiPassword5.js) |
-
-Jalur yang dicakup:
-
-| Merek / standar | 2,4 GHz | 5 GHz |
+| Standar | 2,4 GHz | 5 GHz |
 |---|---|---|
 | TR-098 (ZTE, Huawei, FiberHome, dan lain-lain) | `WLANConfiguration.1` | `WLANConfiguration.5` |
 | TR-181 | `SSID.1` / `AccessPoint.1` | `SSID.2` / `AccessPoint.2` |
 
-Bila sebuah merek memakai indeks lain untuk 5 GHz, tambahkan jalurnya di daftar `JALUR` pada skrip yang bersangkutan.
+Cara billing mengganti WiFi:
 
-Mengganti password 2,4 GHz juga memperbarui `X_CT-COM_CardKey`. Itu salinan yang dibaca `WlanPassword`, supaya password tetap tampil di ONT yang menyembunyikannya, misalnya ZTE.
+- **Nama WiFi, atau password satu pita saja:** ditulis langsung ke jalur di atas, hanya ke jalur yang memang ada di ONT itu.
+- **Password yang sama untuk semua pita** (ONT single-band, atau pilihan "Keduanya"): dikirim lewat `WlanPassword`. Dengan begitu salinan cadangannya (`X_CT-COM_CardKey`) ikut diperbarui, dan password tetap tampil di ONT yang menyembunyikannya, misalnya ZTE.
 
-## 4. Pastikan virtual parameter ikut diperbarui saat ONT lapor
+Kalau ada merek yang memakai indeks lain untuk 5 GHz, tambahkan jalurnya di `JALUR_WIFI` dalam `app/Services/GenieAcsService.php`. Selama jalurnya belum dikenal, halaman ONT menampilkan "nama WiFi belum bisa dibaca" dan form Ganti WiFi tidak muncul.
 
-Di **Admin → Provisions → default**, tambahkan 4 baris ini di bawah blok `// Virtual Parameters periodic check`. Konstanta `hourly` sudah ada di provision itu:
-
-```
-declare("VirtualParameters.wifiSsid", {path: hourly, value: hourly});
-declare("VirtualParameters.wifiPassword", {path: hourly, value: hourly});
-declare("VirtualParameters.wifiSsid5", {path: hourly, value: hourly});
-declare("VirtualParameters.wifiPassword5", {path: hourly, value: hourly});
-```
-
-Jangan pakai `declare("VirtualParameters.*", …)`. Baris seperti itu memaksa ke-22 virtual parameter yang ada dihitung ulang setiap kali ONT lapor, sehingga jadwal per jam atau per hari di atas tidak berlaku lagi. Tombol **Refresh** di billing tetap mengambil nilai terbaru saat itu juga.
-
-## 5. Cek redaman dan coba
+## 4. Cek redaman dan coba
 
 1. Buka satu pelanggan di billing lewat **Daftar Pelanggan → ⋮ → ONT & WiFi**.
 2. Bandingkan redaman di halaman itu dengan nilai *Rx Optical Power* di halaman web ONT. Selisih 0,5 dB masih wajar.

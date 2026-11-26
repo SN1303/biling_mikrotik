@@ -12,12 +12,24 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Klien tipis untuk NBI GenieACS. Data tidak disalin ke database lokal: setiap
- * pemanggilan langsung bertanya ke GenieACS. Perbedaan antar-merek ONT ditangani
- * oleh virtual parameter di GenieACS (lihat docs/genieacs/).
+ * pemanggilan langsung bertanya ke GenieACS. Redaman, SN, dan PPPoE dibaca dari virtual
+ * parameter yang sudah ada di GenieACS; WiFi dibaca dan ditulis langsung ke jalur TR-069.
  */
 class GenieAcsService
 {
-  private const PROYEKSI = '_id,_deviceId,_lastInform,VirtualParameters';
+  private const WLAN = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration';
+  private const PROYEKSI = '_id,_deviceId,_lastInform,VirtualParameters,' . self::WLAN . ',Device.WiFi';
+
+  /**
+   * Calon jalur WiFi per pita: TR-098 (indeks 1 = 2,4 GHz, 5 = 5 GHz) lalu TR-181.
+   * Merek yang memakai indeks lain cukup ditambahkan di sini.
+   */
+  private const JALUR_WIFI = [
+    'ssid' => [self::WLAN . '.1.SSID', 'Device.WiFi.SSID.1.SSID'],
+    'password' => [self::WLAN . '.1.KeyPassphrase', self::WLAN . '.1.PreSharedKey.1.KeyPassphrase', 'Device.WiFi.AccessPoint.1.Security.KeyPassphrase'],
+    'ssid5' => [self::WLAN . '.5.SSID', 'Device.WiFi.SSID.2.SSID'],
+    'password5' => [self::WLAN . '.5.KeyPassphrase', self::WLAN . '.5.PreSharedKey.1.KeyPassphrase', 'Device.WiFi.AccessPoint.2.Security.KeyPassphrase'],
+  ];
 
   public function aktif(): bool
   {
@@ -79,19 +91,11 @@ class GenieAcsService
     return array_map(fn(array $d) => $this->bentukOnt($d), $daftar);
   }
 
-  /** Kunci isian WiFi aplikasi → virtual parameter di GenieACS. */
-  private const VP_WIFI = [
-    'ssid' => 'VirtualParameters.wifiSsid',
-    'password' => 'VirtualParameters.wifiPassword',
-    'ssid5' => 'VirtualParameters.wifiSsid5',
-    'password5' => 'VirtualParameters.wifiPassword5',
-  ];
-
-  /** Minta ONT melapor ulang nilai virtual parameter. @return 'selesai'|'antri'|'terkirim' */
-  public function refresh(string $deviceId): string
+  /** Minta ONT melapor ulang virtual parameter dan WiFi-nya. @return 'selesai'|'antri'|'terkirim' */
+  public function refresh(array $ont): string
   {
     $nama = array_map(fn($vp) => "VirtualParameters.$vp", ['pppoeUsername', 'RXPower', 'getSerialNumber', 'WlanPassword']);
-    return $this->task($deviceId, ['name' => 'getParameterValues', 'parameterNames' => [...$nama, ...array_values(self::VP_WIFI)]]);
+    return $this->task($ont['id'], ['name' => 'getParameterValues', 'parameterNames' => [...$nama, ...array_merge(...array_values($ont['jalurWifi']))]]);
   }
 
   /** @return 'selesai'|'antri'|'terkirim' */
@@ -101,16 +105,34 @@ class GenieAcsService
   }
 
   /**
+   * Tulis WiFi langsung ke jalur yang ada di ONT itu. Password yang sama untuk SEMUA pita ONT
+   * dikirim lewat VirtualParameters.WlanPassword (sudah ada di GenieACS), supaya salinan
+   * cadangannya ikut diperbarui untuk ONT yang menyembunyikan password.
+   *
    * @param array<'ssid'|'password'|'ssid5'|'password5', string> $nilai hanya kunci yang diubah
    * @return 'selesai'|'antri'|'terkirim'
+   * @throws \DomainException bila ONT tidak punya jalur untuk salah satu kunci
    */
-  public function setWifi(string $deviceId, array $nilai): string
+  public function setWifi(array $ont, array $nilai): string
   {
+    $nilai = array_intersect_key($nilai, array_flip(['ssid', 'password', 'ssid5', 'password5']));
+    $semuaPita = $ont['dualBand'] ? ['password', 'password5'] : ['password'];
+    $password = array_intersect_key($nilai, array_flip($semuaPita));
+
     $parameter = [];
-    foreach (array_intersect_key($nilai, self::VP_WIFI) as $kunci => $isi) {
-      $parameter[] = [self::VP_WIFI[$kunci], $isi, 'xsd:string'];
+    if (count($password) === count($semuaPita) && count(array_unique($password)) === 1) {
+      $parameter[] = ['VirtualParameters.WlanPassword', reset($password), 'xsd:string'];
+      $nilai = array_diff_key($nilai, $password);
     }
-    return $this->task($deviceId, ['name' => 'setParameterValues', 'parameterValues' => $parameter]);
+    foreach ($nilai as $kunci => $isi) {
+      if (!$ont['jalurWifi'][$kunci]) {
+        throw new \DomainException('WiFi ONT ini belum bisa dibaca, jadi belum bisa diganti dari billing.');
+      }
+      foreach ($ont['jalurWifi'][$kunci] as $jalur) {
+        $parameter[] = [$jalur, $isi, 'xsd:string'];
+      }
+    }
+    return $this->task($ont['id'], ['name' => 'setParameterValues', 'parameterValues' => $parameter]);
   }
 
   /**
@@ -149,6 +171,18 @@ class GenieAcsService
     $rx = $vp('RXPower');
     $cadangan = $vp('WlanPassword');
 
+    // Jalur WiFi yang benar-benar ada di dokumen ONT ini (nilainya boleh kosong, mis. ZTE menyembunyikan password)
+    $jalur = array_map(fn(array $calon) => array_values(array_filter($calon,
+      fn(string $p) => is_array($n = data_get($d, $p)) && array_key_exists('_value', $n))), self::JALUR_WIFI);
+    $baca = function (string $kunci) use ($d, $jalur) {
+      foreach ($jalur[$kunci] as $p) {
+        if (($v = data_get($d, "$p._value")) !== null && $v !== '') {
+          return (string) $v;
+        }
+      }
+      return null;
+    };
+
     return [
       'id' => $d['_id'],
       'sn' => $vp('getSerialNumber') ?? ($d['_deviceId']['_SerialNumber'] ?? ''),
@@ -157,11 +191,13 @@ class GenieAcsService
       'online' => $lastInform !== null && $lastInform->gt(now()->subMinutes((int) config('services.genieacs.online_menit', 10))),
       'rxPower' => is_numeric($rx) ? (float) $rx : null,
       'pppoe' => $vp('pppoeUsername'),
+      'dualBand' => (bool) $jalur['ssid5'],
+      'jalurWifi' => $jalur,
       'wifi' => [
-        'ssid' => $vp('wifiSsid'),
-        'password' => $vp('wifiPassword') ?? $cadangan,
-        'ssid5' => $vp('wifiSsid5'),
-        'password5' => $vp('wifiPassword5') ?? $cadangan,
+        'ssid' => $baca('ssid'),
+        'password' => $baca('password') ?? $cadangan,
+        'ssid5' => $baca('ssid5'),
+        'password5' => $jalur['ssid5'] ? ($baca('password5') ?? $cadangan) : null,
       ],
     ];
   }

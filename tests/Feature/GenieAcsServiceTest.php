@@ -29,19 +29,52 @@ class GenieAcsServiceTest extends TestCase
     config(['services.genieacs.url' => 'http://acs.test:7557', 'services.genieacs.online_menit' => 10]);
   }
 
-  /** Dokumen device seperti balasan NBI. */
-  public static function device(array $vp = [], string $sn = 'ZTEGC1234567', int $menitLalu = 2): array
+  public const WLAN = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration';
+
+  /**
+   * Dokumen device seperti balasan NBI. $wlan = isi WLANConfiguration per indeks
+   * (1 = 2,4 GHz, 5 = 5 GHz); bawaan: ONT single-band.
+   */
+  public static function device(array $vp = [], string $sn = 'ZTEGC1234567', int $menitLalu = 2, ?array $wlan = null): array
   {
-    $nilai = $vp + [
-      'pppoeUsername' => 'rizal@tji-1', 'RXPower' => '-19.8', 'getSerialNumber' => $sn, 'WlanPassword' => '',
-      'wifiSsid' => 'RIZAL-NET', 'wifiPassword' => 'rahasia123', 'wifiSsid5' => '', 'wifiPassword5' => '',
-    ];
+    $nilai = $vp + ['pppoeUsername' => 'rizal@tji-1', 'RXPower' => '-19.8', 'getSerialNumber' => $sn, 'WlanPassword' => ''];
+    $wlan ??= ['1' => ['SSID' => 'RIZAL-NET', 'KeyPassphrase' => 'rahasia123']];
     return [
       '_id' => '00259E-F609-' . $sn,
       '_deviceId' => ['_SerialNumber' => $sn, '_ProductClass' => 'F609', '_Manufacturer' => 'ZTE'],
       '_lastInform' => now()->subMinutes($menitLalu)->toIso8601String(),
       'VirtualParameters' => array_map(fn($v) => ['_value' => $v], $nilai),
+      'InternetGatewayDevice' => ['LANDevice' => ['1' => ['WLANConfiguration' => self::bungkus($wlan)]]],
     ];
+  }
+
+  /** Nilai daun jadi {"_value": v}, seperti dokumen GenieACS. */
+  private static function bungkus(array $isi): array
+  {
+    return array_map(fn($v) => is_array($v) ? self::bungkus($v) : ['_value' => $v], $isi);
+  }
+
+  /** ONT dalam bentuk `ont`, lewat devices() dengan NBI tiruan; task membalas $task (kode status atau callback). */
+  private function ont(?array $wlan = null, int|\Closure $task = 200): array
+  {
+    Http::fake([
+      'acs.test:7557/devices/?*' => Http::response([self::device([], 'ZTEGC1234567', 2, $wlan)]),
+      'acs.test:7557/devices/*/tasks*' => is_int($task) ? Http::response('', $task) : $task,
+    ]);
+    return $this->service()->devices([])[0];
+  }
+
+  /** parameterValues dari task setParameterValues yang terkirim. */
+  private function nilaiTerkirim(): array
+  {
+    $nilai = null;
+    Http::assertSent(function (Request $r) use (&$nilai) {
+      if (str_contains($r->url(), '/tasks')) {
+        $nilai = json_decode($r->body(), true)['parameterValues'] ?? null;
+      }
+      return true;
+    });
+    return $nilai;
   }
 
   private function client(?string $pppoe = 'rizal@tji-1', ?string $sn = null): Lamtim_user_mikrotik_details
@@ -113,9 +146,26 @@ class GenieAcsServiceTest extends TestCase
 
   public function test_password_kosong_pakai_wlanpassword(): void
   {
-    Http::fake(['acs.test:7557/devices/*' => Http::response([self::device(['wifiPassword' => '', 'WlanPassword' => 'cadangan123'])])]);
+    // ZTE: jalur password ada, tapi nilainya disembunyikan (kosong)
+    Http::fake(['acs.test:7557/devices/*' => Http::response([self::device(['WlanPassword' => 'cadangan123'], 'ZTEGC1234567', 2,
+      ['1' => ['SSID' => 'RIZAL-NET', 'KeyPassphrase' => '']])])]);
     $hasil = $this->service()->ontPelanggan($this->client());
     $this->assertSame('cadangan123', $hasil['ont']['wifi']['password']);
+  }
+
+  public function test_wifi_dibaca_dari_jalur_asli_dua_pita(): void
+  {
+    $ont = $this->ont(['1' => ['SSID' => 'RIZAL-NET', 'KeyPassphrase' => 'satu2345'], '5' => ['SSID' => 'RIZAL-5G', 'PreSharedKey' => ['1' => ['KeyPassphrase' => 'lima2345']]]]);
+    $this->assertSame(['ssid' => 'RIZAL-NET', 'password' => 'satu2345', 'ssid5' => 'RIZAL-5G', 'password5' => 'lima2345'], $ont['wifi']);
+    $this->assertTrue($ont['dualBand']);
+  }
+
+  public function test_single_band_tanpa_5ghz(): void
+  {
+    $ont = $this->ont();
+    $this->assertFalse($ont['dualBand']);
+    $this->assertNull($ont['wifi']['ssid5']);
+    $this->assertNull($ont['wifi']['password5']);
   }
 
   public function test_tanpa_pppoe_dan_sn_tidak_query(): void
@@ -161,33 +211,64 @@ class GenieAcsServiceTest extends TestCase
     Http::assertSent(fn(Request $r) => str_contains($r->url(), '/devices/A%20B%2F1/tasks'));
   }
 
-  public function test_set_wifi_kirim_satu_task(): void
-  {
-    Http::fake(['acs.test:7557/devices/*' => Http::response('', 200)]);
-    $this->assertSame('selesai', $this->service()->setWifi(self::ID, ['ssid' => 'Rumah Budi', 'ssid5' => 'Rumah Budi-5G', 'password' => '12345678']));
+  private const DUA_PITA = ['1' => ['SSID' => 'A', 'KeyPassphrase' => 'satu2345'], '5' => ['SSID' => 'A-5G', 'KeyPassphrase' => 'lima2345']];
 
-    Http::assertSentCount(1);
-    Http::assertSent(function (Request $r) {
-      $body = json_decode($r->body(), true);
-      $this->assertSame('setParameterValues', $body['name']);
-      $this->assertEqualsCanonicalizing([
-        ['VirtualParameters.wifiSsid', 'Rumah Budi', 'xsd:string'],
-        ['VirtualParameters.wifiSsid5', 'Rumah Budi-5G', 'xsd:string'],
-        ['VirtualParameters.wifiPassword', '12345678', 'xsd:string'],
-      ], $body['parameterValues']);
-      return true;
-    });
+  public function test_nama_dan_password_satu_pita_ke_jalur_asli(): void
+  {
+    $ont = $this->ont(self::DUA_PITA);
+    $this->assertSame('selesai', $this->service()->setWifi($ont, ['ssid' => 'Rumah Budi', 'ssid5' => 'Rumah Budi-5G', 'password' => '12345678']));
+    $this->assertEqualsCanonicalizing([
+      [self::WLAN . '.1.SSID', 'Rumah Budi', 'xsd:string'],
+      [self::WLAN . '.5.SSID', 'Rumah Budi-5G', 'xsd:string'],
+      [self::WLAN . '.1.KeyPassphrase', '12345678', 'xsd:string'],
+    ], $this->nilaiTerkirim());
   }
 
-  public function test_refresh_minta_virtual_parameter(): void
+  public function test_password_5ghz_ke_jalur_presharedkey(): void
   {
-    Http::fake(['acs.test:7557/devices/*' => Http::response('', 200)]);
-    $this->service()->refresh(self::ID);
+    $ont = $this->ont(['1' => ['SSID' => 'A', 'KeyPassphrase' => 'x'], '5' => ['SSID' => 'A-5G', 'PreSharedKey' => ['1' => ['KeyPassphrase' => '']]]]);
+    $this->service()->setWifi($ont, ['password5' => 'abcdefgh']);
+    $this->assertSame([[self::WLAN . '.5.PreSharedKey.1.KeyPassphrase', 'abcdefgh', 'xsd:string']], $this->nilaiTerkirim());
+  }
+
+  public function test_password_semua_pita_lewat_wlanpassword(): void
+  {
+    // ONT single-band: password 2,4 GHz = semua WiFi → pakai WlanPassword supaya cadangannya ikut diperbarui
+    $this->service()->setWifi($this->ont(), ['password' => '12345678']);
+    $this->assertSame([['VirtualParameters.WlanPassword', '12345678', 'xsd:string']], $this->nilaiTerkirim());
+  }
+
+  public function test_password_keduanya_sama_lewat_wlanpassword(): void
+  {
+    $this->service()->setWifi($this->ont(self::DUA_PITA), ['ssid' => 'B', 'password' => '12345678', 'password5' => '12345678']);
+    $this->assertEqualsCanonicalizing([
+      [self::WLAN . '.1.SSID', 'B', 'xsd:string'],
+      ['VirtualParameters.WlanPassword', '12345678', 'xsd:string'],
+    ], $this->nilaiTerkirim());
+  }
+
+  public function test_jalur_tidak_ada_ditolak_tanpa_task(): void
+  {
+    $ont = $this->ont(); // single-band: tidak ada WLANConfiguration.5
+    try {
+      $this->service()->setWifi($ont, ['ssid5' => 'X-5G']);
+      $this->fail('Pita yang tidak ada harus ditolak');
+    } catch (\DomainException) {
+    }
+    Http::assertNotSent(fn(Request $r) => str_contains($r->url(), '/tasks'));
+  }
+
+  public function test_refresh_minta_vp_dan_jalur_wifi(): void
+  {
+    $ont = $this->ont(self::DUA_PITA);
+    $this->service()->refresh($ont);
     Http::assertSent(function (Request $r) {
+      if (!str_contains($r->url(), '/tasks')) return false;
       $body = json_decode($r->body(), true);
       $this->assertSame('getParameterValues', $body['name']);
-      foreach (['pppoeUsername', 'RXPower', 'getSerialNumber', 'WlanPassword', 'wifiSsid', 'wifiPassword', 'wifiSsid5', 'wifiPassword5'] as $vp) {
-        $this->assertContains("VirtualParameters.$vp", $body['parameterNames']);
+      foreach (['VirtualParameters.pppoeUsername', 'VirtualParameters.RXPower', 'VirtualParameters.getSerialNumber', 'VirtualParameters.WlanPassword',
+        self::WLAN . '.1.SSID', self::WLAN . '.1.KeyPassphrase', self::WLAN . '.5.SSID', self::WLAN . '.5.KeyPassphrase'] as $nama) {
+        $this->assertContains($nama, $body['parameterNames']);
       }
       return true;
     });
@@ -209,10 +290,10 @@ class GenieAcsServiceTest extends TestCase
 
   public function test_task_faulted_bukan_antri(): void
   {
-    Http::fake(fn() => new \GuzzleHttp\Promise\FulfilledPromise(new \GuzzleHttp\Psr7\Response(202, [], '{}', '1.1', 'Task faulted')));
+    $ont = $this->ont(null, fn() => new \GuzzleHttp\Promise\FulfilledPromise(new \GuzzleHttp\Psr7\Response(202, [], '{}', '1.1', 'Task faulted')));
     $this->expectException(GenieAcsTidakTerjangkau::class);
     $this->expectExceptionMessage('ONT menolak perintah');
-    $this->service()->setWifi(self::ID, ['ssid' => 'Rumah']);
+    $this->service()->setWifi($ont, ['ssid' => 'Rumah']);
   }
 
   public function test_task_202_antri_pakai_reason_asli(): void

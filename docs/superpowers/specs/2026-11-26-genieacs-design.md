@@ -157,3 +157,15 @@ Arti jawaban NBI: **200** = sudah dikerjakan ONT, sehingga muncul pesan berhasil
 - Teks persis pesan, susunan tabel daftar ONT, dan ikon.
 - Format tanggal "lapor X menit lalu" (pakai `diffForHumans` berlocale id).
 - Ambang warna redaman boleh disesuaikan setelah melihat data nyata.
+
+## Perubahan 26 Nov 2026: tanpa virtual parameter baru
+
+Atas permintaan pemilik, keempat virtual parameter WiFi baru (`wifiSsid`, `wifiPassword`, `wifiSsid5`, `wifiPassword5`) **dibatalkan**. Alasannya, provision `default` di GenieACS pemilik sudah memperbarui `WLANConfiguration.*.SSID` dan `KeyPassphrase` setiap jam. Sekarang:
+
+- **Membaca WiFi:** billing membaca langsung dari jalur TR-069 (TR-098 indeks 1 dan 5, atau TR-181 `SSID.1`/`SSID.2`). Kalau password kosong, billing memakai cadangan `WlanPassword`.
+- **Menulis nama WiFi, atau password satu pita saja:** ditulis langsung ke jalur yang memang ada di dokumen ONT tersebut.
+- **Menulis password yang sama untuk semua pita ONT:** dikirim lewat `VirtualParameters.WlanPassword` yang sudah ada, supaya cadangan `X_CT-COM_CardKey` ikut diperbarui.
+- **Pita yang jalurnya tidak dikenal:** ditolak (422). Form Ganti WiFi tidak tampil bila jalur 2,4 GHz tidak dikenal.
+- **Konsekuensi:**
+  - Perbedaan jalur antar-merek kini diatur di `GenieAcsService::JALUR_WIFI`, bukan di GenieACS.
+  - Mengganti password satu pita di ONT yang menyembunyikan password tidak memperbarui cadangan `WlanPassword`.

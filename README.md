@@ -17,7 +17,7 @@ aplikasi biling rt rw net sederhana
 
 ## GenieACS (ONT & WiFi pelanggan)
 
-Opsional. Isi di `.env`, lalu ikuti [docs/genieacs/README.md](docs/genieacs/README.md) (membuka NBI dan memasang 4 virtual parameter WiFi):
+Opsional. Isi di `.env`, lalu ikuti [docs/genieacs/README.md](docs/genieacs/README.md) (membuka NBI ke VM billing; GenieACS tidak perlu ditambah apa-apa):
 
 ```
 GENIEACS_URL=http://<ip-genieacs>:7557   # kosong = fitur ONT mati

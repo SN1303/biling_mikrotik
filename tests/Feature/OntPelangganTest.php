@@ -52,10 +52,11 @@ class OntPelangganTest extends TestCase
   }
 
   /** Pencarian device membalas ONT Rizal; task membalas $statusTask. */
-  private function fakeNbi(int $statusTask = 200, array $vp = []): void
+  /** $wlan = isi WLANConfiguration (lihat GenieAcsServiceTest::device); null = single-band bawaan. */
+  private function fakeNbi(int $statusTask = 200, ?array $wlan = null): void
   {
     Http::fake([
-      'acs.test:7557/devices/?*' => Http::response([GenieAcsServiceTest::device($vp)]),
+      'acs.test:7557/devices/?*' => Http::response([GenieAcsServiceTest::device([], 'ZTEGC1234567', 2, $wlan)]),
       'acs.test:7557/devices/*/tasks*' => Http::response('', $statusTask),
     ]);
   }
@@ -129,15 +130,16 @@ class OntPelangganTest extends TestCase
   public function test_keduanya_pakai_password_sama_untuk_5ghz(): void
   {
     $this->masukSebagai(1);
-    $this->fakeNbi(200, ['wifiSsid5' => 'RIZAL-NET-5G']);
+    $this->fakeNbi(200, ['1' => ['SSID' => 'RIZAL-NET', 'KeyPassphrase' => 'x'], '5' => ['SSID' => 'RIZAL-NET-5G', 'KeyPassphrase' => 'y']]);
+    $this->get($this->url())->assertSee('Keduanya');
     $this->postJson($this->url('wifi'), ['band' => 'keduanya', 'ssid' => 'Budi', 'ssid5' => 'Budi-5G', 'password' => '12345678'])->assertOk();
-    Http::assertSent(function ($r) {
+    $w = GenieAcsServiceTest::WLAN;
+    Http::assertSent(function ($r) use ($w) {
       if (!str_contains($r->url(), '/tasks')) return false;
       $this->assertEqualsCanonicalizing([
-        ['VirtualParameters.wifiSsid', 'Budi', 'xsd:string'],
-        ['VirtualParameters.wifiPassword', '12345678', 'xsd:string'],
-        ['VirtualParameters.wifiSsid5', 'Budi-5G', 'xsd:string'],
-        ['VirtualParameters.wifiPassword5', '12345678', 'xsd:string'],
+        ["$w.1.SSID", 'Budi', 'xsd:string'],
+        ["$w.5.SSID", 'Budi-5G', 'xsd:string'],
+        ['VirtualParameters.WlanPassword', '12345678', 'xsd:string'],
       ], json_decode($r->body(), true)['parameterValues']);
       return true;
     });
@@ -156,9 +158,9 @@ class OntPelangganTest extends TestCase
 
   public function test_ssid_tidak_terbaca_form_wifi_tidak_tampil_dan_ditolak(): void
   {
-    // ONT tanpa jalur WiFi yang dikenal: menulis akan "berhasil" palsu, jadi jangan izinkan
+    // ONT tanpa jalur WiFi yang dikenal (merek lain / data belum terbaca): jangan izinkan menulis
     $this->masukSebagai(1);
-    $this->fakeNbi(200, ['wifiSsid' => '']);
+    $this->fakeNbi(200, []);
     $this->get($this->url())->assertOk()->assertDontSee('Simpan WiFi')->assertSee('Reboot ONT');
     $this->postJson($this->url('wifi'), ['band' => '24', 'ssid' => 'Rumah'])->assertStatus(422);
     Http::assertNotSent(fn($r) => str_contains($r->url(), '/tasks') && str_contains($r->body(), 'setParameterValues'));

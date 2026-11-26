@@ -9,7 +9,7 @@
     $rx = $ont['rxPower'];
     $redaman = $rx >= -25 ? ['baik', 'success'] : ($rx >= -27 ? ['waspada', 'warning'] : ['buruk', 'danger']);
   }
-  $dualBand = $ont && $ont['wifi']['ssid5'] !== null;
+  $dualBand = $ont && $ont['dualBand'];
   $bisaHubungkan = Route::has('ont.hubungkan');
 @endphp
 
@@ -210,10 +210,10 @@
 @if ($ont)
 <div class="card mb-4">
   <div class="card-header"><h6 class="mb-0">Ganti WiFi</h6></div>
-  @if ($ont['wifi']['ssid'] === null)
-  {{-- Nama WiFi tidak terbaca = jalur WiFi ONT ini belum dikenal virtual parameter; menulis tidak akan sampai ke ONT --}}
+  @if (!$ont['jalurWifi']['ssid'])
+  {{-- Jalur WiFi ONT ini tidak dikenal (lihat GenieAcsService::JALUR_WIFI); menulis tidak akan sampai ke ONT --}}
   <div class="card-body">
-    <p class="text-muted">Nama WiFi ONT ini belum bisa dibaca, jadi belum bisa diganti dari billing. Pastikan virtual parameter WiFi sudah dipasang di GenieACS, lalu tekan Refresh.</p>
+    <p class="text-muted">Nama WiFi ONT ini belum bisa dibaca, jadi belum bisa diganti dari billing. Tekan Refresh; bila tetap begini, merek ONT ini memakai jalur WiFi yang belum dikenal.</p>
     <button type="button" id="btn-reboot" class="btn btn-outline-danger">
       <i class="mdi mdi-restart me-1"></i> Reboot ONT
     </button>

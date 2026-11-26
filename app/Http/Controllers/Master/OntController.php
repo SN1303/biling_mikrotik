@@ -52,7 +52,7 @@ class OntController extends Controller
 
   public function refresh(string $id): JsonResponse
   {
-    return $this->jalankan($id, 'refresh', fn(array $ont) => $this->acs->refresh($ont['id']), 'Data ONT diperbarui.');
+    return $this->jalankan($id, 'refresh', fn(array $ont) => $this->acs->refresh($ont), 'Data ONT diperbarui.');
   }
 
   public function reboot(string $id): JsonResponse
@@ -84,14 +84,11 @@ class OntController extends Controller
     }
 
     return $this->jalankan($id, 'ganti WiFi', function (array $ont, User $pelanggan) use ($nilai) {
-      // Nama WiFi yang tidak terbaca berarti jalur WiFi ONT ini belum dikenal virtual parameter:
-      // menulis akan tampak berhasil padahal ONT tidak berubah.
-      foreach (['ssid' => ['ssid', 'password'], 'ssid5' => ['ssid5', 'password5']] as $baca => $pita) {
-        if ($ont['wifi'][$baca] === null && array_intersect_key($nilai, array_flip($pita))) {
-          throw ValidationException::withMessages(['band' => 'WiFi ONT ini belum bisa dibaca, jadi belum bisa diganti dari billing.']);
-        }
+      try {
+        $status = $this->acs->setWifi($ont, $nilai);
+      } catch (\DomainException $e) { // jalur WiFi pita itu tidak dikenal di ONT ini
+        throw ValidationException::withMessages(['band' => $e->getMessage()]);
       }
-      $status = $this->acs->setWifi($ont['id'], $nilai);
       if ($status === 'selesai' && isset($nilai['ssid'])) {
         $pelanggan->user_mikrotik->update(['wifi_name' => $nilai['ssid']]);
       }
