@@ -16,6 +16,8 @@ class Kernel extends HttpKernel
   protected $middleware = [
     // \App\Http\Middleware\TrustHosts::class,
     \App\Http\Middleware\TrustProxies::class,
+    // Host remote web ONT ditangani penuh di sini, sebelum routing/sesi/CSRF billing
+    \App\Http\Middleware\OntRemoteProxy::class,
     \Illuminate\Http\Middleware\HandleCors::class,
     \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
     \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
