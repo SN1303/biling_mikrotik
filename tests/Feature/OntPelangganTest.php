@@ -200,13 +200,22 @@ class OntPelangganTest extends TestCase
     $this->masukSebagai(7);
     $this->fakeNbiRemote();
     Log::spy();
-    // Skema dan port mengikuti alamat billing yang sedang dipakai
+    // Tanpa skema: iframe ikut skema halaman (https di balik Cloudflare walau PHP melihat http). Port non-standar ikut.
     $url = $this->postJson('http://billing.test:8099' . $this->url('remote'))->assertOk()->json('url');
-    $this->assertStringStartsWith('http://ont.test:8099/_remote/mulai?tiket=', $url);
-    $url = $this->postJson('https://billing.test' . $this->url('remote'))->assertOk()->json('url');
-    $this->assertStringStartsWith('https://ont.test/_remote/mulai?tiket=', $url);
+    $this->assertStringStartsWith('//ont.test:8099/_remote/mulai?tiket=', $url);
+    $url = $this->postJson('http://billing.test' . $this->url('remote'))->assertOk()->json('url');
+    $this->assertStringStartsWith('//ont.test/_remote/mulai?tiket=', $url);
     Log::shouldHaveReceived('info')->withArgs(fn($pesan, $konteks = []) => $pesan === 'ONT remote'
       && ($konteks['ip'] ?? null) === '10.1.1.5' && !str_contains(json_encode($konteks), 'adm1n'))->twice();
+  }
+
+  public function test_iframe_remote_disandbox_tanpa_navigasi_atas(): void
+  {
+    // Web ONT (bisa dikendalikan pelanggan) tidak boleh bisa membelokkan halaman billing
+    $this->masukSebagai(4);
+    $this->fakeNbiRemote();
+    $this->get($this->url())->assertOk()->assertSee("sandbox: 'allow-scripts allow-forms allow-same-origin", false)
+      ->assertDontSee('allow-top-navigation', false);
   }
 
   public function test_remote_ditolak_kolektor(): void

@@ -167,6 +167,34 @@ class RemoteOntServiceTest extends TestCase
     $this->service()->buatTiket($this->staf, self::SID, $this->ont(GenieAcsServiceTest::device()));
   }
 
+  public static function ipBerbahaya(): array
+  {
+    return ['loopback' => ['127.0.0.1'], 'dengan port' => ['127.0.0.1:7557'], 'metadata' => ['169.254.169.254'],
+      'nama host' => ['acs.test'], 'nol' => ['0.0.0.0'], 'ipv6 loopback' => ['::1']];
+  }
+
+  #[\PHPUnit\Framework\Attributes\DataProvider('ipBerbahaya')]
+  public function test_ip_dari_device_divalidasi(string $ip): void
+  {
+    // IP dilaporkan device (bisa dikendalikan pelanggan): jangan sampai billing mem-proxy ke layanan lokalnya sendiri
+    $this->expectException(\DomainException::class);
+    $this->service()->buatTiket($this->staf, self::SID, $this->ont(self::deviceDenganIp($ip)));
+  }
+
+  public function test_ip_lan_dan_cgnat_diizinkan(): void
+  {
+    foreach (['10.116.202.236', '100.66.30.96', '192.168.1.1', '172.16.5.5'] as $ip) {
+      $this->assertNotEmpty($this->service()->buatTiket($this->staf, self::SID, ['id' => 'D', 'ip' => $ip]));
+    }
+  }
+
+  public function test_ip_berubah_jadi_berbahaya_sesi_berakhir(): void
+  {
+    $id = $this->sesiBaru([self::deviceDenganIp('127.0.0.1')]);
+    $this->travel(6)->minutes();
+    $this->assertNull($this->service()->sesi($id));
+  }
+
   public function test_aktif_butuh_remote_host_dan_genieacs(): void
   {
     $this->assertTrue($this->service()->aktif());

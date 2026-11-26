@@ -19,7 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
 class OntRemoteProxy
 {
   private const COOKIE = 'ont_remote';
-  private const HEADER_DITERUSKAN = ['Content-Type', 'User-Agent', 'Accept', 'Accept-Language', 'X-Requested-With'];
+  // Authorization: untuk ONT yang login lewat HTTP Basic/Digest (billing tidak memakainya di host ini)
+  private const HEADER_DITERUSKAN = ['Content-Type', 'User-Agent', 'Accept', 'Accept-Language', 'X-Requested-With', 'Authorization'];
   private const HEADER_DIBUANG = ['x-frame-options', 'content-security-policy', 'transfer-encoding', 'connection',
     'content-encoding', 'content-length', 'keep-alive', 'set-cookie'];
 
@@ -53,20 +54,25 @@ class OntRemoteProxy
 
   private function mulai(Request $request): Response
   {
-    $id = $this->remote->tukarTiket((string) $request->query('tiket'));
+    $tiket = $request->query('tiket');
+    $id = is_string($tiket) ? $this->remote->tukarTiket($tiket) : null;
     if (!$id) {
       return $this->halaman('Sesi remote berakhir', 'Tautan remote sudah kedaluwarsa. Buka lagi dari halaman ONT pelanggan di billing.', 403);
     }
+    // Strict: tetap terkirim di iframe dari billing (satu situs), tapi tidak dari tautan situs lain (CSRF ke ONT).
+    // Secure juga bila HTTPS-nya diakhiri Cloudflare (PHP sendiri melihat http).
+    $aman = $request->isSecure() || strtolower((string) $request->header('X-Forwarded-Proto')) === 'https';
     return redirect('/')->withCookie(new Cookie(self::COOKIE, Crypt::encryptString($id), 0, '/', null,
-      $request->isSecure(), true, false, Cookie::SAMESITE_LAX));
+      $aman, true, false, Cookie::SAMESITE_STRICT));
   }
 
   private function teruskan(Request $request, string $ip): Response
   {
     $asal = "http://$ip";
     $header = array_filter(array_map(fn($h) => $request->headers->get($h), array_combine(self::HEADER_DITERUSKAN, self::HEADER_DITERUSKAN)));
-    $cookieOnt = collect($request->cookies->all())->except(self::COOKIE)
-      ->map(fn($v, $k) => "$k=$v")->implode('; ');
+    // Header Cookie mentah (bukan $_COOKIE yang sudah di-url-decode PHP), tanpa cookie remote
+    $cookieOnt = collect(explode(';', (string) $request->headers->get('Cookie')))->map(fn($c) => trim($c))
+      ->reject(fn($c) => $c === '' || str_starts_with($c, self::COOKIE . '='))->implode('; ');
     if ($cookieOnt !== '') {
       $header['Cookie'] = $cookieOnt;
     }
@@ -79,11 +85,9 @@ class OntRemoteProxy
       $http = $http->withBody($isi, $request->headers->get('Content-Type', 'application/x-www-form-urlencoded'));
     }
 
-    // Hanya path + query yang diteruskan: request berbentuk absolut ("GET http://lain/…")
-    // tidak boleh bisa mengganti host tujuan
-    $uri = $request->getRequestUri();
-    $tujuan = $asal . '/' . ltrim((string) parse_url($uri, PHP_URL_PATH), '/')
-      . (($q = parse_url($uri, PHP_URL_QUERY)) !== null ? "?$q" : '');
+    // Host tujuan selalu IP sesi; dari request hanya path + query mentah yang diambil
+    $q = (string) $request->server->get('QUERY_STRING');
+    $tujuan = $asal . '/' . ltrim($request->getPathInfo(), '/') . ($q !== '' ? "?$q" : '');
 
     try {
       $ont = $http->send($request->getMethod(), $tujuan);
@@ -98,12 +102,24 @@ class OntRemoteProxy
       }
       if (strtolower($nama) === 'location') {
         // Alamat absolut ke IP ONT dijadikan relatif, supaya tetap di host remote
-        $nilai = array_map(fn($v) => preg_replace('#^https?://' . preg_quote($ip, '#') . '(:\d+)?#i', '', $v) ?: '/', $nilai);
+        $nilai = array_map(fn($v) => preg_replace('#^https?://' . preg_quote($ip, '#') . '(:\d+)?(?=[/?\#]|$)#i', '', $v) ?: '/', $nilai);
       }
       $balasan->headers->set($nama, $nilai);
     }
-    foreach ($ont->headers()['Set-Cookie'] ?? $ont->headers()['set-cookie'] ?? [] as $c) {
-      $balasan->headers->setCookie(Cookie::fromString(preg_replace('/;\s*domain=[^;]*/i', '', $c)));
+    foreach ($ont->headers() as $nama => $nilai) {
+      if (strtolower($nama) !== 'set-cookie') {
+        continue;
+      }
+      foreach ($nilai as $c) {
+        try {
+          $cookie = Cookie::fromString(preg_replace('/;\s*domain=[^;]*/i', '', $c));
+        } catch (\InvalidArgumentException) {
+          continue; // Set-Cookie rusak dari ONT: lewati, jangan jadi error 500
+        }
+        if ($cookie->getName() !== self::COOKIE) { // ONT tidak boleh menimpa cookie sesi remote
+          $balasan->headers->setCookie($cookie);
+        }
+      }
     }
     return $balasan;
   }

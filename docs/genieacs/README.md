@@ -94,6 +94,8 @@ Kartu **Remote ONT** di halaman ONT pelanggan menampilkan web admin ONT di dalam
 
 Batasan:
 - Satu browser hanya bisa me-remote satu ONT pada satu waktu.
+- Upload file ke ONT (firmware, restore konfigurasi) belum didukung lewat remote.
+- IP ONT harus IPv4 LAN atau CGNAT (10.x, 172.16–31.x, 192.168.x, 100.64–127.x). IP loopback, link-local, atau nama host dari GenieACS ditolak, supaya billing tidak bisa diarahkan ke layanannya sendiri.
 - Sesi remote berakhir setelah 2 jam, saat staf logout, atau saat akunnya dinonaktifkan.
 - Halaman ONT yang di dalam JavaScript-nya melompat langsung ke `http://<IP ONT>/…` akan keluar dari kotak remote. Kalau ketemu, catat merek dan halamannya.
 

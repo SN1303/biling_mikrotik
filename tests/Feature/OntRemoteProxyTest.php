@@ -58,7 +58,7 @@ class OntRemoteProxyTest extends TestCase
     $cookie = collect($res->headers->getCookies())->firstWhere(fn($c) => $c->getName() === 'ont_remote');
     $this->assertNotNull($cookie);
     $this->assertTrue($cookie->isHttpOnly());
-    $this->assertSame('lax', $cookie->getSameSite());
+    $this->assertSame('strict', $cookie->getSameSite());
   }
 
   public function test_tiket_tidak_sah_halaman_berakhir(): void
@@ -106,7 +106,7 @@ class OntRemoteProxyTest extends TestCase
   {
     $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('ok')]);
     $this->call('POST', 'http://ont.test/login.cgi', [], ['ont_remote' => $cookie, 'SID' => 'abc'], [],
-      ['CONTENT_TYPE' => 'application/x-www-form-urlencoded'], 'Username=admin&Password=x')->assertOk();
+      ['CONTENT_TYPE' => 'application/x-www-form-urlencoded', 'HTTP_COOKIE' => "ont_remote=$cookie; SID=abc"], 'Username=admin&Password=x')->assertOk();
     Http::assertSent(fn(Request $r) => $r->method() === 'POST' && $r->url() === 'http://10.1.1.5/login.cgi'
       && $r->body() === 'Username=admin&Password=x'
       && str_contains($r->header('Cookie')[0] ?? '', 'SID=abc')
@@ -150,6 +150,60 @@ class OntRemoteProxyTest extends TestCase
     $this->withUnencryptedCookie('ont_remote', $c1)->get('http://ont.test/b')->assertOk();
     Http::assertSent(fn(Request $r) => $r->url() === 'http://10.1.1.6/a');
     Http::assertSent(fn(Request $r) => $r->url() === 'http://10.1.1.5/b');
+  }
+
+  public function test_cookie_ont_diteruskan_mentah(): void
+  {
+    // PHP meng-url-decode $_COOKIE; ONT harus menerima nilai persis seperti yang ia set
+    $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('ok')]);
+    $this->call('GET', 'http://ont.test/status.asp', [], ['ont_remote' => $cookie], [],
+      ['HTTP_COOKIE' => "SID=ab+c%3D; ont_remote=$cookie; lang=id"])->assertOk();
+    Http::assertSent(fn(Request $r) => str_contains($r->url(), '/status.asp')
+      && ($r->header('Cookie')[0] ?? '') === 'SID=ab+c%3D; lang=id');
+  }
+
+  public function test_authorization_diteruskan(): void
+  {
+    $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('ok')]);
+    $this->withUnencryptedCookie('ont_remote', $cookie)->withHeader('Authorization', 'Basic YWRtaW46eA==')->get('http://ont.test/')->assertOk();
+    Http::assertSent(fn(Request $r) => str_contains($r->url(), '10.1.1.5') && $r->hasHeader('Authorization', 'Basic YWRtaW46eA=='));
+  }
+
+  public function test_set_cookie_rusak_atau_ont_remote_dilewati(): void
+  {
+    $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('ok', 200, [
+      'SET-COOKIE' => ['=tanpanama', 'a b=spasi', 'ont_remote=dibajak', 'SID=baik; Path=/'],
+    ])]);
+    $res = $this->withUnencryptedCookie('ont_remote', $cookie)->get('http://ont.test/')->assertOk();
+    $nama = collect($res->headers->getCookies())->map->getName()->all();
+    $this->assertSame(['SID'], $nama);
+  }
+
+  public function test_path_dengan_titik_dua_tetap_utuh(): void
+  {
+    $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('ok')]);
+    $this->withUnencryptedCookie('ont_remote', $cookie)->get('http://ont.test/a:80/b?x=1')->assertOk();
+    Http::assertSent(fn(Request $r) => $r->url() === 'http://10.1.1.5/a:80/b?x=1');
+  }
+
+  public function test_location_ip_lain_tidak_terpotong(): void
+  {
+    $cookie = $this->cookie('10.1.1.5', ['http://10.1.1.5/*' => Http::response('', 302, ['Location' => 'http://10.1.1.55/x'])]);
+    $res = $this->withUnencryptedCookie('ont_remote', $cookie)->get('http://ont.test/');
+    $this->assertSame('http://10.1.1.55/x', $res->headers->get('Location'));
+  }
+
+  public function test_tiket_array_bukan_500(): void
+  {
+    $this->get('http://ont.test/_remote/mulai?tiket[]=x')->assertForbidden();
+  }
+
+  public function test_cookie_strict_dan_secure_di_belakang_https(): void
+  {
+    $res = $this->withHeader('X-Forwarded-Proto', 'https')->get('http://ont.test/_remote/mulai?tiket=' . urlencode($this->tiket()));
+    $c = collect($res->headers->getCookies())->firstWhere(fn($c) => $c->getName() === 'ont_remote');
+    $this->assertSame('strict', $c->getSameSite());
+    $this->assertTrue($c->isSecure());
   }
 
   public function test_host_lain_tidak_terpengaruh(): void

@@ -120,7 +120,9 @@
       $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Membuka...');
       $.ajax({ url: @json($ont ? route('ont.remote', $id) : ''), method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
         .done(function (res) {
-          $('#remote-bingkai').html('').append($('<iframe>', { src: res.url, title: 'Web ONT', class: 'remote-iframe' }));
+          // sandbox tanpa izin navigasi atas: web ONT tidak bisa membelokkan halaman billing
+          $('#remote-bingkai').html('').append($('<iframe>', { src: res.url, title: 'Web ONT', class: 'remote-iframe',
+            sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads' }));
           $('#remote-area').removeClass('d-none');
         })
         .fail(function (xhr) { toastr.error((xhr.responseJSON || {}).message || 'Gagal membuka remote ONT.'); })

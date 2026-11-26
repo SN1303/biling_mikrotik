@@ -36,6 +36,9 @@ class RemoteOntService
     if (empty($ont['ip'])) {
       throw new \DomainException('IP ONT belum terbaca di GenieACS (IPTR069 / pppoeIP kosong).');
     }
+    if (!self::ipAman($ont['ip'])) {
+      throw new \DomainException("IP ONT dari GenieACS tidak valid untuk remote ({$ont['ip']}).");
+    }
     $id = Str::random(40);
     Cache::put("ont-remote:$id", [
       'user' => $staf->id,
@@ -65,6 +68,17 @@ class RemoteOntService
     return Cache::has("ont-remote:{$isi['id']}") ? $isi['id'] : null;
   }
 
+  /**
+   * IP dilaporkan oleh device, yang bisa dikendalikan pelanggan. Hanya IPv4 polos yang
+   * boleh, dan bukan loopback, 0.0.0.0/8, link-local (169.254, metadata cloud) atau rentang
+   * cadangan lain: billing tidak boleh mem-proxy ke layanannya sendiri. LAN (10/8, 192.168/16,
+   * 172.16/12) dan CGNAT 100.64/10 tetap boleh.
+   */
+  private static function ipAman(string $ip): bool
+  {
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_RES_RANGE) !== false;
+  }
+
   /** @return array{ip:string,user:int}|null */
   public function sesi(?string $id): ?array
   {
@@ -84,7 +98,7 @@ class RemoteOntService
     if (now()->timestamp - $data['cek'] >= self::CEK_IP) {
       try {
         $ont = $this->acs->devices(['_id' => $data['device']])[0] ?? null;
-        if (!$ont || empty($ont['ip'])) {
+        if (!$ont || empty($ont['ip']) || !self::ipAman($ont['ip'])) {
           Cache::forget("ont-remote:$id");
           return null;
         }

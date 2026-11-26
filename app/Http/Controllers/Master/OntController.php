@@ -51,9 +51,10 @@ class OntController extends Controller
       'sn' => $hasil['ont']['sn'], 'ip' => $hasil['ont']['ip'],
     ]);
 
-    // Skema dan port mengikuti alamat billing saat ini (https lewat Cloudflare, http:8099 saat uji lokal)
+    // Tanpa skema ("//host/…"): iframe mengikuti skema halaman billing. Di balik Cloudflare PHP
+    // melihat http walau browser memakai https; URL berskema http akan diblokir (mixed content).
     $port = in_array($request->getPort(), [80, 443], true) ? '' : ':' . $request->getPort();
-    $url = $request->getScheme() . '://' . config('services.genieacs.remote_host') . $port . '/_remote/mulai?tiket=' . urlencode($tiket);
+    $url = '//' . config('services.genieacs.remote_host') . $port . '/_remote/mulai?tiket=' . urlencode($tiket);
     return response()->json(['url' => $url]);
   }
 
