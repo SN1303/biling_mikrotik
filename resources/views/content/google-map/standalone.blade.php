@@ -878,7 +878,14 @@
   body.dark-mode .leaflet-popup-content-wrapper { background: #2b2c40 !important; color: #d0d0d0 !important; }
   body.dark-mode .leaflet-popup-tip { background: #2b2c40 !important; }
   body.dark-mode .leaflet-popup-content .table { color: #d0d0d0 !important; }
-  body.dark-mode .leaflet-popup-content .text-muted { color: #8888a0 !important; }
+  body.dark-mode .leaflet-popup-content .text-muted { color: #a3a4bb !important; }
+
+  /* Latar popup peta ditentukan peta (putih, atau gelap saat "Malam"), bukan tema aplikasi.
+     Variabel warna tema dikunci ulang di dalam popup, supaya tema gelap aplikasi tidak
+     membuat teks putih di atas popup putih (dan sebaliknya). */
+  .leaflet-popup-content { --mryes-text-primary: #384551; --bs-heading-color: #384551; --bs-body-color: #566a7f; --bs-secondary-color: #6d7a89; }
+  body.dark-mode .leaflet-popup-content { --mryes-text-primary: #d0d0d0; --bs-heading-color: #e4e4ee; --bs-body-color: #d0d0d0; --bs-secondary-color: #a3a4bb; }
+  .leaflet-container a.popup-btn { color: #fff; text-decoration: none; }
   body.dark-mode .popup-btn-edit { background: #3b3c56; color: #8be9fd; border-color: #555577; }
   body.dark-mode .popup-btn-delete { background: #3b3c56; color: #ff6b81; border-color: #555577; }
 
