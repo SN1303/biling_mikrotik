@@ -63,20 +63,27 @@ Kalau `GENIEACS_URL` kosong, menu dan tombol ONT tidak tampil, dan route-nya men
 
 Karena merek ONT campur, letak data per merek berbeda. Perbedaan ini ditangani di GenieACS lewat **virtual parameter**, sehingga aplikasi selalu membaca nama yang sama:
 
-| Virtual parameter | Isi | Tulis? |
-|---|---|---|
-| `VirtualParameters.pppoeUsername` | Username PPPoE dari WAN ONT (TR-098 `InternetGatewayDevice...WANPPPConnection.*.Username` atau TR-181 `Device.PPP.Interface.*.Username`) | tidak |
-| `VirtualParameters.rxPower` | Redaman Rx dalam dBm, sudah dinormalkan dari jalur khusus vendor (ZTE `X_ZTE-COM_WANPONInterfaceConfig`, Huawei `X_GponInterafceConfig`, FiberHome `X_FH_GponInterfaceConfig`, TR-181 `Device.Optical.Interface.*`) | tidak |
-| `VirtualParameters.wifiSsid` | SSID 2,4 GHz (TR-098 `WLANConfiguration.1`, TR-181 `Device.WiFi.SSID.1`) | ya |
-| `VirtualParameters.wifiPassword` | Password 2,4 GHz (jalur `PreSharedKey.1.KeyPassphrase` atau `KeyPassphrase`, sesuai vendor) | ya |
-| `VirtualParameters.wifiSsid5` | SSID 5 GHz (TR-098 umumnya `WLANConfiguration.5`, TR-181 `Device.WiFi.SSID.2`); kosong bila ONT hanya single-band | ya |
-| `VirtualParameters.wifiPassword5` | Password 5 GHz | ya |
+GenieACS pemilik (`172.1.10.86`) sudah punya 33 virtual parameter (paket R-Tech dan buatan sendiri), dibaca pada 26 Nov 2026. **Yang sudah ada dipakai apa adanya dan tidak diubah.** Aplikasi hanya menambah 4 virtual parameter WiFi per pita, karena `WlanPassword` yang ada menulis ke *semua* WLAN sekaligus dan belum ada virtual parameter SSID.
 
-Skrip keenamnya disimpan di repo, di `docs/genieacs/virtual-parameters/*.js`, beserta panduan singkat cara memasangnya di GenieACS (Admin → Virtual Parameters). Satuan redaman berbeda antarmodel, jadi skrip `rxPower` **wajib dikalibrasi** dengan data ONT sungguhan saat GenieACS sudah berjalan. Ini langkah yang sudah direncanakan, bukan risiko tersembunyi.
+| Virtual parameter | Asal | Isi | Tulis? |
+|---|---|---|---|
+| `VirtualParameters.pppoeUsername` | sudah ada | Username PPPoE; koneksi bridge sudah dilewati | (tidak dipakai menulis) |
+| `VirtualParameters.RXPower` | sudah ada | Redaman Rx sebagai string dBm (misalnya `"-19.8"`) atau `"N/A"`; konversi µW ke dBm untuk ZTE, Huawei, FiberHome, CMCC, CT-COM, CU, ALU sudah ditangani | tidak |
+| `VirtualParameters.getSerialNumber` | sudah ada | SN seperti tertera di label ONT (SN heksa diubah ke teks, misalnya `ZTEG…`). **Nilai inilah yang disimpan di `ont_sn` dan dipakai untuk mencari** | tidak |
+| `VirtualParameters.wifiSsid` | baru | SSID 2,4 GHz (TR-098 `LANDevice.1.WLANConfiguration.1.SSID`, TR-181 `Device.WiFi.SSID.1.SSID`) | ya |
+| `VirtualParameters.wifiPassword` | baru | Password 2,4 GHz (`WLANConfiguration.1.KeyPassphrase` / `.PreSharedKey.1.KeyPassphrase`, TR-181 `Device.WiFi.AccessPoint.1.Security.KeyPassphrase`) | ya |
+| `VirtualParameters.wifiSsid5` | baru | SSID 5 GHz (TR-098 `WLANConfiguration.5`, TR-181 `Device.WiFi.SSID.2`); kosong bila single-band | ya |
+| `VirtualParameters.wifiPassword5` | baru | Password 5 GHz (indeks 5 / AccessPoint.2) | ya |
+
+Bila password per pita kosong (ZTE dan beberapa merek menyembunyikannya), aplikasi menampilkan nilai `VirtualParameters.WlanPassword` yang sudah ada. Nilai itu memakai cadangan `X_CT-COM_CardKey`, jadi password yang pernah diganti lewat GenieACS tetap terbaca. Kalau nilai ini juga kosong, aplikasi menampilkan "tidak bisa dibaca (dilindungi ONT)".
+
+**Catatan jaringan:** dari jaringan lokal, port 7557 (NBI) belum bisa dijangkau; hanya UI port 3000 yang terbuka. Panduan pemasangan memuat langkah membuka NBI (`GENIEACS_NBI_INTERFACE=0.0.0.0` di konfigurasi GenieACS) dan membatasinya hanya untuk IP VM billing.
+
+Skrip **4 virtual parameter WiFi baru** disimpan di repo (`docs/genieacs/virtual-parameters/*.js`), beserta panduan cara memasangnya (Admin → Virtual Parameters). Virtual parameter yang sudah ada tidak disalin dan tidak diubah.
 
 ### Mencari ONT milik pelanggan
 
-1. Jika `lamtim_user_mikrotik_details.ont_sn` terisi, cari dengan `{"_deviceId._SerialNumber": ont_sn}`.
+1. Jika `lamtim_user_mikrotik_details.ont_sn` terisi, cari dengan `{"VirtualParameters.getSerialNumber": ont_sn}`, dan bila kosong ulangi dengan `{"_deviceId._SerialNumber": ont_sn}` (SN heksa).
 2. Jika tidak, cari dengan `{"VirtualParameters.pppoeUsername": namaMikrotikUser}`. Jika ketemu tepat satu, simpan Serial Number-nya ke `ont_sn` (terhubung otomatis).
 3. Jika tidak ketemu: tampilkan "ONT belum terhubung" dengan tautan ke daftar ONT belum terhubung.
 
@@ -84,13 +91,13 @@ Saat ini kolom `ont_sn` kosong untuk 37 dari 37 pelanggan, dan semuanya punya us
 
 ### Daftar ONT belum terhubung
 
-Ambil semua device dari NBI dengan proyeksi seperlunya (id, SN, model, waktu terakhir lapor, `pppoeUsername`, `rxPower`). Buang yang SN-nya sudah ada di `ont_sn` atau yang `pppoeUsername`-nya cocok dengan pelanggan. Sisanya ditampilkan dalam tabel, dengan aksi **Hubungkan** (pilih pelanggan, lalu simpan SN ke `ont_sn` pelanggan itu). Pelanggan yang sudah punya ONT lain akan ditimpa setelah konfirmasi.
+Ambil semua device dari NBI dengan proyeksi seperlunya (id, SN, model, waktu terakhir lapor, `pppoeUsername`, `RXPower`). Buang yang SN-nya sudah ada di `ont_sn` atau yang `pppoeUsername`-nya cocok dengan pelanggan. Sisanya ditampilkan dalam tabel, dengan aksi **Hubungkan** (pilih pelanggan, lalu simpan SN ke `ont_sn` pelanggan itu). Pelanggan yang sudah punya ONT lain akan ditimpa setelah konfirmasi.
 
 ### Aksi ke ONT
 
 Semua aksi memakai `POST /devices/{id}/tasks?timeout=3000&connection_request`:
 
-- **Refresh:** task `getParameterValues` untuk keenam virtual parameter dan `_lastInform`.
+- **Refresh:** task `getParameterValues` untuk virtual parameter `pppoeUsername`, `RXPower`, `getSerialNumber`, `WlanPassword`, dan keempat virtual parameter WiFi baru, dan `_lastInform`.
 - **Reboot:** task `reboot`.
 - **Ganti WiFi:** pengguna memilih pita: **2,4 GHz**, **5 GHz**, atau **keduanya**. Pilihan 5 GHz dan "keduanya" hanya muncul bila `wifiSsid5` ONT itu tidak kosong (ONT dual-band). Nama dan password boleh diisi salah satu atau dua-duanya; kolom yang kosong berarti tidak diubah. Untuk "keduanya", nama 5 GHz diisi otomatis dengan akhiran `-5G` (masih bisa diedit), dan passwordnya sama. Semua nilai dikirim dalam satu task `setParameterValues` ke virtual parameter yang sesuai. Validasinya: SSID 1–32 karakter; password WPA 8–63 karakter.
 
@@ -135,7 +142,7 @@ Arti jawaban NBI: **200** = sudah dikerjakan ONT, sehingga muncul pesan berhasil
 ### Pengujian
 
 - **Tes fitur dengan `Http::fake`:** pencarian lewat SN dan lewat PPPoE (termasuk penyimpanan SN otomatis); 200 vs 202 vs koneksi gagal; validasi WiFi; hak akses (kolektor dan bendahara ditolak); daftar belum terhubung tidak memuat ONT milik pelanggan; aksi Hubungkan menyimpan `ont_sn`.
-- **Setelah GenieACS terpasang:** uji pada 1–2 ONT sungguhan per merek, lalu kalibrasi skrip `rxPower`.
+- **Setelah GenieACS terpasang:** uji pada 1–2 ONT sungguhan per merek, lalu cocokkan redaman dengan yang tertera di halaman web ONT.
 
 ## Keputusan kecil (diputuskan Claude, boleh dikoreksi)
 
