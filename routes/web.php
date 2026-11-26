@@ -41,6 +41,7 @@ Route::middleware(['auth', 'role:1,2,3,4,6,7'])->group(function () {
     require __DIR__ . '/modules/google-map.php';
     require __DIR__ . '/modules/mapping.php';
     require __DIR__ . '/modules/area.php';
+    require __DIR__ . '/modules/ont.php';
   });
 
   // Admin + Teknisi + Bendahara + Kolektor + Teknisi-Kolektor (role 1,2,3,4,6,7) — pelanggan
