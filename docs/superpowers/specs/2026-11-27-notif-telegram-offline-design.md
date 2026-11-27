@@ -97,8 +97,9 @@ Status MikroTik terakhir (terjangkau atau tidak) disimpan di cache.
 - **`ppp:notifikasi`, tiap menit:**
   1. Kumpulkan pelanggan dengan `ppp_online=0`, `ppp_dikabari=0`, `ppp_offline_sejak ≤ now − jeda`, dan memenuhi syarat: `users.isActive=1`, `statusIsolir=0`, `ppp_secret_nonaktif=0`. Pencocokan memakai `namaMikrotikUser` + `idMikrotik`, sama dengan pola controller peta.
   2. Kumpulkan pelanggan `ppp_online=1` yang `ppp_dikabari=1`.
-  3. Bila ada isinya, susun **satu pesan** (dipecah bila lebih dari 4096 karakter): blok 🔴 per ODP (ODP yang lewat ambang diberi judul ⚠️), lalu blok 🟢.
-  4. Kirim lewat `sendMessage`. **Hanya bila terkirim**, tandai `ppp_dikabari` (offline → 1; online → 0, dan `ppp_offline_sejak` dikosongkan). Bila gagal, dicoba lagi menit berikutnya.
+  3. Sebelum menyusun pesan offline, cek `/ppp/secret` di MikroTik untuk pelanggan di daftar. Yang ternyata `disabled` diberi `ppp_secret_nonaktif=1` lalu dibuang dari pesan. Ini perlu karena pemilik mengisolir dengan **menonaktifkan secret dan menendang sesi langsung dari Winbox**, sehingga laporan `down` datang tanpa billing tahu secret-nya nonaktif. Kalau MikroTik tidak terjangkau saat itu, pengecekan dilewati.
+  4. Bila ada isinya, susun **satu pesan** (dipecah bila lebih dari 4096 karakter): blok 🔴 per ODP (ODP yang lewat ambang diberi judul ⚠️), lalu blok 🟢.
+  5. Kirim lewat `sendMessage`. **Hanya bila terkirim**, tandai `ppp_dikabari` (offline → 1; online → 0, dan `ppp_offline_sejak` dikosongkan). Bila gagal, dicoba lagi menit berikutnya.
 - **`ppp:cocokkan`, tiap 10 menit**, per MikroTik aktif:
   - Ambil `/ppp/active` dan `/ppp/secret`.
   - Pelanggan aktif di MikroTik tapi tercatat offline → online. Pelanggan tidak aktif tapi tercatat online → offline sejak sekarang.
