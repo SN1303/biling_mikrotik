@@ -16,8 +16,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('tagihan:generate')->monthlyOn(1, '00:10')->withoutOverlapping();
 
         // Notifikasi Telegram pelanggan PPPoE offline (lihat docs/superpowers/specs/2026-11-27-notif-telegram-offline-design.md)
-        $schedule->command('ppp:notifikasi')->everyMinute()->withoutOverlapping();
-        $schedule->command('ppp:cocokkan')->everyTenMinutes()->withoutOverlapping();
+        // Kunci tumpang tindih singkat: proses yang mati di tengah jalan tidak memblokir notifikasi 24 jam
+        $schedule->command('ppp:notifikasi')->everyMinute()->withoutOverlapping(5);
+        $schedule->command('ppp:cocokkan')->everyTenMinutes()->withoutOverlapping(15);
     }
 
     /**

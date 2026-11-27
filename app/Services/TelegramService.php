@@ -8,31 +8,37 @@ use Illuminate\Support\Facades\Log;
 /** Kirim pesan teks ke satu chat Telegram (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID). */
 class TelegramService
 {
-  private const BATAS = 4096; // batas panjang satu pesan Telegram
+  // Batas Telegram 4096 dihitung dalam satuan UTF-16 (emoji = 2); 4000 karakter memberi ruang
+  private const BATAS = 4000;
 
   public function aktif(): bool
   {
     return (string) config('services.telegram.token') !== '' && (string) config('services.telegram.chat_id') !== '';
   }
 
-  /** True hanya bila semua bagian terkirim. Tidak pernah melempar exception. */
+  /**
+   * True bila bagian pertama terkirim: bagian berikut yang gagal hanya dicatat di log, supaya
+   * pemanggil tidak mengirim ulang bagian yang sudah sampai tiap menit. Tidak pernah melempar exception.
+   */
   public function kirim(string $teks): bool
   {
     if (!$this->aktif()) {
       return false;
     }
-    $url = 'https://api.telegram.org/bot' . config('services.telegram.token') . '/sendMessage';
+    $token = (string) config('services.telegram.token');
+    $url = "https://api.telegram.org/bot$token/sendMessage";
 
-    foreach ($this->pecah($teks) as $bagian) {
+    foreach ($this->pecah($teks) as $ke => $bagian) {
       try {
         $res = Http::asForm()->timeout(10)->post($url, ['chat_id' => (string) config('services.telegram.chat_id'), 'text' => $bagian]);
-        if (!$res->successful() || !$res->json('ok')) {
-          Log::warning('Telegram menolak pesan', ['status' => $res->status(), 'keterangan' => $res->json('description')]);
-          return false;
-        }
+        $gagal = !$res->successful() || !$res->json('ok') ? 'Telegram menolak pesan: ' . $res->json('description') : null;
       } catch (\Throwable $e) {
-        Log::warning('Telegram tidak terjangkau: ' . $e->getMessage());
-        return false;
+        // Pesan exception memuat URL berisi token bot: jangan sampai masuk log
+        $gagal = 'Telegram tidak terjangkau: ' . str_replace($token, '***', $e->getMessage());
+      }
+      if ($gagal) {
+        Log::warning($gagal, ['bagian' => $ke + 1]);
+        return $ke > 0;
       }
     }
     return true;

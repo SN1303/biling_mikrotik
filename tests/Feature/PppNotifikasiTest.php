@@ -24,6 +24,8 @@ class PppNotifikasiTest extends TestCase
   public static array|\RuntimeException $secret = [];
   /** @var list<array{0:array,1:int}> antrean balasan Telegram; kosong = selalu ok */
   public static array $telegram = [];
+  /** @var list<string> username yang sedang aktif di MikroTik tiruan */
+  public static array $aktif = [];
 
   protected function setUp(): void
   {
@@ -33,11 +35,18 @@ class PppNotifikasiTest extends TestCase
       'services.ppp_notif.jeda_menit' => 10, 'services.ppp_notif.ambang_massal' => 3]);
     self::$telegram = [];
     Http::fake(['api.telegram.org/*' => function () {
-      [$isi, $kode] = array_shift(self::$telegram) ?? [['ok' => true], 200];
+      [$isi, $kode, $samping] = (array_shift(self::$telegram) ?? [['ok' => true], 200]) + [2 => null];
+      if ($samping) $samping();
       return Http::response($isi, $kode);
     }]);
     self::$secret = [];
+    self::$aktif = [];
     app()->instance(MikrotikPpp::class, new class extends MikrotikPpp {
+      public function aktif(int $idMikrotik): array
+      {
+        if (PppNotifikasiTest::$secret instanceof \RuntimeException) throw PppNotifikasiTest::$secret;
+        return PppNotifikasiTest::$aktif;
+      }
       public function secretNonaktif(int $idMikrotik): array
       {
         if (PppNotifikasiTest::$secret instanceof \RuntimeException) throw PppNotifikasiTest::$secret;
@@ -213,6 +222,45 @@ class PppNotifikasiTest extends TestCase
     $this->assertSame(0, (int) $this->kol('RIZAL', 'ppp_secret_nonaktif'));
   }
 
+  public function test_ternyata_aktif_di_mikrotik_tidak_dilaporkan(): void
+  {
+    // Laporan "up" hilang (billing restart / 429): sebelum mengirim, cek /ppp/active
+    self::$aktif = ['rizal@tj'];
+    $this->offline('RIZAL', 20);
+    $this->offline('BAGOS', 20);
+    $teks = $this->jalankan();
+    $this->assertStringNotContainsString('RIZAL', $teks);
+    $this->assertSame(1, (int) $this->kol('RIZAL', 'ppp_online'));
+    $this->assertNull($this->kol('RIZAL', 'ppp_offline_sejak'));
+  }
+
+  public function test_up_datang_saat_mengirim_tidak_ditandai_dikabari(): void
+  {
+    $this->offline('RIZAL', 20);
+    $id = $this->p['RIZAL'];
+    self::$telegram = [[['ok' => true], 200, fn() => DB::table('lamtim_user_mikrotik_details')->where('id', $id)->update(['ppp_online' => 1, 'ppp_offline_sejak' => null])]];
+    $this->assertNotNull($this->jalankan());
+    $this->assertSame(0, (int) $this->kol('RIZAL', 'ppp_dikabari'));
+  }
+
+  public function test_down_datang_saat_mengirim_pulih_tidak_direset(): void
+  {
+    DB::table('lamtim_user_mikrotik_details')->where('id', $this->p['RIZAL'])
+      ->update(['ppp_online' => 1, 'ppp_dikabari' => 1, 'ppp_offline_sejak' => now()->subMinutes(35)]);
+    $id = $this->p['RIZAL'];
+    self::$telegram = [[['ok' => true], 200, fn() => DB::table('lamtim_user_mikrotik_details')->where('id', $id)->update(['ppp_online' => 0])]];
+    $this->assertNotNull($this->jalankan());
+    $this->assertSame(1, (int) $this->kol('RIZAL', 'ppp_dikabari'));
+    $this->assertNotNull($this->kol('RIZAL', 'ppp_offline_sejak'));
+  }
+
+  public function test_jadwal_kunci_tumpang_tindih_singkat(): void
+  {
+    $jadwal = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events());
+    $menit = fn($cmd) => $jadwal->first(fn($e) => str_contains($e->command ?? '', $cmd))->expiresAt;
+    $this->assertSame(5, $menit('ppp:notifikasi'));
+    $this->assertSame(15, $menit('ppp:cocokkan'));
+  }
   public function test_command_jalan(): void
   {
     $this->offline('RIZAL', 20);

@@ -127,6 +127,41 @@ class PppEventTest extends TestCase
     $this->assertSame(0, (int) $this->baris($tanpaMikrotik)->ppp_online);
   }
 
+  public function test_banyak_laporan_tidak_kena_rate_limit(): void
+  {
+    // Listrik berkedip: puluhan sesi down/up dari satu IP MikroTik dalam semenit
+    for ($i = 0; $i < 70; $i++) {
+      $this->lapor($i % 2 ? 'up' : 'down')->assertOk();
+    }
+  }
+
+  public function test_telegram_bagian_pertama_terkirim_dianggap_terkirim(): void
+  {
+    config(['services.telegram.token' => 'T', 'services.telegram.chat_id' => '99']);
+    Http::fake(['api.telegram.org/*' => Http::sequence()->push(['ok' => true])->push(['ok' => false], 429)]);
+    $teks = implode("\n", array_fill(0, 900, str_repeat('x', 9)));
+    $this->assertTrue(app(TelegramService::class)->kirim($teks)); // jangan kirim ulang bagian 1 tiap menit
+  }
+
+  public function test_telegram_bagian_tidak_lewat_4000(): void
+  {
+    config(['services.telegram.token' => 'T', 'services.telegram.chat_id' => '99']);
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+    app(TelegramService::class)->kirim(implode("\n", array_fill(0, 2000, '🔴 abc')));
+    Http::assertSent(fn($r) => mb_strlen($r['text']) <= 4000);
+    foreach (Http::recorded() as [$r]) {
+      $this->assertLessThanOrEqual(4000, mb_strlen($r['text']));
+    }
+  }
+
+  public function test_token_telegram_tidak_masuk_log(): void
+  {
+    config(['services.telegram.token' => 'TOKENRAHASIA123', 'services.telegram.chat_id' => '99']);
+    Http::fake(fn() => throw new ConnectionException('cURL error 28 for https://api.telegram.org/botTOKENRAHASIA123/sendMessage'));
+    \Illuminate\Support\Facades\Log::spy();
+    app(TelegramService::class)->kirim('halo');
+    \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->withArgs(fn($pesan, $k = []) => !str_contains($pesan . json_encode($k), 'TOKENRAHASIA123'))->once();
+  }
   public function test_telegram_kirim_dipecah(): void
   {
     config(['services.telegram.token' => 'T', 'services.telegram.chat_id' => '99']);

@@ -22,7 +22,7 @@ class SkripNotifPpp
     $url = $this->routerOs(rtrim((string) config('services.ppp_notif.url'), '/') . '/api/mikrotik/ppp-event');
     $token = $this->routerOs((string) config('services.ppp_notif.secret'));
     return self::MULAI . "\n"
-      . ":do { /tool fetch url=\"$url\" http-method=post http-header-field=\"X-Notif-Token: $token\" "
+      . ":do { /tool fetch url=\"$url\" http-method=post http-header-field=\"X-Notif-Token: $token,Content-Type: application/x-www-form-urlencoded\" "
       . "http-data=(\"m=$idMikrotik&e=$event&u=\" . \$user) output=none } on-error={}\n"
       . self::SELESAI;
   }

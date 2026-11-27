@@ -26,7 +26,7 @@ class SkripNotifPppTest extends TestCase
     parent::setUp();
     $this->assertSame('lamtim_biling_test', DB::connection()->getDatabaseName(), 'Tes harus memakai database tes');
     $this->withoutMiddleware(VerifyCsrfToken::class);
-    config(['services.ppp_notif.secret' => 'rahasia', 'services.ppp_notif.url' => 'http://billing.lan']);
+    config(['services.ppp_notif.secret' => str_repeat('a1', 16), 'services.ppp_notif.url' => 'http://billing.lan']);
     self::$diset = [];
     self::$profil = [
       ['id' => '*1', 'name' => 'default', 'on-up' => ':log info "lama"', 'on-down' => ''],
@@ -55,7 +55,7 @@ class SkripNotifPppTest extends TestCase
   public function test_blok_berisi_url_secret_event(): void
   {
     $blok = $this->skrip()->blok($this->mt, 'down');
-    foreach (['# mryes-notif:mulai', '# mryes-notif:selesai', 'http://billing.lan/api/mikrotik/ppp-event', 'X-Notif-Token: rahasia',
+    foreach (['# mryes-notif:mulai', '# mryes-notif:selesai', 'http://billing.lan/api/mikrotik/ppp-event', 'X-Notif-Token: ' . str_repeat('a1', 16), 'Content-Type: application/x-www-form-urlencoded',
       "m={$this->mt}&e=down&u=", 'on-error={}', '$user'] as $isi) {
       $this->assertStringContainsString($isi, $blok);
     }
@@ -97,6 +97,23 @@ class SkripNotifPppTest extends TestCase
     $this->assertCount(0, self::$diset);
   }
 
+  public static function aturanSalah(): array
+  {
+    return ['secret pendek' => ['services.ppp_notif.secret', 'pendek123', 'PPP_NOTIF_SECRET'],
+      'secret berkoma' => ['services.ppp_notif.secret', str_repeat('a', 31) . ',', 'PPP_NOTIF_SECRET'],
+      'url kosong' => ['services.ppp_notif.url', '', 'PPP_NOTIF_URL'],
+      'url localhost' => ['services.ppp_notif.url', 'http://localhost', 'PPP_NOTIF_URL']];
+  }
+
+  #[\PHPUnit\Framework\Attributes\DataProvider('aturanSalah')]
+  public function test_pasang_ditolak_bila_aturan_salah(string $kunci, string $nilai, string $pesan): void
+  {
+    config([$kunci => $nilai]);
+    $this->masuk(1);
+    $res = $this->postJson('/mikrotik/' . encrypt($this->mt) . '/notif/pasang')->assertStatus(422);
+    $this->assertStringContainsString($pesan, $res->json('message'));
+    $this->assertCount(0, self::$diset);
+  }
   public function test_route_notif_hanya_admin(): void
   {
     $this->masuk(4);

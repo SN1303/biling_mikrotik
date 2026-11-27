@@ -30,7 +30,7 @@ class NotifikasiPpp
       ->where('ppp_online', 0)->where('ppp_dikabari', 0)
       ->where('ppp_offline_sejak', '<=', now()->subMinutes((int) config('services.ppp_notif.jeda_menit', 10)))
       ->get();
-    $baru = $this->buangSecretNonaktif($baru);
+    $baru = $this->saringDenganMikrotik($baru);
     $pulih = Lamtim_user_mikrotik_details::with('user:id,name')->where('ppp_online', 1)->where('ppp_dikabari', 1)->get();
 
     if ($baru->isEmpty() && $pulih->isEmpty()) {
@@ -42,8 +42,9 @@ class NotifikasiPpp
       return null; // dicoba lagi menit berikutnya; penanda belum diubah
     }
 
-    Lamtim_user_mikrotik_details::whereIn('id', $baru->pluck('id'))->update(['ppp_dikabari' => 1]);
-    Lamtim_user_mikrotik_details::whereIn('id', $pulih->pluck('id'))->update(['ppp_dikabari' => 0, 'ppp_offline_sejak' => null]);
+    // Bersyarat: laporan up/down yang datang selama Telegram mengirim tidak boleh tertimpa
+    Lamtim_user_mikrotik_details::whereIn('id', $baru->pluck('id'))->where('ppp_online', 0)->update(['ppp_dikabari' => 1]);
+    Lamtim_user_mikrotik_details::whereIn('id', $pulih->pluck('id'))->where('ppp_online', 1)->update(['ppp_dikabari' => 0, 'ppp_offline_sejak' => null]);
     return $teks;
   }
 
@@ -82,11 +83,17 @@ class NotifikasiPpp
         if ($p->ppp_online !== 1 && $p->ppp_online !== true) {
           $ubah = ['ppp_online' => 1] + ($p->ppp_dikabari ? [] : ['ppp_offline_sejak' => null]);
         }
-      } elseif ($p->ppp_online === null || $p->ppp_online) {
+      } elseif (!array_key_exists($p->namaMikrotikUser, $secret)) {
+        // Secret sudah dihapus di MikroTik: bukan gangguan, jangan dilaporkan offline
+      } elseif ($p->ppp_online === null || $p->ppp_online || !$p->ppp_offline_sejak) {
         $ubah = ['ppp_online' => 0, 'ppp_offline_sejak' => $p->ppp_offline_sejak ?? now()];
       }
       if (array_key_exists($p->namaMikrotikUser, $secret) && (bool) $p->ppp_secret_nonaktif !== $secret[$p->namaMikrotikUser]) {
         $ubah['ppp_secret_nonaktif'] = $secret[$p->namaMikrotikUser] ? 1 : 0;
+        // Secret diaktifkan lagi tapi masih offline: lama offline dihitung dari sekarang, bukan sejak diisolir
+        if (!$secret[$p->namaMikrotikUser] && !isset($aktif[$p->namaMikrotikUser])) {
+          $ubah['ppp_offline_sejak'] = now();
+        }
       }
       if ($ubah) {
         $p->update($ubah);
@@ -117,20 +124,25 @@ class NotifikasiPpp
   }
 
   /**
-   * Isolir pemilik dilakukan dengan menonaktifkan secret dari Winbox, yang tidak dilaporkan
-   * ke billing. Cek dulu ke MikroTik; bila tidak terjangkau, lewati pengecekan.
+   * Cek ke MikroTik sebelum mengirim; bila tidak terjangkau, lewati pengecekan.
+   * - Secret nonaktif: pemilik mengisolir dari Winbox, yang tidak dilaporkan ke billing.
+   * - Ternyata aktif: laporan "up" hilang (billing restart, jaringan), jadi bukan offline.
    */
-  private function buangSecretNonaktif(Collection $baru): Collection
+  private function saringDenganMikrotik(Collection $baru): Collection
   {
     foreach ($baru->whereNotNull('idMikrotik')->groupBy('idMikrotik') as $idMikrotik => $grup) {
       try {
         $nonaktif = $this->ppp->secretNonaktif((int) $idMikrotik);
+        $aktif = array_flip($this->ppp->aktif((int) $idMikrotik));
       } catch (\RuntimeException) {
         continue;
       }
-      $buang = $grup->filter(fn($p) => $nonaktif[$p->namaMikrotikUser] ?? false);
-      Lamtim_user_mikrotik_details::whereIn('id', $buang->pluck('id'))->update(['ppp_secret_nonaktif' => 1]);
-      $baru = $baru->reject(fn($p) => $buang->contains('id', $p->id));
+      $isolir = $grup->filter(fn($p) => $nonaktif[$p->namaMikrotikUser] ?? false);
+      $online = $grup->filter(fn($p) => isset($aktif[$p->namaMikrotikUser]));
+      Lamtim_user_mikrotik_details::whereIn('id', $isolir->pluck('id'))->update(['ppp_secret_nonaktif' => 1]);
+      Lamtim_user_mikrotik_details::whereIn('id', $online->pluck('id'))->update(['ppp_online' => 1, 'ppp_offline_sejak' => null]);
+      $buang = $isolir->pluck('id')->merge($online->pluck('id'));
+      $baru = $baru->reject(fn($p) => $buang->contains($p->id));
     }
     return $baru->values();
   }

@@ -68,6 +68,7 @@ class PppCocokkanTest extends TestCase
   {
     $this->freezeSecond();
     self::$aktif = ['bagos@tj-6', 'baru@tj-1'];
+    self::$secret = ['rizal@tj-1' => false, 'bagos@tj-6' => false, 'baru@tj-1' => false];
     $this->cocokkan();
     $this->assertSame(0, (int) $this->b($this->rizal)->ppp_online);
     $this->assertSame(now()->toDateTimeString(), $this->b($this->rizal)->ppp_offline_sejak);
@@ -144,9 +145,36 @@ class PppCocokkanTest extends TestCase
     $this->assertSame(1, (int) $this->b($tanpa)->ppp_online);
   }
 
+  public function test_secret_dihapus_tidak_dianggap_offline(): void
+  {
+    // rizal online tapi tidak ada di /ppp/active maupun /ppp/secret (secret dihapus)
+    self::$secret = ['bagos@tj-6' => false, 'baru@tj-1' => false];
+    $this->cocokkan();
+    $this->assertSame(1, (int) $this->b($this->rizal)->ppp_online);
+  }
+
+  public function test_offline_tanpa_jam_diperbaiki(): void
+  {
+    DB::table('lamtim_user_mikrotik_details')->where('id', $this->bagos)->update(['ppp_offline_sejak' => null]);
+    self::$secret = ['bagos@tj-6' => false];
+    $this->cocokkan();
+    $this->assertNotNull($this->b($this->bagos)->ppp_offline_sejak);
+  }
+
+  public function test_secret_diaktifkan_lagi_jam_offline_mulai_ulang(): void
+  {
+    $this->freezeSecond();
+    DB::table('lamtim_user_mikrotik_details')->where('id', $this->bagos)
+      ->update(['ppp_secret_nonaktif' => 1, 'ppp_offline_sejak' => now()->subDays(3)]);
+    self::$secret = ['bagos@tj-6' => false];
+    $this->cocokkan();
+    $this->assertSame(0, (int) $this->b($this->bagos)->ppp_secret_nonaktif);
+    $this->assertSame(now()->toDateTimeString(), $this->b($this->bagos)->ppp_offline_sejak);
+  }
   public function test_command_semua_mikrotik_aktif(): void
   {
     self::$aktif = ['rizal@tj-1'];
+    self::$secret = ['rizal@tj-1' => false, 'baru@tj-1' => false];
     $this->artisan('ppp:cocokkan')->assertSuccessful();
     $this->assertSame(0, (int) $this->b($this->baru)->ppp_online);
   }

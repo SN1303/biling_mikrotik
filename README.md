@@ -35,7 +35,9 @@ Opsional. Billing mengirim ringkasan ke Telegram: pelanggan PPPoE yang offline l
 2. Di halaman **MikroTik**, menu ⋮ → **Pasang skrip otomatis**. Atau **Skrip manual**, lalu tempel sendiri di Winbox (*PPP → Profiles → Scripts*, On Up dan On Down). Skrip lain di profile tidak diubah.
 3. Pastikan cron penjadwal berjalan (lihat di atas): `ppp:notifikasi` tiap menit dan `ppp:cocokkan` tiap 10 menit.
 
-Pelanggan nonaktif, diisolir, atau dengan secret PPPoE nonaktif tidak dikabari. Profile PPP baru yang dibuat belakangan perlu dipasang ulang.
+Pelanggan nonaktif, diisolir, atau dengan secret PPPoE nonaktif tidak dikabari. Profile PPP baru yang dibuat belakangan perlu dipasang ulang. Username PPPoE yang berisi `+`, `&`, atau `%` tidak terbaca dengan benar oleh laporan MikroTik.
+
+**Kalau sebelumnya sudah memakai skrip bot Telegram lain di on-up/on-down**, hapus atau matikan skrip itu, supaya notifikasi tidak dobel. Tombol pasang tidak menyentuh skrip lain.
 
 ## Menjalankan tes
 

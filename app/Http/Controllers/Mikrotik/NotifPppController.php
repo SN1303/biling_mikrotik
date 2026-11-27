@@ -49,11 +49,19 @@ class NotifPppController extends Controller
     return response()->json(['message' => str_replace(':n', (string) $n, $pesan), 'jumlah' => $n]);
   }
 
+  /** Pengaturan yang salah menghasilkan skrip yang tidak pernah sampai ke billing; tolak dulu. */
   private function belumDiatur(): ?JsonResponse
   {
-    return (string) config('services.ppp_notif.secret') === ''
-      ? response()->json(['message' => 'Isi PPP_NOTIF_SECRET di file .env dulu (kode acak minimal 32 karakter).'], 422)
-      : null;
+    $secret = (string) config('services.ppp_notif.secret');
+    // Huruf/angka saja: http-header-field RouterOS dipisah koma, dan secret pendek mudah ditebak
+    if (strlen($secret) < 32 || !ctype_alnum($secret)) {
+      return response()->json(['message' => 'Isi PPP_NOTIF_SECRET di file .env: huruf/angka acak, minimal 32 karakter.'], 422);
+    }
+    $host = parse_url((string) config('services.ppp_notif.url'), PHP_URL_HOST);
+    if (!$host || in_array(strtolower($host), ['localhost', '127.0.0.1'], true)) {
+      return response()->json(['message' => 'Isi PPP_NOTIF_URL di file .env dengan alamat billing yang bisa dijangkau MikroTik (mis. http://172.1.10.20).'], 422);
+    }
+    return null;
   }
 
   private function idMikrotik(string $id): int

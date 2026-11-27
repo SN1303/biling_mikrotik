@@ -19,4 +19,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Laporan PPPoE up/down dari skrip MikroTik (dilindungi header X-Notif-Token)
-Route::post('/mikrotik/ppp-event', \App\Http\Controllers\Api\PppEventController::class)->name('ppp-event');
+// Tanpa throttle api (60/menit per IP): semua laporan datang dari satu IP MikroTik, dan listrik berkedip
+// bisa menghasilkan puluhan laporan sekaligus. Endpoint sudah dilindungi token.
+Route::post('/mikrotik/ppp-event', \App\Http\Controllers\Api\PppEventController::class)->name('ppp-event')
+  ->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class . ':api');
