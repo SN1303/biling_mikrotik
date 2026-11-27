@@ -17,3 +17,6 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Laporan PPPoE up/down dari skrip MikroTik (dilindungi header X-Notif-Token)
+Route::post('/mikrotik/ppp-event', \App\Http\Controllers\Api\PppEventController::class)->name('ppp-event');

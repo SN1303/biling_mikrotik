@@ -50,4 +50,19 @@ return [
     'remote_host' => env('GENIEACS_REMOTE_HOST', ''),
   ],
 
+  // Bot Telegram untuk notifikasi (kosong = notifikasi mati)
+  'telegram' => [
+    'token' => env('TELEGRAM_BOT_TOKEN', ''),
+    'chat_id' => env('TELEGRAM_CHAT_ID', ''),
+  ],
+
+  // Laporan PPPoE up/down dari skrip MikroTik
+  'ppp_notif' => [
+    'secret' => env('PPP_NOTIF_SECRET', ''),
+    'url' => env('PPP_NOTIF_URL') ?: env('APP_URL'),
+    'jeda_menit' => (int) env('PPP_NOTIF_JEDA_MENIT', 10),
+    'ambang_massal' => (int) env('PPP_NOTIF_AMBANG_MASSAL', 3),
+    'ulang_detik' => 30, // jeda sebelum mencoba lagi MikroTik yang gagal dihubungi
+  ],
+
 ];
