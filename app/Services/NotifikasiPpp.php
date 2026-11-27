@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Lamtim_mikrotik;
 use App\Models\Lamtim_user_mikrotik_details;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 
 /**
@@ -43,6 +45,66 @@ class NotifikasiPpp
     Lamtim_user_mikrotik_details::whereIn('id', $baru->pluck('id'))->update(['ppp_dikabari' => 1]);
     Lamtim_user_mikrotik_details::whereIn('id', $pulih->pluck('id'))->update(['ppp_dikabari' => 0, 'ppp_offline_sejak' => null]);
     return $teks;
+  }
+
+  /**
+   * Cocokkan status dengan /ppp/active dan /ppp/secret: menutup laporan on-up/on-down yang
+   * hilang, dan memberi tahu bila MikroTik tidak terjangkau (sekali) atau pulih (sekali).
+   */
+  public function cocokkan(int $idMikrotik): void
+  {
+    $kunci = "ppp-mikrotik-terjangkau:$idMikrotik";
+    $nama = Lamtim_mikrotik::whereKey($idMikrotik)->value('nama') ?? "#$idMikrotik";
+
+    try {
+      [$aktif, $secret] = $this->ambil($idMikrotik);
+    } catch (\RuntimeException $e) {
+      // Pelanggan tidak diubah: putus ke MikroTik bukan berarti pelanggan offline
+      if (Cache::get($kunci, true) && $this->telegram->kirim("⚠️ MikroTik $nama tidak terjangkau dari billing. Status pelanggan tidak bisa dipantau sampai MikroTik terjangkau lagi.")) {
+        Cache::forever($kunci, false);
+      }
+      return;
+    }
+    if (!Cache::get($kunci, true) && $this->telegram->kirim("✅ MikroTik $nama terjangkau lagi. Pemantauan pelanggan berjalan normal.")) {
+      Cache::forever($kunci, true);
+    }
+
+    $aktif = array_flip($aktif);
+    // Pelanggan tanpa idMikrotik hanya bisa dipastikan bila MikroTik aktif cuma satu
+    $satuMikrotik = Lamtim_mikrotik::where('isActive', 1)->count() <= 1;
+    $pelanggan = Lamtim_user_mikrotik_details::whereNotNull('namaMikrotikUser')
+      ->where(fn($q) => $q->where('idMikrotik', $idMikrotik)->when($satuMikrotik, fn($w) => $w->orWhereNull('idMikrotik')))
+      ->get();
+
+    foreach ($pelanggan as $p) {
+      $ubah = [];
+      if (isset($aktif[$p->namaMikrotikUser])) {
+        if ($p->ppp_online !== 1 && $p->ppp_online !== true) {
+          $ubah = ['ppp_online' => 1] + ($p->ppp_dikabari ? [] : ['ppp_offline_sejak' => null]);
+        }
+      } elseif ($p->ppp_online === null || $p->ppp_online) {
+        $ubah = ['ppp_online' => 0, 'ppp_offline_sejak' => $p->ppp_offline_sejak ?? now()];
+      }
+      if (array_key_exists($p->namaMikrotikUser, $secret) && (bool) $p->ppp_secret_nonaktif !== $secret[$p->namaMikrotikUser]) {
+        $ubah['ppp_secret_nonaktif'] = $secret[$p->namaMikrotikUser] ? 1 : 0;
+      }
+      if ($ubah) {
+        $p->update($ubah);
+      }
+    }
+  }
+
+  /** Ambil daftar aktif dan secret; coba sekali lagi setelah jeda (mis. MikroTik sedang reboot). */
+  private function ambil(int $idMikrotik): array
+  {
+    try {
+      return [$this->ppp->aktif($idMikrotik), $this->ppp->secretNonaktif($idMikrotik)];
+    } catch (\RuntimeException) {
+      if (($detik = (int) config('services.ppp_notif.ulang_detik', 30)) > 0) {
+        sleep($detik);
+      }
+      return [$this->ppp->aktif($idMikrotik), $this->ppp->secretNonaktif($idMikrotik)];
+    }
   }
 
   /** Pelanggan yang boleh dikabari: akun aktif, tidak diisolir, secret aktif. */

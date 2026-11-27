@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
 
         // Notifikasi Telegram pelanggan PPPoE offline (lihat docs/superpowers/specs/2026-11-27-notif-telegram-offline-design.md)
         $schedule->command('ppp:notifikasi')->everyMinute()->withoutOverlapping();
+        $schedule->command('ppp:cocokkan')->everyTenMinutes()->withoutOverlapping();
     }
 
     /**
