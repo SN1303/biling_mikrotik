@@ -63,6 +63,18 @@
                     data-ip="${row.ip}" data-port="${row.port}" data-isactive="${row.isActive}">
                     <i class="mdi mdi-pencil-outline me-1"></i> Edit
                   </a>
+                  <div class="dropdown-divider"></div>
+                  <h6 class="dropdown-header">Notifikasi Telegram</h6>
+                  <a class="dropdown-item btn-notif" href="javascript:void(0);" data-id="${data}" data-aksi="pasang">
+                    <i class="mdi mdi-bell-plus-outline me-1"></i> Pasang skrip otomatis
+                  </a>
+                  <a class="dropdown-item btn-notif" href="javascript:void(0);" data-id="${data}" data-aksi="cabut">
+                    <i class="mdi mdi-bell-off-outline me-1"></i> Cabut skrip
+                  </a>
+                  <a class="dropdown-item btn-notif-skrip" href="javascript:void(0);" data-id="${data}">
+                    <i class="mdi mdi-script-text-outline me-1"></i> Skrip manual
+                  </a>
+                  <div class="dropdown-divider"></div>
                    <a class="dropdown-item btn-delete text-danger fw-bold" href="javascript:void(0);" data-id="${data}">
                     <i class="mdi mdi-trash-can-outline me-1"></i> Delete
                   </a>
@@ -268,6 +280,43 @@
 
 
 
+    // Notifikasi Telegram: pasang / cabut blok skrip on-up/on-down di semua PPP Profile
+    const urlNotif = (id, aksi) => @json(url('/mikrotik')) + '/' + encodeURIComponent(id) + '/notif/' + aksi;
+    $(document).on('click', '.btn-notif', function () {
+      const id = $(this).data('id');
+      const aksi = $(this).data('aksi');
+      const pasang = aksi === 'pasang';
+      Swal.fire({
+        title: pasang ? 'Pasang skrip notifikasi?' : 'Cabut skrip notifikasi?',
+        text: pasang
+          ? 'Skrip laporan ditambahkan ke on-up dan on-down semua PPP Profile. Skrip lain di profile tidak diubah.'
+          : 'Hanya blok skrip notifikasi yang dibuang dari semua PPP Profile.',
+        icon: 'question', showCancelButton: true,
+        confirmButtonText: pasang ? 'Ya, pasang' : 'Ya, cabut', cancelButtonText: 'Batal',
+        customClass: { confirmButton: 'btn btn-primary me-2', cancelButton: 'btn btn-outline-secondary' }, buttonsStyling: false,
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        $.ajax({ url: urlNotif(id, aksi), method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } })
+          .done(res => toastr.success(res.message))
+          .fail(xhr => toastr.error((xhr.responseJSON || {}).message || 'Gagal menghubungi MikroTik.'));
+      });
+    });
+
+    $(document).on('click', '.btn-notif-skrip', function () {
+      $.getJSON(urlNotif($(this).data('id'), 'skrip'))
+        .done(res => {
+          $('#skrip-on-up').val(res.on_up);
+          $('#skrip-on-down').val(res.on_down);
+          bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-skrip-notif')).show();
+        })
+        .fail(xhr => toastr.error((xhr.responseJSON || {}).message || 'Gagal mengambil skrip.'));
+    });
+
+    $(document).on('click', '.btn-salin-skrip', function () {
+      const isi = $('#' + $(this).data('target')).val();
+      navigator.clipboard.writeText(isi).then(() => toastr.success('Skrip disalin.'), () => toastr.error('Gagal menyalin, salin manual.'));
+    });
+
     function fillExampleData() {
       const form = document.getElementById("form-add-new-record");
       form.querySelector('[name="nama"]').value = "MIKROTIK1";
@@ -397,6 +446,35 @@
       </div>
     </form>
 
+  </div>
+</div>
+
+{{-- Skrip manual notifikasi Telegram (on-up / on-down PPP Profile) --}}
+<div class="modal fade" id="modal-skrip-notif" tabindex="-1" aria-labelledby="judul-skrip-notif" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="judul-skrip-notif">Skrip manual notifikasi Telegram</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning small mb-3">
+          Skrip ini berisi <strong>kode rahasia</strong>. Jangan dibagikan. Tempel di Winbox: <em>PPP → Profiles → (profile) → Scripts</em>,
+          di bagian <strong>On Up</strong> dan <strong>On Down</strong>, di bawah skrip yang sudah ada.
+        </div>
+        @foreach (['on-up' => 'On Up', 'on-down' => 'On Down'] as $kunci => $judul)
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0" for="skrip-{{ $kunci }}">{{ $judul }}</label>
+            <button type="button" class="btn btn-sm btn-outline-primary btn-salin-skrip" data-target="skrip-{{ $kunci }}">
+              <i class="mdi mdi-content-copy me-1"></i> Salin
+            </button>
+          </div>
+          <textarea id="skrip-{{ $kunci }}" class="form-control font-monospace small" rows="4" readonly></textarea>
+        </div>
+        @endforeach
+      </div>
+    </div>
   </div>
 </div>
 

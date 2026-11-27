@@ -281,6 +281,23 @@ class OntPelangganTest extends TestCase
     $this->assertArrayNotHasKey('ont_url', app(\App\Services\NetworkMapService::class)->getClients()[0]);
   }
 
+  public function test_peta_pakai_status_ppp(): void
+  {
+    $set = fn(array $v) => DB::table('lamtim_user_mikrotik_details')->where('id', $this->client)->update($v + ['latitude' => -5.0, 'longitude' => 105.0]);
+    $status = fn() => app(\App\Services\NetworkMapService::class)->getClients()[0]['status_client'];
+
+    $set(['status' => 'online', 'ppp_online' => 0, 'statusIsolir' => 0]);
+    $this->assertSame('offline', $status());
+    $set(['status' => 'offline', 'ppp_online' => 1]);
+    $this->assertSame('online', $status());
+    $set(['ppp_online' => 1, 'statusIsolir' => 1]);
+    $this->assertSame('isolir', $status());
+    $set(['ppp_online' => 1, 'statusIsolir' => 0, 'status' => 'isolir']);
+    $this->assertSame('isolir', $status());
+    $set(['ppp_online' => null, 'status' => 'online']);
+    $this->assertSame('online', $status());
+  }
+
   public function test_log_tidak_memuat_password(): void
   {
     $this->masukSebagai(1);

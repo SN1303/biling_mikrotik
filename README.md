@@ -27,6 +27,16 @@ GENIEACS_ONLINE_MENIT=10
 GENIEACS_REMOTE_HOST=                    # opsional: subdomain remote web ONT, lihat panduan
 ```
 
+## Notifikasi Telegram pelanggan offline
+
+Opsional. Billing mengirim ringkasan ke Telegram: pelanggan PPPoE yang offline lebih dari 10 menit (dikelompokkan per ODP, gangguan massal ditandai ⚠️) dan yang online lagi.
+
+1. Isi `.env`: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PPP_NOTIF_SECRET` (kode acak ≥ 32 karakter), dan `PPP_NOTIF_URL` (alamat billing yang bisa dijangkau MikroTik; kosong = `APP_URL`).
+2. Di halaman **MikroTik**, menu ⋮ → **Pasang skrip otomatis**. Atau **Skrip manual**, lalu tempel sendiri di Winbox (*PPP → Profiles → Scripts*, On Up dan On Down). Skrip lain di profile tidak diubah.
+3. Pastikan cron penjadwal berjalan (lihat di atas): `ppp:notifikasi` tiap menit dan `ppp:cocokkan` tiap 10 menit.
+
+Pelanggan nonaktif, diisolir, atau dengan secret PPPoE nonaktif tidak dikabari. Profile PPP baru yang dibuat belakangan perlu dipasang ulang.
+
 ## Menjalankan tes
 
 Tes memakai database terpisah `lamtim_biling_test` (lihat `phpunit.xml`), jadi data asli tidak tersentuh.

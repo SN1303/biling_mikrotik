@@ -134,13 +134,28 @@ class NetworkMapService
                     'idOdp' => $client->idOdp,
                     'odp_nama' => $client->odp->nama ?? null,
                     'ip' => $client->localAdress,
-                    'status_client' => $client->status ?? 'offline',
+                    'status_client' => $this->statusClient($client),
                     'lat' => (float) $client->latitude,
                     'lng' => (float) $client->longitude,
                     'route_waypoints' => $client->route_waypoints,
                     'keterangan' => $client->keterangan ?? null,
                 ];
             })->toArray();
+    }
+
+    /**
+     * Warna titik pelanggan: isolir tetap isolir; selain itu pakai status koneksi PPPoE dari
+     * laporan MikroTik (ppp_online). Bila belum pernah dilaporkan, pakai isian manual `status`.
+     */
+    private function statusClient($client): string
+    {
+        if ((int) $client->statusIsolir === 1 || $client->status === 'isolir') {
+            return 'isolir';
+        }
+        if ($client->ppp_online !== null) {
+            return $client->ppp_online ? 'online' : 'offline';
+        }
+        return $client->status ?? 'offline';
     }
 
     public function getAreas(): array

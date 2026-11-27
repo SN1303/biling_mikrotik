@@ -27,6 +27,11 @@ Route::prefix('mikrotik')->as('mikrotik.')->controller(MikrotikController::class
   Route::post('/kelola-isolir/bulk-isolir', 'bulkIsolir')->name('kelola-isolir.bulk-isolir');
   Route::post('/kelola-isolir/bulk-aktifkan', 'bulkAktifkan')->name('kelola-isolir.bulk-aktifkan');
 
+  // === Notifikasi Telegram: skrip laporan PPPoE di PPP Profile ===
+  Route::post('/{id}/notif/pasang', [\App\Http\Controllers\Mikrotik\NotifPppController::class, 'pasang'])->name('notif.pasang');
+  Route::post('/{id}/notif/cabut', [\App\Http\Controllers\Mikrotik\NotifPppController::class, 'cabut'])->name('notif.cabut');
+  Route::get('/{id}/notif/skrip', [\App\Http\Controllers\Mikrotik\NotifPppController::class, 'skrip'])->name('notif.skrip');
+
   // === CRUD (static routes sebelum wildcard {id}) ===
   Route::get('/', 'index')->name('index');
   Route::get('/create', 'create')->name('create');
