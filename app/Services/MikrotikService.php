@@ -200,6 +200,9 @@ class MikrotikService
       $setQuery->equal('disabled', 'yes');
       $client->query($setQuery)->read();
 
+      // Tandai dulu, sebelum sesi ditendang: laporan "down" yang menyusul tidak boleh jadi notifikasi offline
+      $this->tandaiSecret($pppoeUsername, true, $idMikrotik);
+
       // Disconnect sesi aktif
       $this->removeActivePppSession($client, $pppoeUsername);
 
@@ -235,6 +238,7 @@ class MikrotikService
       $setQuery->equal('.id', $secretId);
       $setQuery->equal('disabled', 'no');
       $client->query($setQuery)->read();
+      $this->tandaiSecret($pppoeUsername, false, $idMikrotik);
 
       Log::info("PPPoE user '{$pppoeUsername}' berhasil di-enable pada Mikrotik ID {$idMikrotik}.");
       return ['success' => true, 'message' => "PPPoE user '{$pppoeUsername}' berhasil di-enable."];
@@ -242,6 +246,17 @@ class MikrotikService
       Log::error("Gagal enable PPPoE '{$pppoeUsername}': " . $e->getMessage());
       return ['success' => false, 'message' => 'Gagal enable: ' . $e->getMessage()];
     }
+  }
+
+  /**
+   * Catat secret PPPoE nonaktif/aktif di billing, supaya notifikasi Telegram tidak melaporkan
+   * pelanggan yang memang sengaja dimatikan.
+   */
+  public function tandaiSecret(string $pppoeUsername, bool $nonaktif, ?int $idMikrotik = null): void
+  {
+    Lamtim_user_mikrotik_details::where('namaMikrotikUser', $pppoeUsername)
+      ->when($idMikrotik, fn($q) => $q->where(fn($w) => $w->where('idMikrotik', $idMikrotik)->orWhereNull('idMikrotik')))
+      ->update(['ppp_secret_nonaktif' => $nonaktif ? 1 : 0]);
   }
 
   /**
